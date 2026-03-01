@@ -1,9 +1,10 @@
 
-import requests
-import os
+import argparse
 import base64
-import sys
+import os
 from pathlib import Path
+
+import requests
 from dotenv import load_dotenv
 
 env_path = Path(__file__).resolve().parent / ".env"
@@ -12,7 +13,7 @@ load_dotenv(dotenv_path=env_path)
 invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
 stream = False
 
-query = (
+BASE_QUERY = (
     "You are a transit infrastructure inspector. "
     "Classify this image into exactly ONE of the following disciplines based on what is shown:\n\n"
     "- FARE COLLECTION: Fare gates, Clipper card dispensers, add-on machines, parking pay machines, change dispensers\n"
@@ -49,6 +50,15 @@ kSupportedList = {
     "webm": ["video/webm", "video_url"],
     "mov": ["video/mov", "video_url"]
 }
+def build_query(user_summary: str | None = None) -> str:
+    """Build final prompt by appending optional user summary context."""
+    if not user_summary:
+        return BASE_QUERY
+    return (
+        f"{BASE_QUERY}\n\n"
+        "User-reported summary (use as secondary context after visual evidence):\n"
+        f"{user_summary.strip()}"
+    )
 
 def get_extension(filename):
     _, ext = os.path.splitext(filename)
@@ -148,10 +158,19 @@ def chat_with_media(infer_url, media_files, query: str, stream: bool = False):
 
 if __name__ == "__main__":
     """ Usage:
-        python nemotron.py                                    # Text-only
-        python nemotron.py sample.mp4                         # Single video
-        python nemotron.py sample1.png sample2.png            # Multiple images
+        python nemotron_cli.py                                 # Interactive CLI
+        python nemotron.py --description "broken light" img.jpg
+        python nemotron.py sample.mp4                          # Legacy media-only mode
     """
+    parser = argparse.ArgumentParser(description="Nemotron multimodal inference helper")
+    parser.add_argument("media", nargs="*", help="Optional media files (images/videos)")
+    parser.add_argument(
+        "-d",
+        "--description",
+        default=None,
+        help="Optional user summary to append to the classification prompt",
+    )
+    args = parser.parse_args()
 
-    media_samples = list(sys.argv[1:])
-    chat_with_media(invoke_url, media_samples, query, stream)
+    final_query = build_query(args.description)
+    chat_with_media(invoke_url, list(args.media), final_query, stream)
