@@ -1,4 +1,4 @@
-# Project Title
+# Image Based Incident Identification and Cataloging
 
 Project Description
 
@@ -16,7 +16,9 @@ List main objectives, problems you aim to solve.
 
 - [x] Feature 2
 
-- [ ] Feature 3
+- [ ] add some sort of database catalog
+
+- \[ \]
 
 ### Software Stack / Technologies Used
 
@@ -46,15 +48,11 @@ Summary for developers with links to setup, build, test instructions in wiki or 
 
 2. Select View Code
 
-   <!-- image: width=754 -->
-   ![](assets/screenshot-2026-03-01_00-08-40-1772352666452.png)
+   ![](assets/README/screenshot-2026-03-01_00-08-40-1772352666452.png)
 
-    
+3. Click Generate API Key
 
-3. Click Generate API Key 
-
-   <!-- image: width=761 -->
-   ![](assets/screenshot-2026-03-01_00-12-21-1772352804639.png)
+   ![]()
 
 4. Create a `.env` file in the project root with:
 
