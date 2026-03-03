@@ -29,7 +29,7 @@ BASE_QUERY = (
     "- RSS: Broken train, broken train seats, broken train windows, vandalism in train\n\n"
     "Respond with:\n"
     "1. Discipline: <one of the above>\n"
-    "2. Confidence: high/medium/low\n"
+    "2. Confidence: Score from 0 to 100\n"
     "3. Evidence: <what in the image led to this classification>"
 )
 
