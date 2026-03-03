@@ -52,7 +52,7 @@ Summary for developers with links to setup, build, test instructions in wiki or 
 
 3. Click Generate API Key
 
-   ![]()
+   ![](assets/README/screenshot-2026-03-01_00-12-21-1772352804639.png)
 
 4. Create a `.env` file in the project root with:
 
