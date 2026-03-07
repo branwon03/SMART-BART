@@ -1,10 +1,10 @@
 {
     "20260226_155654539_iOS 1.jpg": {
-      "discipline": "GROUNDS",
+      "discipline": "MECHANICAL",
       "raw_response": "GROUNDS."
     },
     "20260226_155654539_iOS.jpg": {
-      "discipline": "ELECTRICAL",
+      "discipline": "MECHANICAL",
       "raw_response": "ELECTRICAL."
     },
     "20260226_155703344_iOS.jpg": {
@@ -28,27 +28,27 @@
       "raw_response": "MECHANICAL"
     },
     "20260226_160156571_iOS 1.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS"
     },
     "20260226_160156571_iOS.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR."
     },
     "20260226_160158367_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "buildings"
     },
     "20260226_160200494_iOS.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "LANDSCAPING."
     },
     "20260226_160205713_iOS 1.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR."
     },
     "20260226_160205713_iOS.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "GROUND"
     },
     "20260226_160213044_iOS.jpg": {
@@ -56,71 +56,71 @@
       "raw_response": "Grounds."
     },
     "20260226_160220229_iOS.jpg": {
-      "discipline": "ELECTRICAL",
+      "discipline": "GROUNDS",
       "raw_response": "ELECTRICAL."
     },
     "20260226_160225383_iOS.jpg": {
-      "discipline": "ELECTRICAL",
+      "discipline": "GROUNDS",
       "raw_response": "ELECTRICAL."
     },
     "20260226_160232524_iOS.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "GROUNDS",
       "raw_response": "**MECHANICAL**"
     },
     "20260226_160236944_iOS 1.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_160236944_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "Buildings."
     },
     "20260226_160240926_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES."
     },
     "20260226_160249641_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS: Station and parking lots only \u2014 cracked floors, cracked walls, columns, water intrusion, paint, vandalism, doors, parking lots, missing signs, drainage issues."
     },
     "20260226_160514584_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_160527507_iOS.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR"
     },
     "20260226_160529760_iOS 1.jpg": {
-      "discipline": "SYSTEM SERVICE",
+      "discipline": "GROUNDS",
       "raw_response": "SYSTEM SERVICE."
     },
     "20260226_160529760_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "Buildings"
     },
     "20260226_160534440_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_160536972_iOS.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "systems of a train.."
     },
     "20260226_160542902_iOS.jpg": {
-      "discipline": "SYSTEM SERVICE",
+      "discipline": "GROUNDS",
       "raw_response": "SYSTEM SERVICE."
     },
     "20260226_160545099_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_160549311_iOS.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "GROUNDS",
       "raw_response": "MECHANICAL."
     },
     "20260226_160553091_iOS.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR."
     },
     "20260226_160637003_iOS.jpg": {
@@ -132,27 +132,27 @@
       "raw_response": "GROUNDs."
     },
     "20260226_160650403_iOS.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "GROUND."
     },
     "20260226_160656407_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "Structures."
     },
     "20260226_160707148_iOS 1.jpg": {
-      "discipline": "TRACK",
+      "discipline": "GROUNDS",
       "raw_response": "Track."
     },
     "20260226_160707148_iOS.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "GROUNDS",
       "raw_response": "MECHANICAL."
     },
     "20260226_160756420_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES."
     },
     "20260226_160759528_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES."
     },
     "20260226_161551414_iOS 1.jpg": {
@@ -160,7 +160,7 @@
       "raw_response": "GROUNDS."
     },
     "20260226_161551414_iOS.jpg": {
-      "discipline": "FARE COLLECTION",
+      "discipline": "GROUNDS",
       "raw_response": "Fare Collection."
     },
     "20260226_161555669_iOS.jpg": {
@@ -168,7 +168,7 @@
       "raw_response": "GROUNDS."
     },
     "20260226_161600168_iOS.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "GROUND"
     },
     "20260226_161611364_iOS 1.jpg": {
@@ -176,19 +176,19 @@
       "raw_response": "GROUNDS"
     },
     "20260226_161611364_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_161615974_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_161621550_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_161624424_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS"
     },
     "20260226_161627414_iOS.jpg": {
@@ -196,27 +196,27 @@
       "raw_response": "GROUNDS."
     },
     "20260226_161758336_iOS 1.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_161758336_iOS.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "GROUNDS",
       "raw_response": "MECHANICAL."
     },
     "20260226_161800293_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "Buildings."
     },
     "20260226_161804091_iOS.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR"
     },
     "20260226_161807952_iOS.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "GROUNDS",
       "raw_response": "MECHANICAL."
     },
     "20260226_161811645_iOS.jpg": {
-      "discipline": "ELEVATOR AND ESCALATOR",
+      "discipline": "GROUNDS",
       "raw_response": "ELEVATOR AND ESCALATOR."
     },
     "20260226_161814622_iOS.jpg": {
@@ -224,11 +224,11 @@
       "raw_response": "GROUNDS."
     },
     "20260226_161818113_iOS.jpg": {
-      "discipline": "FARE COLLECTION",
+      "discipline": "GROUNDS",
       "raw_response": "FARE COLLECTION."
     },
     "20260226_161832398_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES"
     },
     "20260226_162122656_iOS.jpg": {
@@ -244,11 +244,11 @@
       "raw_response": "BUILDINGS."
     },
     "20260226_162127382_iOS.jpg": {
-      "discipline": "ELECTRICAL",
+      "discipline": "BUILDINGS",
       "raw_response": "ELECTRICAL."
     },
     "20260226_162129345_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "BUILDINGS",
       "raw_response": "Structures."
     },
     "20260226_162131662_iOS.jpg": {
@@ -260,7 +260,7 @@
       "raw_response": "BUILDINGS."
     },
     "20260226_162142286_iOS 1.jpg": {
-      "discipline": "MECHANICAL",
+      "discipline": "BUILDINGS",
       "raw_response": "MECHANICAL."
     },
     "20260226_162142286_iOS.jpg": {
@@ -268,35 +268,35 @@
       "raw_response": "&#x20;BUILDINGS"
     },
     "20260226_162145190_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "BUILDINGS",
       "raw_response": "STRUCTURES"
     },
     "20260226_162149109_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "BUILDINGS",
       "raw_response": "STRUCTURES"
     },
     "20260226_162224802_iOS.jpg": {
-      "discipline": "BUILDINGS",
+      "discipline": "GROUNDS",
       "raw_response": "BUILDINGS."
     },
     "20260226_162226073_iOS.jpg": {
-      "discipline": "SYSTEM SERVICE",
+      "discipline": "GROUNDS",
       "raw_response": "SYSTEM SERVICE."
     },
     "20260226_162229526_iOS 1.jpg": {
-      "discipline": null,
+      "discipline": "GROUNDS",
       "raw_response": "GROUND"
     },
     "20260226_162229526_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES."
     },
     "20260226_162231679_iOS.jpg": {
-      "discipline": "SYSTEM SERVICE",
+      "discipline": "GROUNDS",
       "raw_response": "SYSTEM SERVICE."
     },
     "20260226_162234379_iOS.jpg": {
-      "discipline": "STRUCTURES",
+      "discipline": "GROUNDS",
       "raw_response": "STRUCTURES."
     },
     "20260226_162237496_iOS.jpg": {
