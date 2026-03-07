@@ -1,36 +1,59 @@
 <div align="center">
 
-# Project Title
+# Image Based Incident Identification and Cataloging
 
-Project Description
+An automated web application that detects, classifies, and de-duplicates BART maintenance incident reports submitted via image uploads, reducing manual workload for BART staff and improving infrastructure monitoring across the Bay Area.
 
+CSE-312 | UC Merced School of Engineering
+Project Partner: Bay Area Rapid Transit (BART)
+Mentors: Christian Chaves & Julio Flores Molina
 </div>
-
 
 ## Overview
 
-Project details
+BART's current incident reporting pipeline is entirely manual and lacks the scalability to handle surges in maintenance reports. With infrastructure spanning five counties, the volume of incoming reports far exceeds what limited staff can realistically process, resulting in duplicated or unresolved issues.
+
+This project bridges that gap by building an image-based system that automatically classifies submitted photos, groups duplicate reports of the same incident, and surfaces de-duplicated issues to the correct BART department through a maintenance dashboard.
+
+## The Team
+Akash Sant: anagtode@ucmerced.edu - Back-End Developer, Team Lead
+Kiara Cuntapay: kcuntapay@ucmerced.edu - ML/CV Engineer, Data Engineer
+Brandon Wong: bwong77@ucmerced.edu - Front-End Engineer, ML/CV Engineer
+Emma Countryman: ecountryman@ucmerced.edu - Data Engineer, ML/CV Engineer
+Gavin Abrigo: gabrigo@ucmerced.edu - DevOps Engineer, ML/CV Engineer 
 
 ### Goals
-
-List main objectives, problems you aim to solve.
+- Automate the classification and routing of image-based incident reports.
+- Reduce duplicate incident reports through ML-powered de-duplication.
+- Provide BART staff with a consolidated maintenance dashboard.
+- Enable incident ingestion via both web app and email.
 
 ### Features
 
-- [x] Feature 1
-- [x] Feature 2
-- [ ] Feature 3
+Required:
+- [ ] Photo subject detection & routing
+- [ ] Incident de-duplication
+- [ ] Ingestion via web app & email
+- [ ] Photo confidence scoring
+
+Bonus:
+- [ ] Face blurring
+- [ ] Video processing
 
 ### Software Stack / Technologies Used
 
-- Language: ...
-- Framework: ...
-- Database: ...
-- etc...
+- Frontend: Next.js
+- Backend: Python / FastAPI
+- Detection Model: Nvidia Nemotron-Nano 12b (multimodal VLM) (TBD)
+- Grouping Model: CLIP ViT-B-16 via SentenceTransformers
+- Data Processing: scikit-learn (Cosine Similarity)
+- Image Storage: Amazon S3
+- Database: Amazon DynamoDB
+(Subject to change)
 
 ## Quickstart
 
-Summary for developers with links to setup, build, test instructions in wiki or docs.
+See the Software Stack & Quick Start wiki page for full setup instructions for the frontend, backend, and ML service.
 
 ### Instructions
 
