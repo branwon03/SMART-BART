@@ -1,5 +1,8 @@
 __pycache__/
-.env
+
 .venv/
-s26_cse_312.egg-info/
+.env
+.python-version
+
+BART_Image_Classifier.egg-info/
 Akash's Dataset 1 (jpeg)_resized/
