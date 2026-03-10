@@ -4,10 +4,12 @@
 
 An automated web application that detects, classifies, and de-duplicates BART maintenance incident reports submitted via image uploads, reducing manual workload for BART staff and improving infrastructure monitoring across the Bay Area.
 
-CSE-312 | UC Merced School of Engineering
-Project Partner: Bay Area Rapid Transit (BART)
-Mentors: Christian Chaves & Julio Flores Molina
+CSE-312 | UC Merced School of Engineering <br><br>
 </div>
+
+Project Partner: Bay Area Rapid Transit (BART) <br>
+Mentors: Christian Chaves & Julio Flores Molina
+
 
 ## Overview
 
@@ -16,11 +18,11 @@ BART's current incident reporting pipeline is entirely manual and lacks the scal
 This project bridges that gap by building an image-based system that automatically classifies submitted photos, groups duplicate reports of the same incident, and surfaces de-duplicated issues to the correct BART department through a maintenance dashboard.
 
 ## The Team
-Akash Sant: anagtode@ucmerced.edu - Back-End Developer, Team Lead
-Kiara Cuntapay: kcuntapay@ucmerced.edu - ML/CV Engineer, Data Engineer
-Brandon Wong: bwong77@ucmerced.edu - Front-End Engineer, ML/CV Engineer
-Emma Countryman: ecountryman@ucmerced.edu - Data Engineer, ML/CV Engineer
-Gavin Abrigo: gabrigo@ucmerced.edu - DevOps Engineer, ML/CV Engineer 
+- Akash Sant: anagtode@ucmerced.edu - Back-End Developer, Team Lead
+- Kiara Cuntapay: kcuntapay@ucmerced.edu - ML/CV Engineer, Data Engineer
+- Brandon Wong: bwong77@ucmerced.edu - Front-End Engineer, ML/CV Engineer
+- Emma Countryman: ecountryman@ucmerced.edu - Data Engineer, ML/CV Engineer
+- Gavin Abrigo: gabrigo@ucmerced.edu - DevOps Engineer, ML/CV Engineer 
 
 ### Goals
 - Automate the classification and routing of image-based incident reports.
