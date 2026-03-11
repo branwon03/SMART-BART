@@ -18,7 +18,7 @@ import time
 
 import requests
 
-from nemotron import (
+from inference import (
     BASE_QUERY,
     DISCIPLINES,
     encode_media_base64,

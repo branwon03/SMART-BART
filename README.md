@@ -32,7 +32,7 @@ List main objectives, problems you aim to solve.
 ### Prerequisites
 
 - **Python 3.12+**
-- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- [**uv**](https://docs.astral.sh/uv/) — fast Python package manager
 
 Install `uv` if you don't have it:
 
@@ -45,7 +45,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 1. Clone the repository:
 
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/cse120-ucm/S26-CSE-312
    cd S26-CSE-312
    ```
 
@@ -76,25 +76,11 @@ uv run fastapi dev
 
 The server starts at **http://127.0.0.1:8000** with interactive API docs at **http://127.0.0.1:8000/docs**.
 
-To stop the server, press **Ctrl+C** in the terminal. If it's running in the background, kill it with:
-
-```bash
-lsof -ti :8000 | xargs -r kill -9
-```
-
 ### API Endpoints
 
-- **POST `/report`** — classify a maintenance incident from images and/or a text description.
+- **POST** `/report` — classify a maintenance incident from images and/or a text description.
   - `media` (file upload, optional) — one or more images (`.png`, `.jpg`, `.jpeg`, `.webp`)
   - `description` (form field, optional) — a short text summary of the incident
-
-### Nemotron CLI (non-interactive)
-
-Run classification directly from the command line:
-
-```bash
-uv run python src/nemotron.py --description "broken station light" /path/to/image.jpg
-```
 
 ## Structure
 

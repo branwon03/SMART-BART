@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from nemotron import (
+from inference import (
     build_query,
     chat_with_media,
     get_extension,

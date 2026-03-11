@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from nemotron import build_query, chat_with_media, get_extension, invoke_url
+from inference import build_query, chat_with_media, get_extension, invoke_url
 
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 

@@ -1,7 +1,7 @@
 .PHONY: run-cli batch-label resize-images install-file-picker-deps
 
 run-cli:
-	python3 nemotron_cli.py
+	python3 src/nemotron_cli.py
 
 batch-label:
 ifndef DATASET
