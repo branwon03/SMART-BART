@@ -12,8 +12,8 @@ from nemotron import (
 
 app = FastAPI(title="BART Incident Classifier")
 
-@app.post("/classify")
-async def classify(
+@app.post("/report")
+async def report(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
