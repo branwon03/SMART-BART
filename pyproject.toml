@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.135.1",
+    "python-dotenv>=1.2.2",
+    "requests>=2.32.5",
 ]
 
 [tool.uv]
@@ -28,3 +30,6 @@ commit_version_number = true
 tag_commit = true
 changelog_file = "CHANGELOG.md"
 build_command = "python -m pip install uv && python -m uv build"
+
+[tool.fastapi]
+entrypoint = "src.app.main:app"
