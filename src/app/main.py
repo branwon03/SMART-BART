@@ -37,7 +37,8 @@ async def report(
 
         query = build_query(description)
         result = chat_with_media(
-            invoke_url, [str(p) for p in tmp_paths], query
+            invoke_url, [str(p) for p in tmp_paths], query,
+            description=description,
         )
         return result
 

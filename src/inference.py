@@ -3,6 +3,7 @@ import argparse
 import base64
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -91,7 +92,13 @@ def encode_media_base64(media_file):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-def chat_with_media(infer_url, media_files, query: str, stream: bool = False):
+def chat_with_media(
+    infer_url,
+    media_files,
+    query: str,
+    description: str | None = None,
+    stream: bool = False,
+):
     assert isinstance(media_files, list), f"{media_files}"
 
     if len(media_files) == 0:
@@ -144,9 +151,15 @@ def chat_with_media(infer_url, media_files, query: str, stream: bool = False):
         return None
 
     result = response.json()
-    text = result["choices"][0]["message"]["content"]
-    print(text)
-    return text
+    classification = result["choices"][0]["message"]["content"]
+    print(classification)
+
+    return {
+        "classification": classification,
+        "description": description,
+        "num_images": len(media_files),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 if __name__ == "__main__":
@@ -161,4 +174,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     final_query = build_query(args.description)
-    chat_with_media(invoke_url, list(args.media), final_query, stream)
+    result = chat_with_media(
+        invoke_url, list(args.media), final_query,
+        description=args.description, stream=stream,
+    )
+    if result:
+        print(result)
