@@ -12,8 +12,12 @@ from inference import (
 
 app = FastAPI(title="BART Incident Classifier")
 
-@app.post("/report")
-async def report(
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+@app.post("/submissions")
+async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
