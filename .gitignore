@@ -1,0 +1,20 @@
+___pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.env
+.venv
+env/
+venv/
+venv*/
+.vscode/
+*.log
+.python-version
+
+BART_Image_Classifier.egg-info/
+Akash's Dataset 1 (jpeg)_resized/
