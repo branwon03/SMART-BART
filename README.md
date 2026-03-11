@@ -29,53 +29,72 @@ List main objectives, problems you aim to solve.
 
 ## Quickstart
 
-Summary for developers with links to setup, build, test instructions in wiki or docs.
+### Prerequisites
 
-### Instructions
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
 
-1. Click "Use this template" on GitHub to create your private repository.
-2. Clone your repo locally.
-3. Fill in the metadata table above.
-4. Create an initial branch (e.g., `setup`), never commit directly to `main` (unless instructed).
-5. Open an Issue for each lab / feature before starting work.
-6. Use Pull Requests to merge changes (each PR should reference at least one Issue).
+Install `uv` if you don't have it:
 
----
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-### Nemotron CLI Prototype
+### Setup
 
-1. Open [nvidia nemotron-nano ](https://build.nvidia.com/nvidia/nemotron-nano-12b-v2-vl)and sign up/ login.
+1. Clone the repository:
 
-2. Select View Code
+   ```bash
+   git clone <repo-url>
+   cd S26-CSE-312
+   ```
 
-   ![](assets/README/screenshot-2026-03-01_00-08-40-1772352666452.png)
+2. Install all dependencies (creates a virtual environment automatically):
 
-3. Click Generate API Key
+   ```bash
+   uv sync
+   ```
 
-   ![](assets/README/screenshot-2026-03-01_00-12-21-1772352804639.png)
+3. Obtain an NVIDIA API key:
 
-4. Create a `.env` file in the project root with:
+   - Open [NVIDIA Nemotron-Nano](https://build.nvidia.com/nvidia/nemotron-nano-12b-v2-vl) and sign up / log in.
+   - Select **View Code**, then click **Generate API Key**.
 
-   - `API_KEY=<your_nvidia_api_key>`
+4. Create a `.env` file in the project root:
 
-5. Install dependencies:
+   ```bash
+   echo "NVIDIA_API_KEY=<your_nvidia_api_key>" > .env
+   ```
 
-   - `pip install requests python-dotenv`
-   - `make install-file-picker-deps` (installs `zenity` and `kdialog` for browse mode)
+### Running the FastAPI Server
 
-6. Run the interactive command-line UI:
+Start the development server:
 
-   - `make run-cli`
+```bash
+uv run fastapi dev
+```
 
-7. In the UI:
+The server starts at **http://127.0.0.1:8000** with interactive API docs at **http://127.0.0.1:8000/docs**.
 
-   - Enter a short maintenance description.
-   - Choose browse mode to select an image in the file-picker dialog.
-   - Submit to run inference against Nemotron.
+To stop the server, press **Ctrl+C** in the terminal. If it's running in the background, kill it with:
 
-8. Optional non-interactive usage:
+```bash
+lsof -ti :8000 | xargs -r kill -9
+```
 
-   - `python nemotron.py --description "broken station light" /path/to/image.jpg`
+### API Endpoints
+
+- **POST `/report`** — classify a maintenance incident from images and/or a text description.
+  - `media` (file upload, optional) — one or more images (`.png`, `.jpg`, `.jpeg`, `.webp`)
+  - `description` (form field, optional) — a short text summary of the incident
+
+### Nemotron CLI (non-interactive)
+
+Run classification directly from the command line:
+
+```bash
+uv run python src/nemotron.py --description "broken station light" /path/to/image.jpg
+```
 
 ## Structure
 
