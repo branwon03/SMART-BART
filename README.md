@@ -1,86 +1,68 @@
+<div align="center">
+
 # Image Based Incident Identification and Cataloging
 
-Project Description
+An automated web application that detects, classifies, and de-duplicates BART maintenance incident reports submitted via image uploads, reducing manual workload for BART staff and improving infrastructure monitoring across the Bay Area.
+
+CSE-312 | UC Merced School of Engineering
+Project Partner: Bay Area Rapid Transit (BART)
+Mentors: Christian Chaves & Julio Flores Molina
+</div>
 
 ## Overview
 
-Project details
+BART's current incident reporting pipeline is entirely manual and lacks the scalability to handle surges in maintenance reports. With infrastructure spanning five counties, the volume of incoming reports far exceeds what limited staff can realistically process, resulting in duplicated or unresolved issues.
+
+This project bridges that gap by building an image-based system that automatically classifies submitted photos, groups duplicate reports of the same incident, and surfaces de-duplicated issues to the correct BART department through a maintenance dashboard.
+
+## The Team
+Akash Sant: anagtode@ucmerced.edu - Back-End Developer, Team Lead
+Kiara Cuntapay: kcuntapay@ucmerced.edu - ML/CV Engineer, Data Engineer
+Brandon Wong: bwong77@ucmerced.edu - Front-End Engineer, ML/CV Engineer
+Emma Countryman: ecountryman@ucmerced.edu - Data Engineer, ML/CV Engineer
+Gavin Abrigo: gabrigo@ucmerced.edu - DevOps Engineer, ML/CV Engineer 
 
 ### Goals
-
-List main objectives, problems you aim to solve.
+- Automate the classification and routing of image-based incident reports.
+- Reduce duplicate incident reports through ML-powered de-duplication.
+- Provide BART staff with a consolidated maintenance dashboard.
+- Enable incident ingestion via both web app and email.
 
 ### Features
 
-- [x] Feature 1
+Required:
+- [ ] Photo subject detection & routing
+- [ ] Incident de-duplication
+- [ ] Ingestion via web app & email
+- [ ] Photo confidence scoring
 
-- [x] Feature 2
-
-- [ ] add some sort of database catalog
-
-- \[ \]
+Bonus:
+- [ ] Face blurring
+- [ ] Video processing
 
 ### Software Stack / Technologies Used
 
-- Language: ...
-- Framework: ...
-- Database: ...
-- etc...
+- Frontend: Next.js
+- Backend: Python / FastAPI
+- Detection Model: Nvidia Nemotron-Nano 12b (multimodal VLM) (TBD)
+- Grouping Model: CLIP ViT-B-16 via SentenceTransformers
+- Data Processing: scikit-learn (Cosine Similarity)
+- Image Storage: Amazon S3
+- Database: Amazon DynamoDB
+(Subject to change)
 
 ## Quickstart
 
-### Prerequisites
+See the Software Stack & Quick Start wiki page for full setup instructions for the frontend, backend, and ML service.
 
-- **Python 3.12+**
-- [**uv**](https://docs.astral.sh/uv/) — fast Python package manager
+### Instructions
 
-Install `uv` if you don't have it:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/cse120-ucm/S26-CSE-312
-   cd S26-CSE-312
-   ```
-
-2. Install all dependencies (creates a virtual environment automatically):
-
-   ```bash
-   uv sync
-   ```
-
-3. Obtain an NVIDIA API key:
-
-   - Open [NVIDIA Nemotron-Nano](https://build.nvidia.com/nvidia/nemotron-nano-12b-v2-vl) and sign up / log in.
-   - Select **View Code**, then click **Generate API Key**.
-
-4. Create a `.env` file in the project root:
-
-   ```bash
-   echo "NVIDIA_API_KEY=<your_nvidia_api_key>" > .env
-   ```
-
-### Running the FastAPI Server
-
-Start the development server:
-
-```bash
-uv run fastapi dev
-```
-
-The server starts at **http://127.0.0.1:8000** with interactive API docs at **http://127.0.0.1:8000/docs**.
-
-### API Endpoints
-
-- **POST** `/report` — classify a maintenance incident from images and/or a text description.
-  - `media` (file upload, optional) — one or more images (`.png`, `.jpg`, `.jpeg`, `.webp`)
-  - `description` (form field, optional) — a short text summary of the incident
+1. Click "Use this template" on GitHub to create your private repository.
+2. Clone your repo locally.
+3. Fill in the metadata table above.
+4. Create an initial branch (e.g., `setup`), never commit directly to `main` (unless instructed).
+5. Open an Issue for each lab / feature before starting work.
+6. Use Pull Requests to merge changes (each PR should reference at least one Issue).
 
 ## Structure
 

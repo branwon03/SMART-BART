@@ -31,7 +31,7 @@ DISCIPLINES = [
 
 BASE_QUERY = (
     "You are a transit infrastructure inspector. "
-    "Classify this image into exactly ONE of the following disciplines based on what is shown:\n\n"
+    "Classify the provided image(s) into exactly ONE of the following disciplines based on what is shown:\n\n"
     "- FARE COLLECTION: Fare gates, Clipper card dispensers, add-on machines, parking pay machines, change dispensers\n"
     "- BUILDINGS: Station and parking lots only — cracked floors, cracked walls, columns, water intrusion, paint, vandalism, doors, parking lots, missing signs, drainage issues\n"
     "- COMMS: Emergency telephones, electronic destination signs, old telephones\n"
@@ -43,6 +43,7 @@ BASE_QUERY = (
     "- TRACK: All track issues (except garbage in tracks — that is Structures)\n"
     "- ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems\n"
     "- RSS: Broken train, broken train seats, broken train windows, vandalism in train\n\n"
+    "If multiple images are provided, consider them together as depicting the same incident.\n"
     "Respond with ONLY the discipline name, nothing else."
 )
 
@@ -126,15 +127,13 @@ def chat_with_media(
     }
 
     payload = {
-        "model": "meta/llama-3.2-11b-vision-instruct",
+        "model": "mistralai/ministral-14b-instruct-2512",
         "messages": [
             {"role": "user", "content": content},
         ],
-        "max_tokens": 512,
-        "temperature": 1.00,
+        "max_tokens": 2048,
+        "temperature": 0.15,
         "top_p": 1.00,
-        "frequency_penalty": 0.00,
-        "presence_penalty": 0.00,
         "stream": stream,
     }
 
@@ -163,7 +162,7 @@ def chat_with_media(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Llama Vision multimodal inference helper")
+    parser = argparse.ArgumentParser(description="Ministral 14B multimodal inference helper")
     parser.add_argument("media", nargs="*", help="Optional image files")
     parser.add_argument(
         "-d",
