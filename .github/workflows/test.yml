@@ -20,6 +20,15 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
+      - name: Install pytest
+        run: uv pip install pytest
+
+      - name: Install ruff
+        run: uv pip install ruff
+
+      - name: Install mypy
+        run: uv pip install mypy
+
       - name: Run tests
         run: uv run pytest
 
