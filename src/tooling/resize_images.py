@@ -10,7 +10,6 @@ so the originals are preserved.
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
