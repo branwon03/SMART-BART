@@ -1,4 +1,3 @@
-
 import argparse
 import base64
 import os
@@ -99,6 +98,7 @@ def chat_with_media(
     query: str,
     description: str | None = None,
     stream: bool = False,
+    submission_id: str | None = None,
 ):
     assert isinstance(media_files, list), f"{media_files}"
 
@@ -154,6 +154,7 @@ def chat_with_media(
     print(classification)
 
     return {
+        "submission_id": submission_id,
         "classification": classification,
         "description": description,
         "num_images": len(media_files),

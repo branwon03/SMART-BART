@@ -1,4 +1,5 @@
 import tempfile
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -21,6 +22,7 @@ async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
+    submission_id = f"{uuid.uuid4().hex}"
     tmp_paths: list[Path] = []
 
     try:
@@ -42,7 +44,7 @@ async def submissions(
         query = build_query(description)
         result = chat_with_media(
             invoke_url, [str(p) for p in tmp_paths], query,
-            description=description,
+            description=description, submission_id=submission_id
         )
         return result
 
