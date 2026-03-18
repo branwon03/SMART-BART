@@ -1,4 +1,5 @@
 from datetime import datetime
+import uuid
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -11,9 +12,11 @@ MOCK_RESULT = {
     "description": "Exposed wiring near platform edge",
     "num_images": 1,
     "timestamp": datetime.utcnow().isoformat(),
+    # Placeholder; overridden in the test via `chat_with_media` mock args.
+    "submission_id": "00000000000000000000000000000000",
 }
 
-EXPECTED_KEYS = {"classification", "description", "num_images", "timestamp"}
+EXPECTED_KEYS = {"submission_id", "classification", "description", "num_images", "timestamp"}
 
 
 def _make_png_bytes() -> bytes:
@@ -32,9 +35,16 @@ def _make_png_bytes() -> bytes:
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
 
-@patch("app.main.chat_with_media", return_value=MOCK_RESULT)
+@patch("app.main.chat_with_media")
 def test_submit_with_image(mock_chat):
     png = _make_png_bytes()
+
+    def _side_effect(*args, **kwargs):
+        # `submission_id` is generated in `app.main` and passed into `chat_with_media`.
+        submission_id = kwargs.get("submission_id")
+        return {**MOCK_RESULT, "submission_id": submission_id}
+
+    mock_chat.side_effect = _side_effect
     resp = client.post(
         "/submissions",
         files=[("media", ("test.png", png, "image/png"))],
@@ -55,12 +65,18 @@ def test_submit_with_image(mock_chat):
 
     mock_chat.assert_called_once()
 
+    submission_id = mock_chat.call_args.kwargs["submission_id"]
+    # Validate it's a UUID-like string (the endpoint uses `uuid.uuid4().hex`).
+    uuid.UUID(submission_id)
+    assert body["submission_id"] == submission_id
+
 
 @patch("app.main.chat_with_media", return_value={
     "classification": "BUILDINGS",
     "description": None,
     "num_images": 2,
     "timestamp": datetime.utcnow().isoformat(),
+    "submission_id": "00000000000000000000000000000000",
 })
 def test_submit_multiple_images(mock_chat):
     png = _make_png_bytes()
@@ -86,6 +102,7 @@ def test_submit_multiple_images(mock_chat):
     "description": "Spill on station floor",
     "num_images": 0,
     "timestamp": datetime.utcnow().isoformat(),
+    "submission_id": "00000000000000000000000000000000",
 })
 def test_submit_description_only(mock_chat):
     resp = client.post(
