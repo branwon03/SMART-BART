@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import datetime
 
 
-DATABASE_URL = "postgresql://user:password@localhost/dbname"
+DATABASE_URL = "postgresql://user:CSE_312!@localhost/bart_db"
 
 
 engine = create_engine(DATABASE_URL)
