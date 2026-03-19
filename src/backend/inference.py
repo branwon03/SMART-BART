@@ -155,7 +155,7 @@ def chat_with_media(
 
     return {
         "submission_id": submission_id,
-        "classification": classification,
+        "discipline": classification,
         "description": description,
         "num_images": len(media_files),
         "timestamp": datetime.utcnow().isoformat(),
