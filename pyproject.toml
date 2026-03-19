@@ -5,9 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.135.1",
     "python-dotenv>=1.2.2",
     "requests>=2.32.5",
+    "sqlalchemy>=2.0.0",
+    "psycopg[binary]>=3.2.0",
 ]
 
 [tool.uv]
@@ -33,7 +36,7 @@ changelog_file = "CHANGELOG.md"
 build_command = "python -m pip install uv && python -m uv build"
 
 [tool.fastapi]
-entrypoint = "src.app.main:app"
+entrypoint = "src.backend.main:app"
 
 [dependency-groups]
 dev = [
