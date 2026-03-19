@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+# New imports for Database connection
+from sqlalchemy import create_engine, Column, String, Integer, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
 """
 from inference import (
     build_query,
@@ -18,7 +23,28 @@ from inference import (
 
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
-# CORS
+# --- DATABASE CONFIGURATION ---
+DATABASE_URL = "postgresql://postgres:CSE_312!@localhost:5432/bart_db"
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Define the Incident Table Schema
+class Incident(Base):
+    __tablename__ = "incidents"
+    incident_id = Column(String, primary_key=True, index=True)
+    location_id = Column(String)
+    discipline = Column(String)
+    status = Column(String)
+    vlm_summary = Column(String)
+    issue_priority = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# Create the tables in Postgres if they don't exist
+Base.metadata.create_all(bind=engine)
+
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,9 +52,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#  Mock Data for Dashboard
+# --- COMMENTED OUT MOCK DATA (FOR REFERENCE) ---
+"""
 now = datetime.now()
-
 incidents = [
     {"incident_id": "1", "location_id": "Montgomery St", "discipline": "Electrical", "status": "In Progress", "vlm_summary": "Dysfunctional outlet in ticket office", "issue_priority": 1, "created_at": (now - timedelta(minutes=30)).isoformat()},
     {"incident_id": "2", "location_id": "Powell St", "discipline": "Fare Collection", "status": "In Progress", "vlm_summary": "Broken outlet in office", "issue_priority": 2, "created_at": (now - timedelta(hours=1)).isoformat()},
@@ -41,8 +67,10 @@ photo_reports = [
     {"evidence_id": "ev4", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "out of service", "user_priority": "low"},
     {"evidence_id": "ev5", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "not scanning", "user_priority": "medium"}
 ]
+"""
 
-# Existing Team Endpoints 
+# --- API ENDPOINTS ---
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
@@ -52,10 +80,10 @@ async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
-    submission_id = f"{uuid.uuid4().hex}"
     tmp_paths: list[Path] = []
     try:
         for upload in media:
+            # Note: get_extension and kSupportedList come from inference.py
             ext = get_extension(upload.filename or "")
             if ext not in kSupportedList:
                 raise HTTPException(
@@ -79,15 +107,19 @@ async def submissions(
         for p in tmp_paths:
             p.unlink(missing_ok=True)
 
-
-# dashboard endpoints
+# Dashboard endpoints updated to use the DB
 @app.get("/api/incidents")
 async def get_incidents():
-    return incidents
+    db = SessionLocal()
+    try:
+        # Fetches all rows from the Postgres 'incidents' table
+        return db.query(Incident).all()
+    finally:
+        db.close()
 
 @app.get("/api/photo-reports/{incident_id}")
 async def get_evidence(incident_id: str):
-    return [report for report in photo_reports if report["incident_id"] == incident_id]
-
-# web app endpoints
-#...
+    # Keeping this as a mock return for now until you create a PhotoReport table
+    return [
+        {"evidence_id": "ev1", "incident_id": incident_id, "image_url": "/logo.png", "user_context": "Database report linked successfully.", "user_priority": "medium"}
+    ]
