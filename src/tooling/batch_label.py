@@ -17,7 +17,7 @@ import time
 
 import requests
 
-from inference import (
+from app.inference import (
     BASE_QUERY,
     DISCIPLINES,
     encode_media_base64,

@@ -14,15 +14,15 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
 
-"""
-from inference import (
+
+from app.inference import (
     build_query,
     chat_with_media,
     get_extension,
     invoke_url,
     kSupportedList,
 )
-"""
+
 
 # DATABASE CONFIGURATION
 DATABASE_URL = "postgresql://postgres:CSE_312!@localhost:5432/bart_db"
@@ -70,7 +70,7 @@ app.add_middleware(
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-"""""
+
 @app.post("/submissions")
 async def submissions(
     media: list[UploadFile] = File(default=[]),
@@ -102,7 +102,7 @@ async def submissions(
     finally:
         for p in tmp_paths:
             p.unlink(missing_ok=True)
-"""
+
 
 # Dashboard endpoints using DB
 @app.get("/api/incidents")
