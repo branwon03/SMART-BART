@@ -10,6 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, String, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
+
+app = FastAPI(title="BART Incident Classifier & Dashboard API")
+
 
 """
 from inference import (
@@ -21,39 +25,38 @@ from inference import (
 )
 """
 
-app = FastAPI(title="BART Incident Classifier & Dashboard API")
-
-# --- DATABASE CONFIGURATION ---
+# DATABASE CONFIGURATION
 DATABASE_URL = "postgresql://postgres:CSE_312!@localhost:5432/bart_db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Define the Incident Table Schema
 class Incident(Base):
     __tablename__ = "incidents"
-    incident_id = Column(String, primary_key=True, index=True)
-    location_id = Column(String)
-    discipline = Column(String)
+    incident_id = Column(String, primary_key=True)
     status = Column(String)
+    issue_priority = Column(String)
+    discipline = Column(String)
     vlm_summary = Column(String)
-    issue_priority = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    location_id = Column(String)
+    created_at = Column(DateTime)
 
-# Define the photo-reports Table Schema
 class PhotoReport(Base):
     __tablename__ = "photo_reports"
-    evidence_id = Column(String, primary_key=True, index=True)
-    incident_id = Column(String)
+    evidence_id = Column(String, primary_key=True)
+    submission_id = Column(String) # New field!
+    incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
+    embedding = Column(String) # Or JSON/LargeBinary depending on your vector tool
+    submitted_at = Column(DateTime)
     user_context = Column(String)
-    user_priority = Column(String)
+    found_priority = Column(String)
 
 # Create the tables in Postgres if they don't exist
 Base.metadata.create_all(bind=engine)
 
-# --- CORS ---
+# CORS 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,9 +64,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- COMMENTED OUT MOCK DATA (FOR REFERENCE) ---
 
-# --- API ENDPOINTS ---
+# API ENDPOINTS
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
@@ -74,10 +76,10 @@ async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
+    
     tmp_paths: list[Path] = []
     try:
         for upload in media:
-            # Note: get_extension and kSupportedList come from inference.py
             ext = get_extension(upload.filename or "")
             if ext not in kSupportedList:
                 raise HTTPException(
@@ -101,12 +103,12 @@ async def submissions(
         for p in tmp_paths:
             p.unlink(missing_ok=True)
 
-# Dashboard endpoints updated to use the DB
+# Dashboard endpoints using DB
 @app.get("/api/incidents")
 async def get_incidents():
     db = SessionLocal()
     try:
-        # Fetches all rows from the Postgres 'incidents' table
+        # Fetches all rows from the Postgres incidents table
         return db.query(Incident).all()
     finally:
         db.close()
@@ -115,7 +117,7 @@ async def get_incidents():
 async def get_evidence(incident_id: str):
     db = SessionLocal()
     try:
-        # This now queries your Postgres 'photo_reports' table
+        # This now queries your Postgres photo_reports table
         reports = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
         return reports
     finally:
