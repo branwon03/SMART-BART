@@ -1,27 +1,65 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
-import datetime
 import os
-from dotenv import load_dotenv
+import re
 from pathlib import Path
+
+from dotenv import load_dotenv
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    String,
+    create_engine,
+)
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg://postgres:CSE_312!@db:5432/bart_db",
+)
+DATABASE_URL = re.sub(r"^postgresql://", "postgresql+psycopg://", DATABASE_URL)
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class MaintenanceRequest(Base):
-    __tablename__ = "maintenance_requests"
 
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String)
-    station = Column(String)
-    labels = Column(String)  
-    urgency = Column(String)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+# ── Models ────────────────────────────────────────────────────────────────────
+
+class Incident(Base):
+    __tablename__ = "incidents"
+
+    incident_id = Column(String, primary_key=True)
+    status = Column(String)
+    issue_priority = Column(String)
+    discipline = Column(String)
+    vlm_summary = Column(String)
+    location_id = Column(String)
+    created_at = Column(DateTime)
+
+
+class PhotoReport(Base):
+    __tablename__ = "photo_reports"
+
+    evidence_id = Column(String, primary_key=True)
+    submission_id = Column(String)
+    incident_id = Column(String, ForeignKey("incidents.incident_id"))
+    image_url = Column(String)
+    embedding = Column(String)
+    submitted_at = Column(DateTime)
+    user_context = Column(String)
+    found_priority = Column(String)
+
+
+# ── Dependency for FastAPI ────────────────────────────────────────────────────
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def init_db():
