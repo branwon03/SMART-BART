@@ -3,7 +3,7 @@ import uuid
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from app.main import app
+from src.backend.main import app
 
 client = TestClient(app)
 
@@ -34,8 +34,7 @@ def _make_png_bytes() -> bytes:
     iend_chunk = struct.pack(">I", 0) + iend + struct.pack(">I", zlib.crc32(iend) & 0xFFFFFFFF)
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
-
-@patch("app.main.chat_with_media")
+@patch("src.backend.inference.chat_with_media", return_value=MOCK_RESULT)
 def test_submit_with_image(mock_chat):
     png = _make_png_bytes()
 
