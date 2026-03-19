@@ -70,6 +70,7 @@ app.add_middleware(
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
+"""""
 @app.post("/submissions")
 async def submissions(
     media: list[UploadFile] = File(default=[]),
@@ -101,6 +102,7 @@ async def submissions(
     finally:
         for p in tmp_paths:
             p.unlink(missing_ok=True)
+"""
 
 # Dashboard endpoints using DB
 @app.get("/api/incidents")
