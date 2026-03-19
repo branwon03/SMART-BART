@@ -41,6 +41,15 @@ class Incident(Base):
     issue_priority = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# Define the photo-reports Table Schema
+class PhotoReport(Base):
+    __tablename__ = "photo_reports"
+    evidence_id = Column(String, primary_key=True, index=True)
+    incident_id = Column(String)
+    image_url = Column(String)
+    user_context = Column(String)
+    user_priority = Column(String)
+
 # Create the tables in Postgres if they don't exist
 Base.metadata.create_all(bind=engine)
 
@@ -53,21 +62,6 @@ app.add_middleware(
 )
 
 # --- COMMENTED OUT MOCK DATA (FOR REFERENCE) ---
-"""
-now = datetime.now()
-incidents = [
-    {"incident_id": "1", "location_id": "Montgomery St", "discipline": "Electrical", "status": "In Progress", "vlm_summary": "Dysfunctional outlet in ticket office", "issue_priority": 1, "created_at": (now - timedelta(minutes=30)).isoformat()},
-    {"incident_id": "2", "location_id": "Powell St", "discipline": "Fare Collection", "status": "In Progress", "vlm_summary": "Broken outlet in office", "issue_priority": 2, "created_at": (now - timedelta(hours=1)).isoformat()},
-]
-
-photo_reports = [
-    {"evidence_id": "ev1", "incident_id": "1", "image_url": "/mock_outlet_1.jpg", "user_context": "the outlet doesn't work", "user_priority": "medium"},
-    {"evidence_id": "ev2", "incident_id": "1", "image_url": "/mock_outlet_1.jpg", "user_context": "The top socket does not work", "user_priority": "medium"},
-    {"evidence_id": "ev3", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "Scanner is not turning on", "user_priority": "low"},
-    {"evidence_id": "ev4", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "out of service", "user_priority": "low"},
-    {"evidence_id": "ev5", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "not scanning", "user_priority": "medium"}
-]
-"""
 
 # --- API ENDPOINTS ---
 
@@ -119,7 +113,10 @@ async def get_incidents():
 
 @app.get("/api/photo-reports/{incident_id}")
 async def get_evidence(incident_id: str):
-    # Keeping this as a mock return for now until you create a PhotoReport table
-    return [
-        {"evidence_id": "ev1", "incident_id": incident_id, "image_url": "/logo.png", "user_context": "Database report linked successfully.", "user_priority": "medium"}
-    ]
+    db = SessionLocal()
+    try:
+        # This now queries your Postgres 'photo_reports' table
+        reports = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
+        return reports
+    finally:
+        db.close()
