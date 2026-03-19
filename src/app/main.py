@@ -5,11 +5,13 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-# New imports for Database connection
 from sqlalchemy import create_engine, Column, String, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
+
+import uuid
+
 
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
@@ -51,8 +53,7 @@ class Incident(Base):
 
 class PhotoReport(Base):
     __tablename__ = "photo_reports"
-    # evidence_id is now an Integer and tells the DB to handle the counting
-    evidence_id = Column(Integer, primary_key=True, autoincrement=True) 
+    evidence_id = Column(Integer, primary_key=True, autoincrement=True)  
     submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
@@ -74,12 +75,9 @@ app.add_middleware(
 
 
 # API ENDPOINTS
-
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
-
-import uuid
 
 @app.post("/submissions")
 async def submissions(
@@ -111,16 +109,16 @@ async def submissions(
         # 3. Store the report in Postgres
         new_report = PhotoReport(
             submission_id=str(uuid.uuid4())[:8],
-            incident_id="1",  # <--- THIS IS THE LINK. Hardcoded to '2'
+            incident_id="1",  # <--- THIS IS THE LINK. Hardcoded to '2'                     #hardcoded
             image_url="test_outlet.jpg",                                                    #hardcoded
             submitted_at=datetime.utcnow(),
             user_context=description or "No description provided",
-            found_priority="medium",
-            embedding=None
+            found_priority="medium",                                                        #hardcoded
+            embedding=None                                                                  #hardcoded
         )
         
         db.add(new_report)
-        db.commit() # This makes it real in Postgres!
+        db.commit() 
 
         return result
 
@@ -134,21 +132,20 @@ async def submissions(
             p.unlink(missing_ok=True)
 
 
-# Dashboard endpoints using DB
+# Dashboard - get incidents
 @app.get("/api/incidents")
 async def get_incidents():
     db = SessionLocal()
     try:
-        # Fetches all rows from the Postgres incidents table
         return db.query(Incident).all()
     finally:
         db.close()
 
+# Dashboard - get reports
 @app.get("/api/photo-reports/{incident_id}")
 async def get_evidence(incident_id: str):
     db = SessionLocal()
     try:
-        # This now queries your Postgres photo_reports table
         reports = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
         return reports
     finally:
