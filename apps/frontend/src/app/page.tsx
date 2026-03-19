@@ -1,29 +1,29 @@
 "use client"
 import { useEffect, useState } from 'react';
-import Link from "next/link";
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
+import { API_BASE_URL } from "../lib/config";
 
 
 export default function MaintenanceDashboard() {
   const [data, setData] = useState<Incident[]>([]);
-  const [activeTab, setActiveTab] = useState("Electrical");
+  const [activeTab, setActiveTab] = useState("ELECTRICAL");
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
 
-
   const disciplines = [
-    "Fare Collection", "Buildings", "Comms",
-    "Elevator & Escalator", "Grounds", "Mechanical",
-    "System Service", "Structures", "Electrical"
+    "FARE COLLECTION", "BUILDINGS", "COMMS",
+    "ELEVATOR AND ESCALATOR", "GROUNDS", "MECHANICAL",
+    "SYSTEM SERVICE", "STRUCTURES", "TRACK",
+    "ELECTRICAL", "RSS",
   ];
 
 
   const filteredData = data.filter((item) => item.discipline === activeTab);
 
 
-  const formatElapsed = (isoString: string | undefined) => {
+  const formatElapsed = (isoString: string | null | undefined) => {
     if (!isoString) return "0m";
     const start = new Date(isoString);
     const diffInMs = now.getTime() - start.getTime();
@@ -97,12 +97,6 @@ export default function MaintenanceDashboard() {
 
 
         <nav className="flex-1 space-y-1 overflow-y-auto mt-8">
-          <Link
-            href="/submit"
-            className="block w-full text-left px-4 py-2.5 rounded-lg font-bold transition-all text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-          >
-            Submit report
-          </Link>
           {disciplines.map((item) => (
             <button
               key={item}
@@ -279,9 +273,9 @@ export default function MaintenanceDashboard() {
 
               <div className="flex flex-col items-center">
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
-                  {evidence.length > 0 ? (
+                  {evidence.length > 0 && evidence[0].image_url ? (
                     <img
-                      src={evidence[0].image_url}
+                      src={`${API_BASE_URL}${evidence[0].image_url}`}
                       className="w-full h-full object-cover"
                       alt="Main evidence"
                     />
