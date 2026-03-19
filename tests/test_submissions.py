@@ -1,3 +1,6 @@
+"""
+Tests for the /submissions endpoint contract (response shape, validation).
+"""
 from datetime import datetime
 import uuid
 from unittest.mock import patch
@@ -8,19 +11,17 @@ from src.backend.main import app
 client = TestClient(app)
 
 MOCK_RESULT = {
-    "classification": "ELECTRICAL",
+    "discipline": "ELECTRICAL",
     "description": "Exposed wiring near platform edge",
     "num_images": 1,
     "timestamp": datetime.utcnow().isoformat(),
-    # Placeholder; overridden in the test via `chat_with_media` mock args.
     "submission_id": "00000000000000000000000000000000",
 }
 
-EXPECTED_KEYS = {"submission_id", "classification", "description", "num_images", "timestamp"}
+EXPECTED_KEYS = {"incident_id", "submission_id", "discipline", "description", "num_images", "timestamp"}
 
 
 def _make_png_bytes() -> bytes:
-    """Minimal valid 1x1 PNG so the extension check passes."""
     import struct
     import zlib
     sig = b"\x89PNG\r\n\x1a\n"
@@ -34,14 +35,13 @@ def _make_png_bytes() -> bytes:
     iend_chunk = struct.pack(">I", 0) + iend + struct.pack(">I", zlib.crc32(iend) & 0xFFFFFFFF)
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
+
 @patch("src.backend.main.chat_with_media", return_value=MOCK_RESULT)
 def test_submit_with_image(mock_chat):
     png = _make_png_bytes()
 
     def _side_effect(*args, **kwargs):
-        # `submission_id` is generated in `app.main` and passed into `chat_with_media`.
-        submission_id = kwargs.get("submission_id")
-        return {**MOCK_RESULT, "submission_id": submission_id}
+        return {**MOCK_RESULT, "submission_id": kwargs.get("submission_id")}
 
     mock_chat.side_effect = _side_effect
     resp = client.post(
@@ -53,7 +53,7 @@ def test_submit_with_image(mock_chat):
 
     body = resp.json()
     assert set(body.keys()) == EXPECTED_KEYS
-    assert body["classification"] in [
+    assert body["discipline"] in [
         "FARE COLLECTION", "BUILDINGS", "COMMS", "ELEVATOR AND ESCALATOR",
         "GROUNDS", "MECHANICAL", "SYSTEM SERVICE", "STRUCTURES",
         "TRACK", "ELECTRICAL", "RSS",
@@ -65,19 +65,19 @@ def test_submit_with_image(mock_chat):
     mock_chat.assert_called_once()
 
     submission_id = mock_chat.call_args.kwargs["submission_id"]
-    # Validate it's a UUID-like string (the endpoint uses `uuid.uuid4().hex`).
     uuid.UUID(submission_id)
     assert body["submission_id"] == submission_id
 
 
-@patch("src.backend.main.chat_with_media", return_value={
-    "classification": "BUILDINGS",
-    "description": None,
-    "num_images": 2,
-    "timestamp": datetime.utcnow().isoformat(),
-    "submission_id": "00000000000000000000000000000000",
-})
+@patch("src.backend.main.chat_with_media")
 def test_submit_multiple_images(mock_chat):
+    mock_chat.side_effect = lambda *a, **kw: {
+        "discipline": "BUILDINGS",
+        "description": None,
+        "num_images": 2,
+        "timestamp": datetime.utcnow().isoformat(),
+        "submission_id": kw.get("submission_id"),
+    }
     png = _make_png_bytes()
     resp = client.post(
         "/submissions",
@@ -91,19 +91,20 @@ def test_submit_multiple_images(mock_chat):
     body = resp.json()
     assert set(body.keys()) == EXPECTED_KEYS
     assert body["num_images"] == 2
-    assert body["classification"] == "BUILDINGS"
+    assert body["discipline"] == "BUILDINGS"
 
     mock_chat.assert_called_once()
 
 
-@patch("src.backend.main.chat_with_media", return_value={
-    "classification": "SYSTEM SERVICE",
-    "description": "Spill on station floor",
-    "num_images": 0,
-    "timestamp": datetime.utcnow().isoformat(),
-    "submission_id": "00000000000000000000000000000000",
-})
+@patch("src.backend.main.chat_with_media")
 def test_submit_description_only(mock_chat):
+    mock_chat.side_effect = lambda *a, **kw: {
+        "discipline": "SYSTEM SERVICE",
+        "description": "Spill on station floor",
+        "num_images": 0,
+        "timestamp": datetime.utcnow().isoformat(),
+        "submission_id": kw.get("submission_id"),
+    }
     resp = client.post(
         "/submissions",
         data={"description": "Spill on station floor"},
@@ -112,7 +113,7 @@ def test_submit_description_only(mock_chat):
 
     body = resp.json()
     assert set(body.keys()) == EXPECTED_KEYS
-    assert body["classification"] == "SYSTEM SERVICE"
+    assert body["discipline"] == "SYSTEM SERVICE"
     assert body["description"] == "Spill on station floor"
     assert body["num_images"] == 0
 
@@ -132,11 +133,11 @@ def test_submit_unsupported_file_type():
 
 
 @patch("src.backend.main.chat_with_media", return_value=None)
-def test_submit_api_failure_returns_null(mock_chat):
+def test_submit_api_failure_returns_502(mock_chat):
     png = _make_png_bytes()
     resp = client.post(
         "/submissions",
         files=[("media", ("test.png", png, "image/png"))],
     )
-    assert resp.status_code == 200
-    assert resp.json() is None
+    assert resp.status_code == 502
+    assert "Inference API unavailable" in resp.json()["detail"]
