@@ -18,6 +18,7 @@ dependencies = [
 package = true
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore deprecations from vbuild using pkgutil.find_loader (pending upstream fix)
