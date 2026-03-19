@@ -1,12 +1,15 @@
 "use client"
 import { useEffect, useState } from 'react';
+import Link from "next/link";
+import type { Incident, PhotoReport } from "../types/api";
+import { getIncidents, getPhotoReports } from "../lib/incidents";
 
 
 export default function MaintenanceDashboard() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Incident[]>([]);
   const [activeTab, setActiveTab] = useState("Electrical");
-  const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
-  const [evidence, setEvidence] = useState<any[]>([]);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
 
 
@@ -17,7 +20,7 @@ export default function MaintenanceDashboard() {
   ];
 
 
-  const filteredData = data.filter((item: any) => item.discipline === activeTab);
+  const filteredData = data.filter((item) => item.discipline === activeTab);
 
 
   const formatElapsed = (isoString: string | undefined) => {
@@ -33,13 +36,11 @@ export default function MaintenanceDashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/incidents');
-      if (!res.ok) throw new Error("Server Error");
-      const json = await res.json();
+      const json = await getIncidents();
       setData(json);
      
       if (selectedIncident) {
-        const updated = json.find((i: any) => i.incident_id === selectedIncident.incident_id);
+        const updated = json.find((i) => i.incident_id === selectedIncident.incident_id);
         if (updated) setSelectedIncident(updated);
       }
     } catch (err) {
@@ -50,9 +51,7 @@ export default function MaintenanceDashboard() {
 
   const fetchEvidence = async (incidentId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/photo-reports/${incidentId}`);
-      if (!res.ok) throw new Error("Evidence Fetch Error");
-      const json = await res.json();
+      const json = await getPhotoReports(incidentId);
       setEvidence(json);
     } catch (err) {
       console.error("Fetch evidence failed:", err);
@@ -98,6 +97,12 @@ export default function MaintenanceDashboard() {
 
 
         <nav className="flex-1 space-y-1 overflow-y-auto mt-8">
+          <Link
+            href="/submit"
+            className="block w-full text-left px-4 py-2.5 rounded-lg font-bold transition-all text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+          >
+            Submit report
+          </Link>
           {disciplines.map((item) => (
             <button
               key={item}
