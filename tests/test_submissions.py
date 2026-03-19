@@ -34,7 +34,7 @@ def _make_png_bytes() -> bytes:
     iend_chunk = struct.pack(">I", 0) + iend + struct.pack(">I", zlib.crc32(iend) & 0xFFFFFFFF)
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
-@patch("src.backend.inference.chat_with_media", return_value=MOCK_RESULT)
+@patch("src.backend.main.chat_with_media", return_value=MOCK_RESULT)
 def test_submit_with_image(mock_chat):
     png = _make_png_bytes()
 
@@ -70,7 +70,7 @@ def test_submit_with_image(mock_chat):
     assert body["submission_id"] == submission_id
 
 
-@patch("app.main.chat_with_media", return_value={
+@patch("src.backend.main.chat_with_media", return_value={
     "classification": "BUILDINGS",
     "description": None,
     "num_images": 2,
@@ -96,7 +96,7 @@ def test_submit_multiple_images(mock_chat):
     mock_chat.assert_called_once()
 
 
-@patch("app.main.chat_with_media", return_value={
+@patch("src.backend.main.chat_with_media", return_value={
     "classification": "SYSTEM SERVICE",
     "description": "Spill on station floor",
     "num_images": 0,
@@ -131,7 +131,7 @@ def test_submit_unsupported_file_type():
     assert "mp4" in body["detail"]
 
 
-@patch("app.main.chat_with_media", return_value=None)
+@patch("src.backend.main.chat_with_media", return_value=None)
 def test_submit_api_failure_returns_null(mock_chat):
     png = _make_png_bytes()
     resp = client.post(
