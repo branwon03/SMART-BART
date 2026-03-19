@@ -33,7 +33,7 @@ export default function MaintenanceDashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/incidents');
+      const res = await fetch('http://127.0.0.1:8000/api/incidents');
       if (!res.ok) throw new Error("Server Error");
       const json = await res.json();
       setData(json);

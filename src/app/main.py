@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+"""
 from inference import (
     build_query,
     chat_with_media,
@@ -12,6 +13,7 @@ from inference import (
     invoke_url,
     kSupportedList,
 )
+"""
 
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
@@ -33,10 +35,10 @@ incidents = [
 
 photo_reports = [
     {"evidence_id": "ev1", "incident_id": "1", "image_url": "/mock_outlet_1.jpg", "user_context": "the outlet doesn't work", "user_priority": "medium"},
-    {"evidence_id": "ev2", "incident_id": "1", "image_url": "/mock_outlet_2.jpg", "user_context": "The top socket does not work", "user_priority": "medium"},
+    {"evidence_id": "ev2", "incident_id": "1", "image_url": "/mock_outlet_1.jpg", "user_context": "The top socket does not work", "user_priority": "medium"},
     {"evidence_id": "ev3", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "Scanner is not turning on", "user_priority": "low"},
-    {"evidence_id": "ev4", "incident_id": "2", "image_url": "/mock_scanner_2.jpg", "user_context": "out of service", "user_priority": "low"},
-    {"evidence_id": "ev5", "incident_id": "2", "image_url": "/mock_scanner_3.jpg", "user_context": "not scanning", "user_priority": "medium"}
+    {"evidence_id": "ev4", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "out of service", "user_priority": "low"},
+    {"evidence_id": "ev5", "incident_id": "2", "image_url": "/mock_scanner_1.jpg", "user_context": "not scanning", "user_priority": "medium"}
 ]
 
 # Existing Team Endpoints 
