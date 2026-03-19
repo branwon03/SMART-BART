@@ -14,8 +14,16 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
 
+"""
+from inference import (
+    build_query,
+    chat_with_media,
+    get_extension,
+    invoke_url,
+    kSupportedList,
+)"""
 
-from app.inference import (
+from gemini_inference import (
     build_query,
     chat_with_media,
     get_extension,
