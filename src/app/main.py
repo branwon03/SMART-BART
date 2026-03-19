@@ -14,22 +14,22 @@ from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
 
-"""
+
 from inference import (
     build_query,
     chat_with_media,
     get_extension,
     invoke_url,
     kSupportedList,
-)"""
-
+)
+"""
 from gemini_inference import (
     build_query,
     chat_with_media,
     get_extension,
     invoke_url,
     kSupportedList,
-)
+)"""
 
 
 # DATABASE CONFIGURATION
@@ -51,11 +51,12 @@ class Incident(Base):
 
 class PhotoReport(Base):
     __tablename__ = "photo_reports"
-    evidence_id = Column(String, primary_key=True)
-    submission_id = Column(String) # New field!
+    # evidence_id is now an Integer and tells the DB to handle the counting
+    evidence_id = Column(Integer, primary_key=True, autoincrement=True) 
+    submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
-    embedding = Column(String) # Or JSON/LargeBinary depending on your vector tool
+    embedding = Column(String)
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)
@@ -78,36 +79,57 @@ app.add_middleware(
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
+import uuid
 
 @app.post("/submissions")
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
 ):
-    
     tmp_paths: list[Path] = []
+    db = SessionLocal() # Start DB Session
     try:
+        # 1. Save uploaded files to temp storage
         for upload in media:
             ext = get_extension(upload.filename or "")
-            if ext not in kSupportedList:
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"Unsupported file type '.{ext}'. Accepted: {', '.join(sorted(kSupportedList))}",
-                )
-
             suffix = f".{ext}"
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
             tmp.write(await upload.read())
             tmp.close()
             tmp_paths.append(Path(tmp.name))
 
+        # 2. Get the VLM Classification
         query = build_query(description)
         result = chat_with_media(
             invoke_url, [str(p) for p in tmp_paths], query,
             description=description,
         )
+
+        if not result:
+            raise HTTPException(status_code=500, detail="VLM failed to respond")
+
+        # 3. Store the report in Postgres
+        new_report = PhotoReport(
+            submission_id=str(uuid.uuid4())[:8],
+            incident_id="1",  # <--- THIS IS THE LINK. Hardcoded to '2'
+            image_url="test_outlet.jpg",                                                    #hardcoded
+            submitted_at=datetime.utcnow(),
+            user_context=description or "No description provided",
+            found_priority="medium",
+            embedding=None
+        )
+        
+        db.add(new_report)
+        db.commit() # This makes it real in Postgres!
+
         return result
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
+        db.close()
         for p in tmp_paths:
             p.unlink(missing_ok=True)
 
