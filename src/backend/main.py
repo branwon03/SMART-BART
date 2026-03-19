@@ -2,11 +2,15 @@ import tempfile
 import uuid
 from pathlib import Path
 from datetime import datetime, timedelta
-
+from src.backend.inference import (
+    chat_with_media,
+    build_query,
+    get_extension,
+    invoke_url,
+    kSupportedList,
+)
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-
-# New imports for Database connection
 from sqlalchemy import create_engine, Column, String, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
