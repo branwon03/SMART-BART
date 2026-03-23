@@ -1,4 +1,3 @@
-
 import argparse
 import base64
 import os
@@ -9,7 +8,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-env_path = Path(__file__).resolve().parent / ".env"
+env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
 invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
@@ -99,6 +98,7 @@ def chat_with_media(
     query: str,
     description: str | None = None,
     stream: bool = False,
+    submission_id: str | None = None,
 ):
     assert isinstance(media_files, list), f"{media_files}"
 
@@ -154,7 +154,8 @@ def chat_with_media(
     print(classification)
 
     return {
-        "classification": classification,
+        "submission_id": submission_id,
+        "discipline": classification,
         "description": description,
         "num_images": len(media_files),
         "timestamp": datetime.utcnow().isoformat(),
