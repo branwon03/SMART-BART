@@ -1,3 +1,7 @@
+node_modules/
+.next/
+dist/
+build/
 ___pycache__/
 *.py[cod]
 *$py.class
@@ -18,3 +22,4 @@ venv*/
 
 BART_Image_Classifier.egg-info/
 Akash's Dataset 1 (jpeg)_resized/
+uploads/
