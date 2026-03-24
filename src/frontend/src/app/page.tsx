@@ -1,42 +1,29 @@
 "use client"
 import { useEffect, useState } from 'react';
+import type { Incident, PhotoReport } from "../types/api";
+import { getIncidents, getPhotoReports } from "../lib/incidents";
+import { API_BASE_URL } from "../lib/config";
+
 
 export default function MaintenanceDashboard() {
-  const [data, setData] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState("Electrical");
-  const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
-  const [evidence, setEvidence] = useState<any[]>([]);
+  const [data, setData] = useState<Incident[]>([]);
+  const [activeTab, setActiveTab] = useState("ELECTRICAL");
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
 
   const disciplines = [
-    "Fare Collection", "Buildings", "Comms",
-    "Elevator & Escalator", "Grounds", "Mechanical",
-    "System Service", "Structures", "Electrical"
+    "FARE COLLECTION", "BUILDINGS", "COMMS",
+    "ELEVATOR AND ESCALATOR", "GROUNDS", "MECHANICAL",
+    "SYSTEM SERVICE", "STRUCTURES", "TRACK",
+    "ELECTRICAL", "RSS",
   ];
 
-  const filteredData = data.filter((item: any) => item.discipline === activeTab);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'critical': return 'text-red-600';
-      case 'high':     return 'text-orange-500';
-      case 'medium':   return 'text-yellow-500';
-      case 'low':      return 'text-gray-400';
-      default:         return 'text-slate-500';
-    }
-  };
+  const filteredData = data.filter((item) => item.discipline === activeTab);
 
-  const getPriorityBg = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'critical': return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]';
-      case 'high':     return 'bg-orange-500';
-      case 'medium':   return 'bg-yellow-400';
-      case 'low':      return 'bg-gray-400';
-      default:         return 'bg-slate-300';
-    }
-  };
 
-  const formatElapsed = (isoString: string | undefined) => {
+  const formatElapsed = (isoString: string | null | undefined) => {
     if (!isoString) return "0m";
     const start = new Date(isoString);
     const diffInMs = now.getTime() - start.getTime();
@@ -46,15 +33,14 @@ export default function MaintenanceDashboard() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
+
   const fetchData = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/incidents');
-      if (!res.ok) throw new Error("Server Error");
-      const json = await res.json();
+      const json = await getIncidents();
       setData(json);
      
       if (selectedIncident) {
-        const updated = json.find((i: any) => i.incident_id === selectedIncident.incident_id);
+        const updated = json.find((i) => i.incident_id === selectedIncident.incident_id);
         if (updated) setSelectedIncident(updated);
       }
     } catch (err) {
@@ -62,16 +48,16 @@ export default function MaintenanceDashboard() {
     }
   };
 
+
   const fetchEvidence = async (incidentId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/photo-reports/${incidentId}`);
-      if (!res.ok) throw new Error("Evidence Fetch Error");
-      const json = await res.json();
+      const json = await getPhotoReports(incidentId);
       setEvidence(json);
     } catch (err) {
       console.error("Fetch evidence failed:", err);
     }
   };
+
 
   useEffect(() => {
     fetchData();
@@ -83,6 +69,7 @@ export default function MaintenanceDashboard() {
     };
   }, []);
 
+
   useEffect(() => {
     if (selectedIncident) {
       fetchEvidence(selectedIncident.incident_id);
@@ -90,6 +77,7 @@ export default function MaintenanceDashboard() {
       setEvidence([]);
     }
   }, [selectedIncident?.incident_id]);
+
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -106,6 +94,7 @@ export default function MaintenanceDashboard() {
             Maintenance System
           </div>
         </div>
+
 
         <nav className="flex-1 space-y-1 overflow-y-auto mt-8">
           {disciplines.map((item) => (
@@ -126,11 +115,13 @@ export default function MaintenanceDashboard() {
           ))}
         </nav>
 
+
         <div className="pt-6 border-t border-slate-100 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">AS</div>
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Akash Sant</div>
         </div>
       </aside>
+
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 ml-64 relative">
@@ -148,6 +139,7 @@ export default function MaintenanceDashboard() {
             </div>
           </header>
 
+
           {/* TABLE SECTION */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between">
@@ -158,6 +150,7 @@ export default function MaintenanceDashboard() {
                  {filteredData.length} Total Records
                </div>
             </div>
+
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -189,12 +182,10 @@ export default function MaintenanceDashboard() {
                       >
                         <td className="p-5"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600" /></td>
                         <td className="p-5 font-bold text-slate-700">{item.vlm_summary}</td>
-                        <td className="p-5 font-mono text-xs text-slate-400">#{item.incident_id}</td>
-                        
+                        <td className="p-5 font-mono text-xs text-slate-400">#{item.incident_id.slice(0,8)}</td>
                         <td className="p-5">
-                          <div className={`h-1.5 w-10 rounded-full ${getPriorityBg(item.issue_priority)}`} />
+                          <div className={`h-1.5 w-10 rounded-full ${item.issue_priority === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]' : 'bg-yellow-400'}`} />
                         </td>
-
                         <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">{item.location_id}</td>
                         <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
                           {formatElapsed(item.created_at)}
@@ -207,6 +198,7 @@ export default function MaintenanceDashboard() {
             </div>
           </div>
         </main>
+
 
         {/* OVERLAY SIDEBAR */}
         {selectedIncident && (
@@ -226,13 +218,12 @@ export default function MaintenanceDashboard() {
                   <span>{selectedIncident.incident_id}</span>
                  
                   <span className="font-bold text-gray-700">Priority:</span>
-                  
-                  <span className={`font-bold ${getPriorityColor(selectedIncident.issue_priority)}`}>
-                    {selectedIncident.issue_priority}
+                  <span className={selectedIncident.issue_priority === 1 ? "text-black-500" : "text-yellow-600 font-bold"}>
+                    {selectedIncident.issue_priority === 1 ? "TODO" : "Standard"}
                   </span>
                  
                   <span className="font-bold text-gray-700">Status:</span>
-                  <span className="text-600 text-xs tracking-tight">
+                  <span className="text-700">
                     {selectedIncident.status}
                   </span>
                  
@@ -243,58 +234,64 @@ export default function MaintenanceDashboard() {
                   <span>{formatElapsed(selectedIncident.created_at)}</span>
                 </div>
 
+
                 <div className="absolute top-10 right-0 flex flex-col gap-2 w-32">
-                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors">
+                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100">
                     Begin
                   </button>
-                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors">
+                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100">
                     Edit Issue
                   </button>
-                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors">
+                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100">
                     Redirect
                   </button>
-                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors">
+                  <button className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100">
                     Merge/Split
                   </button>
                 </div>
               </div>
 
+
               <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2">Description:</h3>
-                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 h-48 overflow-y-auto text-[11px] leading-relaxed space-y-4 text-slate-600">
+                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 h-48 overflow-y-auto text-[11px] leading-relaxed space-y-4">
                   {evidence.map((ev: any, idx: number) => (
                     <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                       <div className="flex justify-between font-bold text-gray-500 mb-1">
                         <span>Report summary {idx + 1}:</span>
-                        <span>{formatElapsed(ev.submitted_at)} ago</span>
+                        <span>TODO:timestamp</span>
                       </div>
-                      <p className="text-gray-800 italic">- "{ev.user_context || "Rider report logged via web-app."}"</p>
+                      <p className="text-gray-800">- "{ev.user_context || "Rider report logged via web-app."}"</p>
+                     
+                     
                     </div>
                   ))}
                   {evidence.length === 0 && <p className="text-gray-400 italic text-center py-4">No historical reports found.</p>}
                 </div>
               </div>
 
+
               <div className="flex flex-col items-center">
-                <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none shadow-inner">
-                  {evidence.length > 0 ? (
+                <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
+                  {evidence.length > 0 && evidence[0].image_url ? (
                     <img
-                      src={evidence[0].image_url}
+                      src={`${API_BASE_URL}${evidence[0].image_url}`}
                       className="w-full h-full object-cover"
                       alt="Main evidence"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 font-bold uppercase tracking-widest text-[10px]">No Image Available</div>
+                    <div className="flex items-center justify-center h-full text-gray-400">No Image Available</div>
                   )}
-                  <button className="absolute left-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/70 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm">←</button>
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/70 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm">→</button>
+                  <button className="absolute left-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">←</button>
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">→</button>
                 </div>
+
 
                 <button
                   onClick={() => setSelectedIncident(null)}
-                  className="w-32 py-2 border-[3px] border-black rounded-lg font-black text-lg uppercase tracking-tighter hover:bg-slate-900 hover:text-white active:scale-95 transition-all">
+                  className="w-32 py-2 border-[3px] border-black rounded-lg font-black text-lg uppercase tracking-tighter hover:bg-gray-100 active:scale-95 transition-all">
                     Close
-                </button>
+                  </button>
               </div>
             </aside>
           </>
@@ -303,3 +300,4 @@ export default function MaintenanceDashboard() {
     </div>
   );
 }
+
