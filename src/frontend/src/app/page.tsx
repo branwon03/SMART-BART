@@ -15,8 +15,7 @@ export default function MaintenanceDashboard() {
   const disciplines = [
     "FARE COLLECTION", "BUILDINGS", "COMMS",
     "ELEVATOR AND ESCALATOR", "GROUNDS", "MECHANICAL",
-    "SYSTEM SERVICE", "STRUCTURES", "TRACK",
-    "ELECTRICAL", "RSS",
+    "SYSTEM SERVICE", "ELECTRICAL"
   ];
 
 

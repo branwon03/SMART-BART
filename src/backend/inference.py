@@ -23,14 +23,11 @@ DISCIPLINES = [
     "GROUNDS",
     "MECHANICAL",
     "SYSTEM SERVICE",
-    "STRUCTURES",
-    "TRACK",
     "ELECTRICAL",
-    "RSS",
 ]
 
 BASE_QUERY = (
-    "You are a transit infrastructure inspector. "
+    "You are a university infrastructure inspector. "
     "Classify the provided image(s) into exactly ONE of the following disciplines based on what is shown:\n\n"
     "- FARE COLLECTION: Fare gates, Clipper card dispensers, add-on machines, parking pay machines, change dispensers\n"
     "- BUILDINGS: Station and parking lots only — cracked floors, cracked walls, columns, water intrusion, paint, vandalism, doors, parking lots, missing signs, drainage issues\n"
@@ -39,10 +36,7 @@ BASE_QUERY = (
     "- GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals\n"
     "- MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans\n"
     "- SYSTEM SERVICE: Cleaning stations and trains, garbage collection, spills on floors, bathroom cleaning\n"
-    "- STRUCTURES: Non-station structures like aerials, columns, picking up trash in tracks\n"
-    "- TRACK: All track issues (except garbage in tracks — that is Structures)\n"
     "- ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems\n"
-    "- RSS: Broken train, broken train seats, broken train windows, vandalism in train\n\n"
     "If multiple images are provided, consider them together as depicting the same incident.\n"
     "Respond with ONLY the discipline name, nothing else."
 )
