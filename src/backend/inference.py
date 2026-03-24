@@ -27,7 +27,7 @@ DISCIPLINES = [
 ]
 
 BASE_QUERY = (
-    "You are a transit infrastructure inspector. "
+    "You are a university infrastructure inspector. "
     "Classify the provided image(s) into exactly ONE of the following disciplines based on what is shown:\n\n"
     "- FARE COLLECTION: Fare gates, Clipper card dispensers, add-on machines, parking pay machines, change dispensers\n"
     "- BUILDINGS: Station and parking lots only — cracked floors, cracked walls, columns, water intrusion, paint, vandalism, doors, parking lots, missing signs, drainage issues\n"
