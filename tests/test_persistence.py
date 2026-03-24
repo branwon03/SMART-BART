@@ -20,7 +20,8 @@ MOCK_INFERENCE = {
 
 
 def _make_png_bytes() -> bytes:
-    import struct, zlib
+    import struct
+    import zlib
     sig = b"\x89PNG\r\n\x1a\n"
     ihdr_data = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
     ihdr = b"IHDR" + ihdr_data

@@ -4,10 +4,6 @@ Shared test fixtures.
 Swaps the production Postgres engine for an in-memory SQLite so tests run
 without Docker / a live database.  Redirects image uploads to a temp directory.
 """
-import shutil
-import tempfile
-from pathlib import Path
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

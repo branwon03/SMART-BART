@@ -36,4 +36,4 @@ jobs:
         run: uv run ruff check
 
       - name: Run type checker
-        run: uv run mypy src/app
+        run: uv run mypy src/backend

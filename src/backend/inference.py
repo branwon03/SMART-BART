@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
@@ -102,6 +103,7 @@ def chat_with_media(
 ):
     assert isinstance(media_files, list), f"{media_files}"
 
+    content: str | list[dict[str, Any]]
     if len(media_files) == 0:
         content = query
     else:

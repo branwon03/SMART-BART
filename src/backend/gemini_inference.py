@@ -1,5 +1,6 @@
 import os
-import google.generativeai as genai
+
+import google.generativeai as genai  # type: ignore[import-not-found]
 from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
@@ -33,9 +34,11 @@ BASE_QUERY = (
 def get_extension(filename):
     return os.path.splitext(filename)[1][1:].lower()
 
-def build_query(description: str = None):
-    if not description: return BASE_QUERY
-    return f"{BASE_QUERY}\n\nContext: {description}"
+def build_query(description: str | None = None):
+    if not description: 
+        return BASE_QUERY
+    else:
+        return f"{BASE_QUERY}\n\nContext: {description}"
 
 def chat_with_media(unused_url, media_files, query, description=None):
     # 1. Upload/Process images for Gemini
