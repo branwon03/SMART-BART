@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
+import { displayCompactIncidentId } from "../lib/formatIncidentId";
 
 
 export default function MaintenanceDashboard() {
@@ -11,6 +12,7 @@ export default function MaintenanceDashboard() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
+  const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
 
   const disciplines = [
     "FARE COLLECTION", "BUILDINGS", "COMMS",
@@ -77,6 +79,9 @@ export default function MaintenanceDashboard() {
     }
   }, [selectedIncident?.incident_id]);
 
+  useEffect(() => {
+    setIncidentIdExpanded(false);
+  }, [selectedIncident?.incident_id]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -209,12 +214,40 @@ export default function MaintenanceDashboard() {
            
             <aside className="fixed top-0 right-0 w-[450px] bg-white border-l-4 border-black h-screen p-6 shadow-2xl z-30 overflow-y-auto font-sans text-sm">
              
-              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative">
-                <h2 className="text-xl font-bold mb-4 pr-32 leading-tight">{selectedIncident.vlm_summary}</h2>
+              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative pr-36">
+                <h2 className="text-xl font-bold mb-4 leading-tight">{selectedIncident.vlm_summary}</h2>
                
                 <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
                   <span className="font-bold text-gray-700">Incident ID:</span>
-                  <span>{selectedIncident.incident_id}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={incidentIdExpanded}
+                    aria-label={
+                      incidentIdExpanded
+                        ? "Full incident ID. Click to collapse."
+                        : "Incident ID. Click to expand."
+                    }
+                    onClick={() => setIncidentIdExpanded((e) => !e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIncidentIdExpanded((x) => !x);
+                      }
+                    }}
+                    className={`inline-block max-w-full font-mono text-xs rounded-md border-2 border-black/15 bg-amber-50 px-2 py-0.5 text-slate-900 shadow-sm transition-colors hover:bg-amber-100 hover:border-black/30 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${
+                      incidentIdExpanded ? "break-all" : ""
+                    }`}
+                    title={
+                      incidentIdExpanded
+                        ? "Click to show short ID"
+                        : `${selectedIncident.incident_id} — click to expand`
+                    }
+                  >
+                    {incidentIdExpanded
+                      ? selectedIncident.incident_id
+                      : displayCompactIncidentId(selectedIncident.incident_id)}
+                  </span>
                  
                   <span className="font-bold text-gray-700">Priority:</span>
                   <span className={selectedIncident.issue_priority === 1 ? "text-black-500" : "text-yellow-600 font-bold"}>
