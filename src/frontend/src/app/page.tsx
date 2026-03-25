@@ -65,6 +65,9 @@ export default function MaintenanceDashboard() {
     };
   }, [fetchData]);
 
+  useEffect(() => {
+    setIncidentIdExpanded(false);
+  }, [selectedIncident?.incident_id]);
 
   useEffect(() => {
     if (!selectedIncident?.incident_id) return;
