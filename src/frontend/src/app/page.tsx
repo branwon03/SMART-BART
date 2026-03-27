@@ -39,8 +39,6 @@ export default function MaintenanceDashboard() {
     try {
       const json = await getIncidents();
       setData(json);
-     
-    
       setSelectedIncident((prevSelectedIncident) => {
         if (!prevSelectedIncident) return prevSelectedIncident;
         const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
@@ -63,16 +61,28 @@ export default function MaintenanceDashboard() {
 
 
   useEffect(() => {
-    if (selectedIncident) {
-      fetchEvidence(selectedIncident.incident_id);
-    } else {
-      setEvidence([]);
-    }
-  }, [selectedIncident?.incident_id]);
+    const tick = () => {
+      void fetchData();
+    };
+    const initialTimeout = setTimeout(tick, 0);
+    const dataInterval = setInterval(tick, 10000);
+    const clockInterval = setInterval(() => setNow(new Date()), 60000);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(dataInterval);
+      clearInterval(clockInterval);
+    };
+  }, [fetchData]);
+
 
   useEffect(() => {
-    setIncidentIdExpanded(false);
-  }, [selectedIncident?.incident_id]);
+    if (!selectedIncident?.incident_id) return;
+    const incidentId = selectedIncident.incident_id;
+    const timeoutId = setTimeout(() => {
+      void fetchEvidence(incidentId);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchEvidence, selectedIncident?.incident_id]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -80,7 +90,7 @@ export default function MaintenanceDashboard() {
       {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 fixed h-full shadow-sm z-10">
         <div className="flex flex-col items-center justify-center mb-4">
-          <img
+          <Image
             src="/logo.png"
             alt="BART Logo"
             className="w-32 h-auto object-contain"
@@ -99,6 +109,7 @@ export default function MaintenanceDashboard() {
                 setActiveTab(item);
                 setSelectedIncident(null);
                 setEvidence([]);
+                setIncidentIdExpanded(false);
               }}
               className={`w-full text-left px-4 py-2.5 rounded-lg font-bold transition-all ${
                 activeTab === item
@@ -171,7 +182,10 @@ export default function MaintenanceDashboard() {
                     filteredData.map((item: Incident) => (
                       <tr
                         key={item.incident_id}
-                        onClick={() => setSelectedIncident(item)}
+                        onClick={() => {
+                          setSelectedIncident(item);
+                          setIncidentIdExpanded(false);
+                        }}
                         className={`cursor-pointer transition-all group ${
                           selectedIncident?.incident_id === item.incident_id ? 'bg-blue-50' : 'hover:bg-slate-50'
                         }`}
@@ -202,8 +216,9 @@ export default function MaintenanceDashboard() {
             <div
               className="fixed inset-0 bg-black/20 z-20"
               onClick={() => {
-                setSelectedIncident(null)
+                setSelectedIncident(null);
                 setEvidence([]);
+                setIncidentIdExpanded(false);
               }}
             />
            
@@ -288,7 +303,7 @@ export default function MaintenanceDashboard() {
                         <span>Report summary {idx + 1}:</span>
                         <span>{new Date(ev.submitted_at).toLocaleTimeString()}</span>
                       </div>
-                      <p className="text-gray-800">- &quot;{ev.user_context || "Rider report logged via web-app."}&quot;</p>
+                      <p className="text-gray-800">- &quot;{ev.user_context || "Rider report logged via web-app."}</p>
                      
                      
                     </div>
@@ -318,6 +333,7 @@ export default function MaintenanceDashboard() {
                   onClick={() => {
                     setSelectedIncident(null);
                     setEvidence([]);
+                    setIncidentIdExpanded(false);
                   }}
                   className="w-32 py-2 border-[3px] border-black rounded-lg font-black text-lg uppercase tracking-tighter hover:bg-gray-100 active:scale-95 transition-all">
                     Close
