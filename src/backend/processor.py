@@ -36,7 +36,7 @@ def process_incident(incident: Incident, db: Session):
 
     incident_id = incident.incident_id
 
-    incident.status = "In-Progress"
+    incident.status = "In-Progress"       # type: ignore[assignment]
     db.commit()
     print(f"[*] Incident {incident_id} locked as In-Progress")
 
@@ -45,7 +45,7 @@ def process_incident(incident: Incident, db: Session):
     #if no photos exit early 
     if not photos:
         print(f"[!] No photos found for incident {incident_id}")
-        incident.status = "Error: No Photos"
+        incident.status = "Error: No Photos"       # type: ignore[assignment]
         db.commit()
         return 
     
@@ -76,18 +76,18 @@ def process_incident(incident: Incident, db: Session):
     all_missing = len(missing_files) == len(photos)
 
     if all_missing:
-        incident.status = "Error: All Files Missing"
+        incident.status = "Error: All Files Missing"        # type: ignore[assignment]
         print(f"[!] All files missing for incident {incident_id}")
 
     elif best_category is None:
-        incident.status = "Error: Model Returned No Results"
+        incident.status = "Error: Model Returned No Results" # type: ignore[assignment]
         print(f"[!] Model returned no results for incident {incident_id}")
 
     else:
-        incident.discipline = best_category
-        incident.vlm_summary = best_summary
-        incident.issue_priority = best_priority
-        incident.status = "Completed"
+        incident.discipline = best_category      # type: ignore[assignment]
+        incident.vlm_summary = best_summary      # type: ignore[assignment]
+        incident.issue_priority = best_priority  # type: ignore[assignment]
+        incident.status = "Completed"            # type: ignore[assignment]
         print(f"  [✓] Incident {incident_id} -> {best_category} | {best_priority} (confidence: {best_confidence:.2f})")
 
     db.commit()
