@@ -1,6 +1,6 @@
-import pytest
-from unittest.mock import MagicMock, patch
 import src.backend.processor as processor
+from src.backend.processor import process_incident
+from unittest.mock import MagicMock, patch
 
 #intended to mimic a gemini-style response string 
 FAKE_RESPONSE = (
@@ -10,8 +10,6 @@ FAKE_RESPONSE = (
 )
 
 processor.identify_objects = lambda path, class_list: (FAKE_RESPONSE, 0.91)
-
-from src.backend.processor import process_incident
 
 #helper functions to create fake database objects
 def make_incident(incident_id="TEST-001", status="New"):
