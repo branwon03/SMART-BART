@@ -94,7 +94,7 @@ def process_incident(incident: Incident, db: Session):
 
 
 def run_processor():
-    print(f"[*] Starting Incident Processor...")
+    print("[*] Starting Incident Processor...")
 
     while True:
         db = SessionLocal()
@@ -107,7 +107,7 @@ def run_processor():
                 process_incident(incident, db)
 
             else:
-                print(f"[~] No new incidents. Waiting...")
+                print("[~] No new incidents. Waiting...")
 
         except Exception as e:
             print(f"[!] Unexpected error: {e}")
