@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.2.0 (2026-03-27)
+
+### Features
+
+- Add structured model response parser for backend fields
+  ([`436940d`](https://github.com/cse120-ucm/S26-CSE-312/commit/436940df4633538a3400f8696829b046b8f0407a))
+
+
 ## v0.1.1 (2026-03-24)
 
 ### Bug Fixes
