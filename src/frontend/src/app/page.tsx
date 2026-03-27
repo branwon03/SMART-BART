@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
+import { displayCompactIncidentId } from "../lib/formatIncidentId";
+import { formatElapsedSince } from "../lib/formatElapsedSince";
 
 
 export default function MaintenanceDashboard() {
@@ -23,18 +25,7 @@ export default function MaintenanceDashboard() {
   const filteredData = data.filter((item) => item.discipline === activeTab);
 
 
-  const formatElapsed = (isoString: string | null | undefined) => {
-    if (!isoString) return "0m";
-    const start = new Date(isoString);
-    const diffInMs = now.getTime() - start.getTime();
-    const totalMinutes = Math.floor(diffInMs / (1000 * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
-
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const json = await getIncidents();
       setData(json);
@@ -188,7 +179,7 @@ export default function MaintenanceDashboard() {
                         </td>
                         <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">{item.location_id}</td>
                         <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
-                          {formatElapsed(item.created_at)}
+                          {formatElapsedSince(item.created_at, now)}
                         </td>
                       </tr>
                     ))
@@ -231,7 +222,7 @@ export default function MaintenanceDashboard() {
                   <span>{selectedIncident.location_id}</span>
                  
                   <span className="font-bold text-gray-700">Age:</span>
-                  <span>{formatElapsed(selectedIncident.created_at)}</span>
+                  <span>{formatElapsedSince(selectedIncident.created_at, now)}</span>
                 </div>
 
 
@@ -274,11 +265,11 @@ export default function MaintenanceDashboard() {
               <div className="flex flex-col items-center">
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
                   {evidence.length > 0 && evidence[0].image_url ? (
-                    <img
-                      src={`${API_BASE_URL}${evidence[0].image_url}`}
-                      className="w-full h-full object-cover"
-                      alt="Main evidence"
-                    />
+                      <img
+                        src={`${API_BASE_URL}${evidence[0].image_url}`}
+                        className="w-full h-full object-cover"
+                        alt="Main evidence"
+                      />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">No Image Available</div>
                   )}
