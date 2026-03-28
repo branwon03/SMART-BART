@@ -2,38 +2,61 @@ name: Test
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build-test:
+  backend:
+    name: Backend (pytest + ruff + mypy)
     runs-on: ubuntu-latest
     env:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install the project
+      - name: Install backend dependencies
         run: uv sync --all-extras --dev
 
-      - name: Install pytest
-        run: uv pip install pytest
-
-      - name: Install ruff
-        run: uv pip install ruff
-
-      - name: Install mypy
-        run: uv pip install mypy
-
-      - name: Run tests
+      - name: Run backend tests
         run: uv run pytest
 
-      - name: Run linters
+      - name: Run backend lint
         run: uv run ruff check
 
-      - name: Run type checker
+      - name: Run backend type check
         run: uv run mypy src/backend
+
+  frontend:
+    name: Frontend (lint + test + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Run frontend lint
+        working-directory: src/frontend
+        run: npm run lint
+
+      - name: Run frontend tests
+        working-directory: src/frontend
+        run: npm run test
+
+      - name: Run frontend build
+        working-directory: src/frontend
+        run: npm run build
