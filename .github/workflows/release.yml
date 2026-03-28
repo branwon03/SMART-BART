@@ -67,9 +67,11 @@ jobs:
     
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
     
     steps:
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Checkout (main)
         uses: actions/checkout@v4
         with:
@@ -95,6 +97,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ needs.release.outputs.version }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.release.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           labels: ${{ steps.meta.outputs.labels }}
