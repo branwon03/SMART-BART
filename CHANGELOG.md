@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.3.0 (2026-03-30)
+
+### Bug Fixes
+
+- Removing unnecessary disciplines
+  ([`b182e23`](https://github.com/cse120-ucm/S26-CSE-312/commit/b182e23dd4af1f9213686e37f1a2850292e72bb7))
+
+### Features
+
+- Add structured model response parser for backend fields
+  ([`36169d2`](https://github.com/cse120-ucm/S26-CSE-312/commit/36169d27d54a64df1b54283e290a8ef0467e0abb))
+
+
 ## v0.2.0 (2026-03-27)
 
 ### Features
