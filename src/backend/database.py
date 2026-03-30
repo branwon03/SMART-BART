@@ -14,13 +14,17 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:CSE_312!@db:5432/bart_db",
-)
-DATABASE_URL = re.sub(r"^postgresql://", "postgresql+psycopg://", DATABASE_URL)
+REMOTE_DATABASE_URL = "postgresql://neondb_owner:npg_2wK7VUOsuIzL@ep-dry-feather-aeb6o61w-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
-engine = create_engine(DATABASE_URL)
+
+def get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL", REMOTE_DATABASE_URL)
+    return re.sub(r"^postgresql://", "postgresql+psycopg://", database_url)
+
+
+REMOTE_DATABASE_URL = get_database_url()
+
+engine = create_engine(REMOTE_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -28,7 +32,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# ── Models ────────────────────────────────────────────────────────────────────
+# ── Schema ────────────────────────────────────────────────────────────────────
 
 class Incident(Base):
     __tablename__ = "incidents"

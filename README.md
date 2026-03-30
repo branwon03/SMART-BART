@@ -57,6 +57,28 @@ Bonus:
 
 See the Software Stack & Quick Start wiki page for full setup instructions for the frontend, backend, and ML service.
 
+### Remote Postgres With Neon
+
+The backend reads `DATABASE_URL` from environment and falls back to the local Docker Postgres service when one is not provided.
+
+For local Docker Postgres, keep `.env` pointed at:
+
+`DATABASE_URL=postgresql+psycopg://postgres:CSE_312!@db:5432/bart_db`
+
+For Neon:
+
+1. Copy `.env.neon.example` to `.env.neon`.
+2. Paste your Neon connection string into `.env.neon`.
+3. Start only the app services with the Neon override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up --build backend frontend
+```
+
+The Neon connection string should use SSL, for example:
+
+`postgresql://<user>:<password>@<host>/<database>?sslmode=require&channel_binding=require`
+
 ### Instructions
 
 1. Click "Use this template" on GitHub to create your private repository.

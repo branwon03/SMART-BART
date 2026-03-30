@@ -1,0 +1,6 @@
+services:
+  backend:
+    env_file:
+      - .env
+      - .env.neon
+    depends_on: []

@@ -12,6 +12,7 @@ dist/
 build/
 *.egg-info/
 .env
+.env.neon
 .venv
 env/
 venv/
