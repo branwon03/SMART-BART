@@ -5,15 +5,34 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-import requests
+from google import genai
+from google.genai import types
+from google.oauth2 import service_account
 from dotenv import load_dotenv
+import requests
 
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
-invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-stream = False
+# --- VERTEX AI CONFIGURATION ---
+KEY_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+PROJECT_ID = "project-51a9be3f-d2d4-42cc-b2d"
+LOCATION = "us-central1"
+
+# Load Service Account
+credentials = service_account.Credentials.from_service_account_file(
+    KEY_PATH, 
+    scopes=['https://www.googleapis.com/auth/cloud-platform']
+)
+
+client = genai.Client(
+    vertexai=True, 
+    project=PROJECT_ID,
+    location=LOCATION, 
+    credentials=credentials
+)
+
+TUNED_MODEL_ID = "projects/178919740846/locations/us-central1/endpoints/544109271923556352"
 
 DISCIPLINES = [
     "FARE COLLECTION",
@@ -55,13 +74,6 @@ BASE_QUERY = (
     "- UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline\n\n"
 )
 
-kApiKey = os.getenv("NVIDIA_API_KEY")
-
-if not kApiKey:
-    raise RuntimeError(
-        f"Missing NVIDIA_API_KEY. Add it to {env_path} or set it in the environment."
-    )
-
 kSupportedList = {
     "png": ["image/png", "image_url"],
     "jpg": ["image/jpeg", "image_url"],
@@ -70,15 +82,11 @@ kSupportedList = {
 }
 
 
-def build_query(user_summary: str | None = None) -> str:
-    """Build final prompt by appending optional user summary context."""
-    if not user_summary:
+def build_query(description: str | None = None):
+    """Combines the static base query with optional user context."""
+    if not description:
         return BASE_QUERY
-    return (
-        f"{BASE_QUERY}\n\n"
-        "User-reported summary (use as secondary context after visual evidence):\n"
-        f"{user_summary.strip()}"
-    )
+    return f"{BASE_QUERY}\n\nUser Context: {description}"
 
 
 def get_extension(filename):
@@ -87,93 +95,46 @@ def get_extension(filename):
     return ext
 
 
-def mime_type(ext):
-    return kSupportedList[ext][0]
 
+def chat_with_media(media_paths: list[Path], query: str):
+    """
+    Performs inference using the fine-tuned Gemini VLM with the full base query.
+    """
+    # Start with the full prompt (Base Query + Context)
+    content_parts = [query]
 
-def media_type(ext):
-    return kSupportedList[ext][1]
+    # Add the images
+    for path in media_paths:
+        with open(path, "rb") as f:
+            image_bytes = f.read()
+            content_parts.append(
+                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+            )
 
-
-def encode_media_base64(media_file):
-    """Encode media file to base64 string."""
-    with open(media_file, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
-
-
-def chat_with_media(
-    infer_url,
-    media_files,
-    query: str,
-    description: str | None = None,
-    stream: bool = False,
-    submission_id: str | None = None,
-):
-    assert isinstance(media_files, list), f"{media_files}"
-
-    content: str | list[dict[str, Any]]
-    if len(media_files) == 0:
-        content = query
-    else:
-        content = [{"type": "text", "text": query}]
-
-        for media_file in media_files:
-            ext = get_extension(media_file)
-            assert ext in kSupportedList, f"{media_file} format is not supported"
-
-            print(f"Encoding {media_file} as base64...")
-            base64_data = encode_media_base64(media_file)
-
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type(ext)};base64,{base64_data}"
-                },
-            })
-
-    headers = {
-        "Authorization": f"Bearer {kApiKey}",
-        "Accept": "text/event-stream" if stream else "application/json",
-    }
-
-    payload = {
-        "model": "mistralai/ministral-14b-instruct-2512",
-        "messages": [
-            {"role": "user", "content": content},
-        ],
-        "max_tokens": 2048,
-        "temperature": 0.15,
-        "top_p": 1.00,
-        "stream": stream,
-    }
-
-    response = requests.post(infer_url, headers=headers, json=payload, stream=stream)
-
-    if response.status_code != 200:
-        print(f"API error {response.status_code}: {response.text}", file=sys.stderr)
+    try:
+        response = client.models.generate_content(
+            model=TUNED_MODEL_ID,
+            config=types.GenerateContentConfig(
+                temperature=0.1, # Keep it low for consistent MVP results
+            ),
+            contents=content_parts
+        )
+        
+        classification = response.text.strip()
+        
+        return {
+            "discipline": classification, 
+            "num_images": len(media_paths),
+            
+        }
+    except Exception as e:
+        print(f"Inference Error: {e}")
         return None
-
-    if stream:
-        for line in response.iter_lines():
-            if line:
-                print(line.decode("utf-8"))
-        return None
-
-    result = response.json()
-    classification = result["choices"][0]["message"]["content"]
-    print(classification)
-
-    return {
-        "submission_id": submission_id,
-        "discipline": classification,
-        "description": description,
-        "num_images": len(media_files),
-        "timestamp": datetime.utcnow().isoformat(),
-    }
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ministral 14B multimodal inference helper")
+    import argparse
+    parser = argparse.ArgumentParser(description="Gemini VLM inference helper")
     parser.add_argument("media", nargs="*", help="Optional image files")
     parser.add_argument(
         "-d",
@@ -183,10 +144,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # Convert strings from argparse to Path objects
+    media_paths = [Path(m) for m in args.media]
+    
     final_query = build_query(args.description)
-    result = chat_with_media(
-        invoke_url, list(args.media), final_query,
-        description=args.description, stream=stream,
-    )
+    
+    print(f"Running inference on {len(media_paths)} images...")
+    
+    result = chat_with_media(media_paths, final_query)
+    
     if result:
-        print(result)
+        print("\n--- AI RESPONSE ---")
+        print(result["discipline"])
+        print("-------------------\n")
+        
