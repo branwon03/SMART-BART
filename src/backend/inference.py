@@ -34,7 +34,33 @@ client = genai.Client(
 
 TUNED_MODEL_ID = "projects/178919740846/locations/us-central1/endpoints/544109271923556352"
 
-DISCIPLINES = [
+EMBEDDING_MODEL_ID = "gemini-embedding-2-preview"
+
+def generate_embedding(text: str, image_paths: list[Path] = None):
+    """Generates a multimodal embedding for the issue."""
+    parts = [types.Part.from_text(text=text)]
+    
+    if image_paths:
+        for path in image_paths:
+            with open(path, "rb") as f:
+                parts.append(
+                    types.Part.from_bytes(data=f.read(), mime_type="image/jpeg")
+                )
+
+    try:
+        # Generate the embedding
+        result = client.models.embed_content(
+            model=EMBEDDING_MODEL_ID,
+            contents=parts,
+            config=types.EmbedContentConfig(task_type="CLASSIFICATION")
+        )
+        
+        return result.embeddings[0].values
+    except Exception as e:
+        print(f"Embedding Error: {e}")
+        return None
+    
+DISCIPLINES = [ 
     "FARE COLLECTION",
     "BUILDINGS",
     "COMMS",
@@ -98,63 +124,69 @@ def get_extension(filename):
 
 def chat_with_media(media_paths: list[Path], query: str):
     """
-    Performs inference using the fine-tuned Gemini VLM with the full base query.
+    Performs inference and generates a temporary embedding preview.
     """
-    # Start with the full prompt (Base Query + Context)
+    # 1. Prepare parts for the prompt
     content_parts = [query]
-
-    # Add the images
     for path in media_paths:
         with open(path, "rb") as f:
-            image_bytes = f.read()
             content_parts.append(
-                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+                types.Part.from_bytes(data=f.read(), mime_type="image/jpeg")
             )
 
     try:
+        # 2. Run Classification
         response = client.models.generate_content(
             model=TUNED_MODEL_ID,
-            config=types.GenerateContentConfig(
-                temperature=0.1, # Keep it low for consistent MVP results
-            ),
+            config=types.GenerateContentConfig(temperature=0.1),
             contents=content_parts
         )
-        
         classification = response.text.strip()
-        
+
+        vector = generate_embedding(classification, media_paths)
+
         return {
             "discipline": classification, 
+            "embedding": vector, 
             "num_images": len(media_paths),
-            
         }
+        
     except Exception as e:
         print(f"Inference Error: {e}")
         return None
 
-
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Gemini VLM inference helper")
-    parser.add_argument("media", nargs="*", help="Optional image files")
-    parser.add_argument(
-        "-d",
-        "--description",
-        default=None,
-        help="Optional user summary to append to the classification prompt",
-    )
-    args = parser.parse_args()
+    # 1. Hardcoded Test Configuration
+    TEST_IMAGE_PATH = Path("src/backend/test_outlet.jpg")
+    TEST_DESCRIPTION = "The outlet is sparking and has black char marks."
+    
+    # 2. Path Validation
+    if not TEST_IMAGE_PATH.exists():
+        print(f"ERROR: Could not find test image at: {TEST_IMAGE_PATH.absolute()}")
+        print("Make sure you are running the script from the project root.")
+        sys.exit(1)
 
-    # Convert strings from argparse to Path objects
-    media_paths = [Path(m) for m in args.media]
+    # 3. Prepare the Query
+    media_paths = [TEST_IMAGE_PATH]
+    final_query = build_query(TEST_DESCRIPTION)
     
-    final_query = build_query(args.description)
+    print(f"--- TRIGGERING HARDCODED INFERENCE TEST ---")
+    print(f"Target: {TEST_IMAGE_PATH}")
     
-    print(f"Running inference on {len(media_paths)} images...")
-    
+    # 4. Execute Inference
     result = chat_with_media(media_paths, final_query)
     
+    # 5. Output Results
     if result:
-        print("\n--- AI RESPONSE ---")
-        print(result["discipline"])
-        print("-------------------\n")
+        print("\n" + "="*60)
+        print("FINAL CLASSIFICATION:")
+        print(f"  {result['discipline']}")
         
+        # Access the vector from the result dictionary
+        vector = result.get("embedding")
+        if vector:
+            print("\nVECTOR PREVIEW (First 5 values):")
+            print(f"  {vector[:5]}")
+            print(f"  (Total Dimensions: {len(vector)})")
+        
+        print("="*60 + "\n")
