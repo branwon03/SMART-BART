@@ -1,69 +1,122 @@
 import os
 import time
+import mimetypes
+from pathlib import Path
+
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 from sqlalchemy.orm import Session
+
 from src.backend.database import SessionLocal, Incident, PhotoReport
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
  
-UPLOAD_DIR = os.path.join("src", "backend", "uploads")
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+
+client = genai.Client(
+    vertexai=True,
+    project=os.environ["GOOGLE_CLOUD_PROJECT"],
+    location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+)
+
+def resolve_local_image_path(photo: PhotoReport) -> str:
+    image_url = getattr(photo, "image_url", None)
+    evidence_id = getattr(photo, "evidence_id", None)
+
+    # Test path / legacy local path case: image_url is a plain filename like "photo1.jpg"
+    if image_url and isinstance(image_url, str) and not image_url.startswith("/api/images/"):
+        return os.path.join(str(UPLOAD_DIR), image_url)
+
+    # Real app case: image_url is "/api/images/{evidence_id}", so resolve from evidence_id on disk
+    if evidence_id:
+        matches = list(Path(UPLOAD_DIR).glob(f"{evidence_id}.*"))
+        if matches:
+            return str(matches[0])
+
+    return ""
 
 def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
     """
-    TODO: Replace placeholder with real Gemini model logic:
-      1. Load / initialize the model
-      2. Encode the image
-      3. Run inference and prompt Gemini to return:
-            discipline: <value>
-            issue_priority: <value>
-            vlm_summary: <value>
-      4. Return the raw response string and a confidence score
+    Gemini call for MVP steel-thread testing.
+
+    Returns:
+    - raw structured text response for parse_classification(...)
+    - temporary confidence score placeholder
     """
     print(f"  [model] Running inference on {os.path.basename(image_path)}")
- 
-    #Placeholder — simulates a Gemini response string
-    raw_response = (
-        "discipline: MECHANICAL\n"
-        "issue_priority: HIGH\n"
-        "vlm_summary: Placeholder summary of identified issue."
+
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if mime_type is None:
+        mime_type = "image/jpeg"
+
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    prompt = f"""
+You are classifying a BART maintenance incident from an image.
+
+Choose exactly ONE discipline from:
+{", ".join(class_list)}
+
+Return exactly these 3 lines and nothing else:
+discipline: <one label from the list above>
+issue_priority: <LOW|MEDIUM|HIGH|CRITICAL>
+vlm_summary: <one concise sentence>
+""".strip()
+
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+        ],
     )
-    confidence = 0.91
- 
+
+    raw_response = (response.text or "").strip()
+
+    if not raw_response:
+        raise ValueError("Gemini returned an empty response")
+
+    # Temporary placeholder until we decide how we want to score confidence
+    confidence = 1.0
+
     return raw_response, confidence
 
 #kiara's parsing logic, clean raw model output and map to bart labels
 
 def process_incident(incident: Incident, db: Session):
-    #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save 
+    #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save
 
     incident_id = incident.incident_id
 
-    incident.status = "In-Progress"       # type: ignore[assignment]
+    incident.status = "In-Progress"  # type: ignore[assignment]
     db.commit()
     print(f"[*] Incident {incident_id} locked as In-Progress")
 
     photos = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
 
-    #if no photos exit early 
+    #if no photos exit early
     if not photos:
         print(f"[!] No photos found for incident {incident_id}")
-        incident.status = "Error: No Photos"       # type: ignore[assignment]
+        incident.status = "Error: No Photos"  # type: ignore[assignment]
         db.commit()
-        return 
-    
-    best_category = None 
+        return
+
+    best_category = None
     best_summary = None
     best_confidence = -1.0
     missing_files = []
 
     for photo in photos:
-        file_path = os.path.join(UPLOAD_DIR, photo.image_url)
+        file_path = resolve_local_image_path(photo)
 
-        if not os.path.exists(file_path):
+        if not file_path or not os.path.exists(file_path):
             print(f"[!] File not found: {file_path}")
             missing_files.append(file_path)
             continue
 
         raw_response, confidence = identify_objects(file_path, DISCIPLINES)
-
         parsed = parse_classification(raw_response)
 
         if confidence > best_confidence:
@@ -76,22 +129,21 @@ def process_incident(incident: Incident, db: Session):
     all_missing = len(missing_files) == len(photos)
 
     if all_missing:
-        incident.status = "Error: All Files Missing"        # type: ignore[assignment]
+        incident.status = "Error: All Files Missing"  # type: ignore[assignment]
         print(f"[!] All files missing for incident {incident_id}")
 
     elif best_category is None:
-        incident.status = "Error: Model Returned No Results" # type: ignore[assignment]
+        incident.status = "Error: Model Returned No Results"  # type: ignore[assignment]
         print(f"[!] Model returned no results for incident {incident_id}")
 
     else:
-        incident.discipline = best_category      # type: ignore[assignment]
-        incident.vlm_summary = best_summary      # type: ignore[assignment]
+        incident.discipline = best_category  # type: ignore[assignment]
+        incident.vlm_summary = best_summary  # type: ignore[assignment]
         incident.issue_priority = best_priority  # type: ignore[assignment]
-        incident.status = "Completed"            # type: ignore[assignment]
+        incident.status = "Completed"  # type: ignore[assignment]
         print(f"  [✓] Incident {incident_id} -> {best_category} | {best_priority} (confidence: {best_confidence:.2f})")
 
     db.commit()
-
 
 def run_processor():
     print("[*] Starting Incident Processor...")
