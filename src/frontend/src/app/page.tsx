@@ -5,6 +5,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
+import { formatElapsedSince } from "../lib/formatElapsedSince";
 
 
 export default function MaintenanceDashboard() {
@@ -113,7 +114,7 @@ export default function MaintenanceDashboard() {
           ))}
         </nav>
 
-
+        {/* USER INFO LOGIC (TODO: Implement this) */}
         <div className="pt-6 border-t border-slate-100 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">AS</div>
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Akash Sant</div>
@@ -176,6 +177,7 @@ export default function MaintenanceDashboard() {
                         onClick={() => {
                           setSelectedIncident(item);
                           setIncidentIdExpanded(false);
+                          
                         }}
                         className={`cursor-pointer transition-all group ${
                           selectedIncident?.incident_id === item.incident_id ? 'bg-blue-50' : 'hover:bg-slate-50'
