@@ -4,6 +4,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
+import { formatElapsedSince } from "../lib/formatElapsedSince";
 
 
 export default function MaintenanceDashboard() {
@@ -22,17 +23,6 @@ export default function MaintenanceDashboard() {
 
 
   const filteredData = data.filter((item) => item.discipline === activeTab);
-
-
-  const formatElapsed = (isoString: string | null | undefined) => {
-    if (!isoString) return "0m";
-    const start = new Date(isoString);
-    const diffInMs = now.getTime() - start.getTime();
-    const totalMinutes = Math.floor(diffInMs / (1000 * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
 
 
   const fetchData = useCallback(async () => {
@@ -122,7 +112,7 @@ export default function MaintenanceDashboard() {
           ))}
         </nav>
 
-
+        {/* USER INFO LOGIC (TODO: Implement this) */}
         <div className="pt-6 border-t border-slate-100 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">AS</div>
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Akash Sant</div>
@@ -185,6 +175,7 @@ export default function MaintenanceDashboard() {
                         onClick={() => {
                           setSelectedIncident(item);
                           setIncidentIdExpanded(false);
+                          
                         }}
                         className={`cursor-pointer transition-all group ${
                           selectedIncident?.incident_id === item.incident_id ? 'bg-blue-50' : 'hover:bg-slate-50'
@@ -198,7 +189,7 @@ export default function MaintenanceDashboard() {
                         </td>
                         <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">{item.location_id}</td>
                         <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
-                          {formatElapsed(item.created_at)}
+                          {formatElapsedSince(item.created_at, now)}
                         </td>
                       </tr>
                     ))
@@ -272,7 +263,7 @@ export default function MaintenanceDashboard() {
                   <span>{selectedIncident.location_id}</span>
                  
                   <span className="font-bold text-gray-700">Age:</span>
-                  <span>{formatElapsed(selectedIncident.created_at)}</span>
+                  <span>{formatElapsedSince(selectedIncident.created_at, now)}</span>
                 </div>
 
 
