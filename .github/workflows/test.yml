@@ -7,7 +7,7 @@ on:
 jobs:
   backend:
     name: Backend (pytest + ruff + mypy)
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-cse120
     env:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
 
