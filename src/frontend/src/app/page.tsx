@@ -100,7 +100,6 @@ export default function MaintenanceDashboard() {
                 setActiveTab(item);
                 setSelectedIncident(null);
                 setEvidence([]);
-                setIncidentIdExpanded(false);
               }}
               className={`w-full text-left px-4 py-2.5 rounded-lg font-bold transition-all ${
                 activeTab === item
@@ -208,9 +207,8 @@ export default function MaintenanceDashboard() {
             <div
               className="fixed inset-0 bg-black/20 z-20"
               onClick={() => {
-                setSelectedIncident(null);
+                setSelectedIncident(null)
                 setEvidence([]);
-                setIncidentIdExpanded(false);
               }}
             />
            
@@ -295,7 +293,7 @@ export default function MaintenanceDashboard() {
                         <span>Report summary {idx + 1}:</span>
                         <span>TODO:timestamp</span>
                       </div>
-                      <p className="text-gray-800">- &quot;{ev.user_context || "Rider report logged via web-app."}</p>
+                      <p className="text-gray-800">- &quot;{ev.user_context || "Rider report logged via web-app."}&quot;</p>
                      
                      
                     </div>
@@ -308,11 +306,11 @@ export default function MaintenanceDashboard() {
               <div className="flex flex-col items-center">
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
                   {evidence.length > 0 && evidence[0].image_url ? (
-                      <img
-                        src={`${API_BASE_URL}${evidence[0].image_url}`}
-                        className="w-full h-full object-cover"
-                        alt="Main evidence"
-                      />
+                    <img
+                      src={`${API_BASE_URL}${evidence[0].image_url}`}
+                      className="w-full h-full object-cover"
+                      alt="Main evidence"
+                    />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">No Image Available</div>
                   )}
@@ -325,7 +323,6 @@ export default function MaintenanceDashboard() {
                   onClick={() => {
                     setSelectedIncident(null);
                     setEvidence([]);
-                    setIncidentIdExpanded(false);
                   }}
                   className="w-32 py-2 border-[3px] border-black rounded-lg font-black text-lg uppercase tracking-tighter hover:bg-gray-100 active:scale-95 transition-all">
                     Close

@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.4.1 (2026-03-31)
+
+### Bug Fixes
+
+- IMAGE_NAME build error
+  ([`7cd8a1f`](https://github.com/cse120-ucm/S26-CSE-312/commit/7cd8a1ff465727992cb5157553ed67a1707cb231))
+
+### Continuous Integration
+
+- Updating github actions
+  ([`24706fd`](https://github.com/cse120-ucm/S26-CSE-312/commit/24706fdd693998ad718124043791f7bd9455ce9f))
+
+
 ## v0.4.0 (2026-03-31)
 
 ### Bug Fixes
