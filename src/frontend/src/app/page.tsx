@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
+import { displayCompactIncidentId } from "../lib/formatIncidentId";
 
 
 export default function MaintenanceDashboard() {
@@ -11,12 +12,12 @@ export default function MaintenanceDashboard() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
+  const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
 
   const disciplines = [
     "FARE COLLECTION", "BUILDINGS", "COMMS",
     "ELEVATOR AND ESCALATOR", "GROUNDS", "MECHANICAL",
-    "SYSTEM SERVICE", "STRUCTURES", "TRACK",
-    "ELECTRICAL", "RSS",
+    "SYSTEM SERVICE", "ELECTRICAL"
   ];
 
 
@@ -38,8 +39,7 @@ export default function MaintenanceDashboard() {
     try {
       const json = await getIncidents();
       setData(json);
-     
-    
+
       setSelectedIncident((prevSelectedIncident) => {
         if (!prevSelectedIncident) return prevSelectedIncident;
         const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
@@ -62,19 +62,28 @@ export default function MaintenanceDashboard() {
 
 
   useEffect(() => {
-    const initialFetchTimeout = setTimeout(() => {
+    const tick = () => {
       void fetchData();
-    }, 0);
-    const dataInterval = setInterval(() => {
-      void fetchData();
-    }, 10000);
+    };
+    const initialTimeout = setTimeout(tick, 0);
+    const dataInterval = setInterval(tick, 10000);
     const clockInterval = setInterval(() => setNow(new Date()), 60000);
     return () => {
-      clearTimeout(initialFetchTimeout);
+      clearTimeout(initialTimeout);
       clearInterval(dataInterval);
       clearInterval(clockInterval);
     };
   }, [fetchData]);
+
+
+  useEffect(() => {
+    if (!selectedIncident?.incident_id) return;
+    const incidentId = selectedIncident.incident_id;
+    const timeoutId = setTimeout(() => {
+      void fetchEvidence(incidentId);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchEvidence, selectedIncident?.incident_id]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -82,7 +91,7 @@ export default function MaintenanceDashboard() {
       {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 fixed h-full shadow-sm z-10">
         <div className="flex flex-col items-center justify-center mb-4">
-          <img
+          <Image
             src="/logo.png"
             alt="BART Logo"
             className="w-32 h-auto object-contain"
@@ -173,7 +182,10 @@ export default function MaintenanceDashboard() {
                     filteredData.map((item: Incident) => (
                       <tr
                         key={item.incident_id}
-                        onClick={() => setSelectedIncident(item)}
+                        onClick={() => {
+                          setSelectedIncident(item);
+                          setIncidentIdExpanded(false);
+                        }}
                         className={`cursor-pointer transition-all group ${
                           selectedIncident?.incident_id === item.incident_id ? 'bg-blue-50' : 'hover:bg-slate-50'
                         }`}
@@ -211,12 +223,40 @@ export default function MaintenanceDashboard() {
            
             <aside className="fixed top-0 right-0 w-[450px] bg-white border-l-4 border-black h-screen p-6 shadow-2xl z-30 overflow-y-auto font-sans text-sm">
              
-              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative">
-                <h2 className="text-xl font-bold mb-4 pr-32 leading-tight">{selectedIncident.vlm_summary}</h2>
+              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative pr-36">
+                <h2 className="text-xl font-bold mb-4 leading-tight">{selectedIncident.vlm_summary}</h2>
                
                 <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
                   <span className="font-bold text-gray-700">Incident ID:</span>
-                  <span>{selectedIncident.incident_id}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={incidentIdExpanded}
+                    aria-label={
+                      incidentIdExpanded
+                        ? "Full incident ID. Click to collapse."
+                        : "Incident ID. Click to expand."
+                    }
+                    onClick={() => setIncidentIdExpanded((e) => !e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIncidentIdExpanded((x) => !x);
+                      }
+                    }}
+                    className={`inline-block max-w-full font-mono text-xs rounded-md border-2 border-black/15 bg-amber-50 px-2 py-0.5 text-slate-900 shadow-sm transition-colors hover:bg-amber-100 hover:border-black/30 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${
+                      incidentIdExpanded ? "break-all" : ""
+                    }`}
+                    title={
+                      incidentIdExpanded
+                        ? "Click to show short ID"
+                        : `${selectedIncident.incident_id} — click to expand`
+                    }
+                  >
+                    {incidentIdExpanded
+                      ? selectedIncident.incident_id
+                      : displayCompactIncidentId(selectedIncident.incident_id)}
+                  </span>
                  
                   <span className="font-bold text-gray-700">Priority:</span>
                   <span className={selectedIncident.issue_priority === 1 ? "text-black-500" : "text-yellow-600 font-bold"}>
@@ -275,7 +315,7 @@ export default function MaintenanceDashboard() {
               <div className="flex flex-col items-center">
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
                   {evidence.length > 0 && evidence[0].image_url ? (
-                    <img
+                    <Image
                       src={`${API_BASE_URL}${evidence[0].image_url}`}
                       className="w-full h-full object-cover"
                       alt="Main evidence"

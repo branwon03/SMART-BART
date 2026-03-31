@@ -1,6 +1,6 @@
 import os
 
-import google.generativeai as genai  # type: ignore[import-not-found]
+import google.generativeai as genai  # type: ignore[import-untyped, import-not-found]
 from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
