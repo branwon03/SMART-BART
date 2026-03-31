@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v0.4.3 (2026-03-31)
+
+### Bug Fixes
+
+- Changing elapsed time feature
+  ([`b63285d`](https://github.com/cse120-ucm/S26-CSE-312/commit/b63285dc6d9b054a541b2795b8638aea2b146a74))
+
+- Update page.tsx
+  ([`fb15454`](https://github.com/cse120-ucm/S26-CSE-312/commit/fb154545f59194209b131214d498a4b5e1fc2e60))
+
+### Chores
+
+- Update page.tsx to call helper function
+  ([`356e055`](https://github.com/cse120-ucm/S26-CSE-312/commit/356e055d733aa22cada06f4b63924dcb798f1d32))
+
+
 ## v0.4.2 (2026-03-31)
 
 ### Bug Fixes
