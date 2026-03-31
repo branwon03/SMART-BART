@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.2 (2026-03-31)
+
+### Bug Fixes
+
+- Update page.tsx
+  ([`c251219`](https://github.com/cse120-ucm/S26-CSE-312/commit/c251219a3c6463190bbc2095a6f70ca70b3ecbfe))
+
+
 ## v0.4.1 (2026-03-31)
 
 ### Bug Fixes
