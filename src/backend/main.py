@@ -37,17 +37,14 @@ app.add_middleware(
 )
 
 def parse_vlm_response(raw_text: str):
-    """
-    Parses 'Discipline: ELECTRICAL, Priority Level: CRITICAL...' 
-    into a clean dictionary using regex.
-    """
-    data = {"discipline": "UNKNOWN", "priority": "Standard", "summary": raw_text}
+    # Initialize with clean defaults, NOT the raw_text
+    data = {"discipline": "UNKNOWN", "priority": "Standard", "summary": "No summary available"}
     
     try:
-        # Regex to capture text between the labels and commas
-        disc_match = re.search(r"Discipline:\s*([^,]+)", raw_text, re.IGNORECASE)
-        pri_match = re.search(r"Priority Level:\s*([^,]+)", raw_text, re.IGNORECASE)
-        sum_match = re.search(r"Brief Summary:\s*(.+)", raw_text, re.IGNORECASE)
+        # The [^,:\n\r]+ part tells it to STOP at a comma, a colon, OR a newline
+        disc_match = re.search(r"Discipline\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
+        pri_match = re.search(r"Priority\s*(?:Level)?\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
+        sum_match = re.search(r"(?:Brief\s+)?Summary\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
 
         if disc_match:
             data["discipline"] = disc_match.group(1).strip().upper()
@@ -55,6 +52,7 @@ def parse_vlm_response(raw_text: str):
             data["priority"] = pri_match.group(1).strip()
         if sum_match:
             data["summary"] = sum_match.group(1).strip()
+            
     except Exception:
         pass 
         
@@ -171,3 +169,4 @@ async def get_image(evidence_id: str):
         if path.is_file():
             return FileResponse(path, media_type=mime)
     raise HTTPException(status_code=404, detail="Image not found")
+

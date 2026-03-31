@@ -25,7 +25,9 @@ services:
     volumes:
       - ./src:/app/src
       - uploads:/app/uploads
+      - ./.env:/app/.env
       - ./credentials.json:/app/credentials.json
+    
     depends_on:
       db:
         condition: service_healthy
