@@ -1,6 +1,5 @@
 "use client"
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
@@ -82,7 +81,7 @@ export default function MaintenanceDashboard() {
       {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 fixed h-full shadow-sm z-10">
         <div className="flex flex-col items-center justify-center mb-4">
-          <Image
+          <img
             src="/logo.png"
             alt="BART Logo"
             className="w-32 h-auto object-contain"
