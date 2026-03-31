@@ -93,8 +93,6 @@ vlm_summary: <one concise sentence>
     confidence = 1.0
     return raw_response, confidence
 
-#kiara's parsing logic, clean raw model output and map to bart labels
-
 def process_incident(incident: Incident, db: Session):
     #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save
 
