@@ -15,7 +15,7 @@ concurrency: release
 jobs:
   release:
     name: Build and Release Python Package
-    runs-on: runs-on: arc-runner-cse120
+    runs-on: arc-runner-cse120
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     
     permissions:
@@ -57,7 +57,7 @@ jobs:
   docker:
     name: Build and Release Docker Image
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-cse120
     if: needs.release.outputs.released == 'true'
     
     permissions:
