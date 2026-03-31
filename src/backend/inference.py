@@ -86,7 +86,7 @@ BASE_QUERY = (
     "Reason from the image AND/or text input to:\n"
     "1) Output the name of exactly ONE discipline from the list below\n"
     "2) Output exactly ONE fitting priority level from this list: LOW, STANDARD, HIGH, CRITICAL\n"
-    "3) Output a 4 word Summary of what is wrong. Do not output a 1 word summary.\n\n"
+    "3) Output what the problem is about the object in 2-5 words (e.g. broken light, non-functional power socket)\n\n"
     
     "Possible disciplines are:\n"
     "- FARE COLLECTION: Card scanners\n"

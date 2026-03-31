@@ -1,6 +1,7 @@
 import os
 import re
 from pathlib import Path
+from pgvector.sqlalchemy import Vector
 
 from dotenv import load_dotenv
 from sqlalchemy import (
@@ -49,7 +50,7 @@ class PhotoReport(Base):
     submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
-    embedding = Column(String)
+    embedding = Column(Vector(3072))
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)

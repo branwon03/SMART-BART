@@ -3,6 +3,8 @@ import shutil
 import tempfile
 import uuid
 import re
+from .inference import generate_embedding, chat_with_media
+from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -13,6 +15,7 @@ from src.backend.database import Base, Incident, PhotoReport, engine, get_db
 from src.backend.inference import (
     build_query,
     chat_with_media,
+    generate_embedding,
     get_extension,
     kSupportedList,
 )
@@ -107,6 +110,12 @@ async def submissions(
             shutil.copy2(str(first), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
 
+        embedding_vector = generate_embedding(
+            text=description if description else "No description provided",
+            image_paths=tmp_paths
+        )
+        
+
         # 5. Save to Database
         incident = Incident(
             incident_id=incident_id,
@@ -123,7 +132,7 @@ async def submissions(
             submission_id=submission_id,
             incident_id=incident_id,
             image_url=saved_image_url,
-            embedding=None,
+            embedding = embedding_vector,
             submitted_at=now,
             user_context=description,
             found_priority=parsed_data["priority"],
