@@ -1,10 +1,10 @@
 "use client"
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
-import { formatElapsedSince } from "../lib/formatElapsedSince";
 
 
 export default function MaintenanceDashboard() {
@@ -13,12 +13,12 @@ export default function MaintenanceDashboard() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(new Date());
+  const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
 
   const disciplines = [
     "FARE COLLECTION", "BUILDINGS", "COMMS",
     "ELEVATOR AND ESCALATOR", "GROUNDS", "MECHANICAL",
-    "SYSTEM SERVICE", "STRUCTURES", "TRACK",
-    "ELECTRICAL", "RSS",
+    "SYSTEM SERVICE", "ELECTRICAL"
   ];
 
 
@@ -29,46 +29,51 @@ export default function MaintenanceDashboard() {
     try {
       const json = await getIncidents();
       setData(json);
-     
-      if (selectedIncident) {
-        const updated = json.find((i) => i.incident_id === selectedIncident.incident_id);
-        if (updated) setSelectedIncident(updated);
-      }
+
+      setSelectedIncident((prevSelectedIncident) => {
+        if (!prevSelectedIncident) return prevSelectedIncident;
+        const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
+        return updated ?? prevSelectedIncident;
+      });
     } catch (err) {
       console.error("Fetch incidents failed:", err);
     }
-  };
+  }, []);
 
 
-  const fetchEvidence = async (incidentId: string) => {
+  const fetchEvidence = useCallback(async (incidentId: string) => {
     try {
       const json = await getPhotoReports(incidentId);
       setEvidence(json);
     } catch (err) {
       console.error("Fetch evidence failed:", err);
     }
-  };
-
-
-  useEffect(() => {
-    fetchData();
-    const dataInterval = setInterval(fetchData, 10000);
-    const clockInterval = setInterval(() => setNow(new Date()), 60000);
-    return () => {
-      clearInterval(dataInterval);
-      clearInterval(clockInterval);
-    };
   }, []);
 
 
   useEffect(() => {
-    if (selectedIncident) {
-      fetchEvidence(selectedIncident.incident_id);
-    } else {
-      setEvidence([]);
-    }
-  }, [selectedIncident?.incident_id]);
+    const tick = () => {
+      void fetchData();
+    };
+    const initialTimeout = setTimeout(tick, 0);
+    const dataInterval = setInterval(tick, 10000);
+    const clockInterval = setInterval(() => setNow(new Date()), 60000);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(dataInterval);
+      clearInterval(clockInterval);
+    };
+  }, [fetchData]);
 
+
+  useEffect(() => {
+    if (!selectedIncident?.incident_id) return;
+    const incidentId = selectedIncident.incident_id;
+    const timeoutId = setTimeout(() => {
+      void fetchEvidence(incidentId);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchEvidence, selectedIncident?.incident_id]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -76,7 +81,7 @@ export default function MaintenanceDashboard() {
       {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 fixed h-full shadow-sm z-10">
         <div className="flex flex-col items-center justify-center mb-4">
-          <img
+          <Image
             src="/logo.png"
             alt="BART Logo"
             className="w-32 h-auto object-contain"
@@ -94,6 +99,8 @@ export default function MaintenanceDashboard() {
               onClick={() => {
                 setActiveTab(item);
                 setSelectedIncident(null);
+                setEvidence([]);
+                setIncidentIdExpanded(false);
               }}
               className={`w-full text-left px-4 py-2.5 rounded-lg font-bold transition-all ${
                 activeTab === item
@@ -163,10 +170,13 @@ export default function MaintenanceDashboard() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    filteredData.map((item: Incident) => (
                       <tr
                         key={item.incident_id}
-                        onClick={() => setSelectedIncident(item)}
+                        onClick={() => {
+                          setSelectedIncident(item);
+                          setIncidentIdExpanded(false);
+                        }}
                         className={`cursor-pointer transition-all group ${
                           selectedIncident?.incident_id === item.incident_id ? 'bg-blue-50' : 'hover:bg-slate-50'
                         }`}
@@ -196,17 +206,49 @@ export default function MaintenanceDashboard() {
           <>
             <div
               className="fixed inset-0 bg-black/20 z-20"
-              onClick={() => setSelectedIncident(null)}
+              onClick={() => {
+                setSelectedIncident(null);
+                setEvidence([]);
+                setIncidentIdExpanded(false);
+              }}
             />
            
             <aside className="fixed top-0 right-0 w-[450px] bg-white border-l-4 border-black h-screen p-6 shadow-2xl z-30 overflow-y-auto font-sans text-sm">
              
-              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative">
-                <h2 className="text-xl font-bold mb-4 pr-32 leading-tight">{selectedIncident.vlm_summary}</h2>
+              <div className="border-b-2 border-gray-300 pb-4 mb-4 relative pr-36">
+                <h2 className="text-xl font-bold mb-4 leading-tight">{selectedIncident.vlm_summary}</h2>
                
                 <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
                   <span className="font-bold text-gray-700">Incident ID:</span>
-                  <span>{selectedIncident.incident_id}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={incidentIdExpanded}
+                    aria-label={
+                      incidentIdExpanded
+                        ? "Full incident ID. Click to collapse."
+                        : "Incident ID. Click to expand."
+                    }
+                    onClick={() => setIncidentIdExpanded((e) => !e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIncidentIdExpanded((x) => !x);
+                      }
+                    }}
+                    className={`inline-block max-w-full font-mono text-xs rounded-md border-2 border-black/15 bg-amber-50 px-2 py-0.5 text-slate-900 shadow-sm transition-colors hover:bg-amber-100 hover:border-black/30 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${
+                      incidentIdExpanded ? "break-all" : ""
+                    }`}
+                    title={
+                      incidentIdExpanded
+                        ? "Click to show short ID"
+                        : `${selectedIncident.incident_id} — click to expand`
+                    }
+                  >
+                    {incidentIdExpanded
+                      ? selectedIncident.incident_id
+                      : displayCompactIncidentId(selectedIncident.incident_id)}
+                  </span>
                  
                   <span className="font-bold text-gray-700">Priority:</span>
                   <span className={selectedIncident.issue_priority === 1 ? "text-black-500" : "text-yellow-600 font-bold"}>
@@ -246,13 +288,13 @@ export default function MaintenanceDashboard() {
               <div className="mb-6">
                 <h3 className="font-bold text-lg mb-2">Description:</h3>
                 <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 h-48 overflow-y-auto text-[11px] leading-relaxed space-y-4">
-                  {evidence.map((ev: any, idx: number) => (
+                  {evidence.map((ev: PhotoReport, idx: number) => (
                     <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                       <div className="flex justify-between font-bold text-gray-500 mb-1">
                         <span>Report summary {idx + 1}:</span>
                         <span>TODO:timestamp</span>
                       </div>
-                      <p className="text-gray-800">- "{ev.user_context || "Rider report logged via web-app."}"</p>
+                      <p className="text-gray-800">- &quot;{ev.user_context || "Rider report logged via web-app."}</p>
                      
                      
                     </div>
@@ -279,7 +321,11 @@ export default function MaintenanceDashboard() {
 
 
                 <button
-                  onClick={() => setSelectedIncident(null)}
+                  onClick={() => {
+                    setSelectedIncident(null);
+                    setEvidence([]);
+                    setIncidentIdExpanded(false);
+                  }}
                   className="w-32 py-2 border-[3px] border-black rounded-lg font-black text-lg uppercase tracking-tighter hover:bg-gray-100 active:scale-95 transition-all">
                     Close
                   </button>
