@@ -90,7 +90,7 @@ export default function MaintenanceDashboard() {
       {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 fixed h-full shadow-sm z-10">
         <div className="flex flex-col items-center justify-center mb-4">
-          <Image
+          <img
             src="/logo.png"
             alt="BART Logo"
             className="w-32 h-auto object-contain"
@@ -317,7 +317,7 @@ export default function MaintenanceDashboard() {
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
                   {evidence.length > 0 && evidence[0].image_url ? (
                     <img
-                      src={evidence[0].image_url.startsWith('http') ? evidence[0].image_url : `${API_BASE_URL.replace(/\/api$/, '')}${evidence[0].image_url}`}
+                      src={`${API_BASE_URL}${evidence[0].image_url}`}
                       className="w-full h-full object-cover"
                       alt="Main evidence"
                     />
