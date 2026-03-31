@@ -3,6 +3,8 @@ import shutil
 import tempfile
 import uuid
 import re
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from .inference import generate_embedding, chat_with_media
 from pgvector.sqlalchemy import Vector
 from datetime import datetime
@@ -161,21 +163,39 @@ async def submissions(
 async def get_incidents(db: Session = Depends(get_db)):
     return db.query(Incident).all()
 
-@app.get("/api/photo-reports/{incident_id}")
-async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
-    return (
-        db.query(PhotoReport)
-        .filter(PhotoReport.incident_id == incident_id)
-        .all()
-    )
-
 MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
 
-@app.get("/api/images/{evidence_id}")
-async def get_image(evidence_id: str):
-    for ext, mime in MIME_MAP.items():
-        path = UPLOAD_DIR / f"{evidence_id}.{ext}"
-        if path.is_file():
-            return FileResponse(path, media_type=mime)
-    raise HTTPException(status_code=404, detail="Image not found")
+@app.get("/api/photo-reports/{incident_id}")
+async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
+    # Using a clean dictionary-based query to avoid the 3072-dim vector entirely
+    from sqlalchemy import text
+    
+    query = text("""
+        SELECT evidence_id, image_url, submitted_at, user_context 
+        FROM photo_reports 
+        WHERE incident_id = :inc_id 
+        ORDER BY submitted_at DESC
+    """)
+    
+    result = db.execute(query, {"inc_id": incident_id}).fetchall()
+    
+    # Manually building a clean list of standard Python dicts
+    clean_data = []
+    for row in result:
+        clean_data.append({
+            "evidence_id": str(row[0]),
+            "image_url": str(row[1]),
+            "submitted_at": row[2].isoformat() if row[2] else None,
+            "user_context": str(row[3]) if row[3] else ""
+        })
+    
+    # Bypass FastAPI's automatic encoder completely
+    return JSONResponse(content=clean_data)
 
+@app.get("/api/images/{evidence_id}")
+def get_image(evidence_id: str):
+    for ext in ("png", "jpg", "jpeg", "webp"):
+        path = UPLOAD_DIR / f"{evidence_id}.{ext}"
+        if path.exists():
+            return FileResponse(path, media_type=f"image/{ext}")
+    raise HTTPException(status_code=404, detail="Image not found")

@@ -184,7 +184,7 @@ export default function MaintenanceDashboard() {
                         <td className="p-5 font-bold text-slate-700">{item.vlm_summary}</td>
                         <td className="p-5 font-mono text-xs text-slate-400">#{item.incident_id.slice(0,8)}</td>
                         <td className="p-5">
-                          <div className={`h-1.5 w-10 rounded-full ${item.issue_priority === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]' : 'bg-yellow-400'}`} />
+                          <div className={`h-1.5 w-10 rounded-full ${['HIGH', 'CRITICAL', '1'].includes(item.issue_priority) ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]' : 'bg-yellow-400'}`} />
                         </td>
                         <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">{item.location_id}</td>
                         <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
@@ -259,7 +259,7 @@ export default function MaintenanceDashboard() {
                     <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                       <div className="flex justify-between font-bold text-gray-500 mb-1">
                         <span>Report summary {idx + 1}:</span>
-                        <span>TODO:timestamp</span>
+                        <span>{new Date(ev.submitted_at).toLocaleTimeString()}</span>
                       </div>
                       <p className="text-gray-800">- "{ev.user_context || "Rider report logged via web-app."}"</p>
                      
@@ -275,7 +275,7 @@ export default function MaintenanceDashboard() {
                 <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
                   {evidence.length > 0 && evidence[0].image_url ? (
                     <img
-                      src={`${API_BASE_URL}${evidence[0].image_url}`}
+                      src={evidence[0].image_url.startsWith('http') ? evidence[0].image_url : `${API_BASE_URL.replace(/\/api$/, '')}${evidence[0].image_url}`}
                       className="w-full h-full object-cover"
                       alt="Main evidence"
                     />
