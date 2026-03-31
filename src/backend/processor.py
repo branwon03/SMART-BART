@@ -14,11 +14,21 @@ from src.backend.gemini_parser import parse_classification, DISCIPLINES
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
-client = genai.Client(
-    vertexai=True,
-    project=os.environ["GOOGLE_CLOUD_PROJECT"],
-    location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
-)
+def get_genai_client():
+    project = os.getenv("GOOGLE_CLOUD_PROJECT")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+
+    if not use_vertex or not project:
+        raise RuntimeError(
+            "Gemini/Vertex is not configured. Set GOOGLE_GENAI_USE_VERTEXAI=true and GOOGLE_CLOUD_PROJECT."
+        )
+
+    return genai.Client(
+        vertexai=True,
+        project=project,
+        location=location,
+    )
 
 def resolve_local_image_path(photo: PhotoReport) -> str:
     image_url = getattr(photo, "image_url", None)
@@ -45,6 +55,8 @@ def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
     - temporary confidence score placeholder
     """
     print(f"  [model] Running inference on {os.path.basename(image_path)}")
+
+    client = get_genai_client()
 
     mime_type, _ = mimetypes.guess_type(image_path)
     if mime_type is None:
@@ -78,9 +90,7 @@ vlm_summary: <one concise sentence>
     if not raw_response:
         raise ValueError("Gemini returned an empty response")
 
-    # Temporary placeholder until we decide how we want to score confidence
     confidence = 1.0
-
     return raw_response, confidence
 
 #kiara's parsing logic, clean raw model output and map to bart labels
