@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 
@@ -24,18 +24,20 @@ export function useMaintenanceDashboard() {
   const [now, setNow] = useState(() => new Date());
   const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
 
-  const selectedIncidentRef = useRef(selectedIncident);
-  selectedIncidentRef.current = selectedIncident;
 
   const fetchData = useCallback(async () => {
     try {
       const json = await getIncidents();
       setData(json);
-      const current = selectedIncidentRef.current;
-      if (current) {
-        const updated = json.find((i) => i.incident_id === current.incident_id);
-        if (updated) setSelectedIncident(updated);
-      }
+
+      setSelectedIncident((prevSelectedIncident) => {
+        if (!prevSelectedIncident) {
+          return prevSelectedIncident;
+        }
+        const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
+        return updated ?? prevSelectedIncident;
+      });
+      
     } catch (err) {
       console.error("Fetch incidents failed:", err);
     }
@@ -51,27 +53,27 @@ export function useMaintenanceDashboard() {
   }, []);
 
   useEffect(() => {
-    void fetchData();
-    const dataInterval = setInterval(() => void fetchData(), INCIDENTS_POLL_MS);
+    const tick = () => {
+      void fetchData();
+    };
+    const initialTimeout = setTimeout(tick, 0);
+    const dataInterval = setInterval(tick, INCIDENTS_POLL_MS);
     const clockInterval = setInterval(() => setNow(new Date()), CLOCK_TICK_MS);
     return () => {
+      clearTimeout(initialTimeout);
       clearInterval(dataInterval);
       clearInterval(clockInterval);
     };
   }, [fetchData]);
 
   useEffect(() => {
-    const id = selectedIncident?.incident_id;
-    if (id) {
-      void fetchEvidence(id);
-    } else {
-      setEvidence([]);
-    }
-  }, [selectedIncident?.incident_id, fetchEvidence]);
-
-  useEffect(() => {
-    setIncidentIdExpanded(false);
-  }, [selectedIncident?.incident_id]);
+    if (!selectedIncident?.incident_id) return;
+    const incidentId = selectedIncident.incident_id;
+    const timeoutId = setTimeout(() => {
+      void fetchEvidence(incidentId);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchEvidence, selectedIncident?.incident_id]);
 
   const filteredData = useMemo(
     () => data.filter((item) => item.discipline === activeTab),
