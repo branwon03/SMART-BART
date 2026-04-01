@@ -2,6 +2,80 @@
 
 <!-- version list -->
 
+## v0.4.3 (2026-03-31)
+
+### Bug Fixes
+
+- Changing elapsed time feature
+  ([`b63285d`](https://github.com/cse120-ucm/S26-CSE-312/commit/b63285dc6d9b054a541b2795b8638aea2b146a74))
+
+- Update page.tsx
+  ([`fb15454`](https://github.com/cse120-ucm/S26-CSE-312/commit/fb154545f59194209b131214d498a4b5e1fc2e60))
+
+### Chores
+
+- Update page.tsx to call helper function
+  ([`356e055`](https://github.com/cse120-ucm/S26-CSE-312/commit/356e055d733aa22cada06f4b63924dcb798f1d32))
+
+
+## v0.4.2 (2026-03-31)
+
+### Bug Fixes
+
+- Update page.tsx
+  ([`c251219`](https://github.com/cse120-ucm/S26-CSE-312/commit/c251219a3c6463190bbc2095a6f70ca70b3ecbfe))
+
+
+## v0.4.1 (2026-03-31)
+
+### Bug Fixes
+
+- IMAGE_NAME build error
+  ([`7cd8a1f`](https://github.com/cse120-ucm/S26-CSE-312/commit/7cd8a1ff465727992cb5157553ed67a1707cb231))
+
+### Continuous Integration
+
+- Updating github actions
+  ([`24706fd`](https://github.com/cse120-ucm/S26-CSE-312/commit/24706fdd693998ad718124043791f7bd9455ce9f))
+
+
+## v0.4.0 (2026-03-31)
+
+### Bug Fixes
+
+- Defer Gemini client setup until runtime
+  ([`005969d`](https://github.com/cse120-ucm/S26-CSE-312/commit/005969dd6f349cdbb639580a9b5b45ce14ffad34))
+
+- Silence mypy import for google generativeai
+  ([`b1cc0cd`](https://github.com/cse120-ucm/S26-CSE-312/commit/b1cc0cdde4a943789e21d6b98b1f37606edef778))
+
+### Features
+
+- Wire Gemini Flash into processor scaffold
+  ([`2fd8f09`](https://github.com/cse120-ucm/S26-CSE-312/commit/2fd8f094442700ba3b938c28265f741c289ec16e))
+
+
+## v0.3.0 (2026-03-30)
+
+### Bug Fixes
+
+- Removing unnecessary disciplines
+  ([`b182e23`](https://github.com/cse120-ucm/S26-CSE-312/commit/b182e23dd4af1f9213686e37f1a2850292e72bb7))
+
+### Features
+
+- Add structured model response parser for backend fields
+  ([`36169d2`](https://github.com/cse120-ucm/S26-CSE-312/commit/36169d27d54a64df1b54283e290a8ef0467e0abb))
+
+
+## v0.2.0 (2026-03-27)
+
+### Features
+
+- Add structured model response parser for backend fields
+  ([`436940d`](https://github.com/cse120-ucm/S26-CSE-312/commit/436940df4633538a3400f8696829b046b8f0407a))
+
+
 ## v0.1.1 (2026-03-24)
 
 ### Bug Fixes
