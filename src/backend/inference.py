@@ -121,13 +121,19 @@ def get_extension(filename):
     return ext
 
 
-
-def chat_with_media(media_paths: list[Path], query: str):
+def chat_with_media(media_paths, query, description=None, submission_id=None):
     """
-    Performs inference and generates a temporary embedding preview.
+    Runs Gemini classification on uploaded media and returns the
+    structured result needed by the submissions endpoint.
+
+    Notes:
+    - submission_id is accepted so tests / callers can pass it through
+      without breaking the real function
+    - description is optional and currently unused here
     """
     # 1. Prepare parts for the prompt
     content_parts = [query]
+
     for path in media_paths:
         with open(path, "rb") as f:
             content_parts.append(
@@ -146,11 +152,13 @@ def chat_with_media(media_paths: list[Path], query: str):
         vector = generate_embedding(classification, media_paths)
 
         return {
-            "discipline": classification, 
-            "embedding": vector, 
+            "submission_id": submission_id,
+            "discipline": classification,
+            "embedding": vector,
             "num_images": len(media_paths),
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         print(f"Inference Error: {e}")
         return None

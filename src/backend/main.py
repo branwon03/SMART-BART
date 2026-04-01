@@ -13,6 +13,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from src.backend.grouping import find_matching_incident
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
 from src.backend.inference import (
     build_query,
@@ -44,7 +45,27 @@ app.add_middleware(
 def parse_vlm_response(raw_text: str):
     # Initialize with clean defaults, NOT the raw_text
     data = {"discipline": "UNKNOWN", "priority": "Standard", "summary": "No summary available"}
-    
+
+    KNOWN_DISCIPLINES = {
+        "FARE COLLECTION",
+        "BUILDINGS",
+        "COMMS",
+        "ELEVATOR AND ESCALATOR",
+        "GROUNDS",
+        "MECHANICAL",
+        "SYSTEM SERVICE",
+        "ELECTRICAL",
+        "UNCLASSIFIED",
+    }
+
+    if not raw_text:
+        return data
+
+    raw_upper = raw_text.strip().upper()
+    if raw_upper in KNOWN_DISCIPLINES:
+        data["discipline"] = raw_upper
+        return data
+
     try:
         # The [^,:\n\r]+ part tells it to STOP at a comma, a colon, OR a newline
         disc_match = re.search(r"Discipline\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
@@ -57,10 +78,10 @@ def parse_vlm_response(raw_text: str):
             data["priority"] = pri_match.group(1).strip()
         if sum_match:
             data["summary"] = sum_match.group(1).strip()
-            
+
     except Exception:
-        pass 
-        
+        pass
+
     return data
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -81,7 +102,10 @@ async def submissions(
         for upload in media:
             ext = get_extension(upload.filename or "")
             if ext not in kSupportedList:
-                raise HTTPException(status_code=422, detail="Unsupported file type")
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Unsupported file type '.{ext}'. Accepted: {', '.join(sorted(kSupportedList))}",
+                )
             
             suffix = f".{ext}"
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
@@ -92,13 +116,22 @@ async def submissions(
         # 2. Run Inference
         submission_id = uuid.uuid4().hex
         query_text = build_query(description)
-        result = chat_with_media(tmp_paths, query_text)
+        result = chat_with_media(
+            tmp_paths,
+            query_text,
+            submission_id=submission_id,
+        )
 
         if result is None:
             raise HTTPException(status_code=502, detail="Inference API unavailable")
 
+        
         # 3. Parse the long string from Gemini into clean fields
         parsed_data = parse_vlm_response(result["discipline"])
+
+        summary_text = parsed_data["summary"]
+        if summary_text == "No summary available":
+            summary_text = description or "No summary available"
         
         incident_id = uuid.uuid4().hex
         evidence_id = uuid.uuid4().hex
@@ -116,18 +149,31 @@ async def submissions(
             text=description if description else "No description provided",
             image_paths=tmp_paths
         )
-        
+
+        matched_incident_id, grouping_score = find_matching_incident(
+            db=db,
+            new_embedding=embedding_vector,
+            discipline=parsed_data["discipline"],
+            user_context=description,
+        )
+        grouped_into_existing = matched_incident_id is not None
 
         # 5. Save to Database
-        incident = Incident(
-            incident_id=incident_id,
-            status="Open",
-            issue_priority=parsed_data["priority"],
-            discipline=parsed_data["discipline"],
-            vlm_summary=parsed_data["summary"],
-            location_id=None,
-            created_at=now,
-        )
+        if grouped_into_existing:
+            incident_id = matched_incident_id
+        else:
+            incident_id = uuid.uuid4().hex
+            incident = Incident(
+                incident_id=incident_id,
+                status="Open",
+                issue_priority=parsed_data["priority"],
+                discipline=parsed_data["discipline"],
+                vlm_summary=summary_text,
+                location_id=None,
+                created_at=now,
+            )
+            db.add(incident)
+
         
         photo_report = PhotoReport(
             evidence_id=evidence_id,
@@ -140,19 +186,17 @@ async def submissions(
             found_priority=parsed_data["priority"],
         )
 
-        db.add(incident)
         db.add(photo_report)
         db.commit()
 
-        # 6. Return Clean Response
+                # 6. Return Clean Response
         return {
             "incident_id": incident_id,
             "submission_id": submission_id,
             "discipline": parsed_data["discipline"],
-            "priority": parsed_data["priority"],
-            "summary": parsed_data["summary"],
-            "description_provided": description,
-            "timestamp": now.isoformat()
+            "description": description,
+            "num_images": result["num_images"],
+            "timestamp": result["timestamp"],
         }
     finally:
         # Cleanup temp files
@@ -171,9 +215,9 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, image_url, submitted_at, user_context 
-        FROM photo_reports 
-        WHERE incident_id = :inc_id 
+        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context
+        FROM photo_reports
+        WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
     """)
     
@@ -182,13 +226,19 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     # Manually building a clean list of standard Python dicts
     clean_data = []
     for row in result:
+        image_val = row[3]
+        submitted_val = row[4]
+        user_context_val = row[5]
+
         clean_data.append({
             "evidence_id": str(row[0]),
-            "image_url": str(row[1]),
-            "submitted_at": row[2].isoformat() if row[2] else None,
-            "user_context": str(row[3]) if row[3] else ""
+            "submission_id": str(row[1]),
+            "incident_id": str(row[2]),
+            "image_url": None if image_val is None else str(image_val),
+            "submitted_at": submitted_val if isinstance(submitted_val, str)
+            else submitted_val.isoformat() if submitted_val else None,
+            "user_context": user_context_val if user_context_val is not None else ""
         })
-    
     # Bypass FastAPI's automatic encoder completely
     return JSONResponse(content=clean_data)
 
