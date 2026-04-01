@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+// Define the shape of expanded state
 interface ReportContextType {
   images: string[];
   setImages: React.Dispatch<React.SetStateAction<string[]>>;
@@ -28,7 +29,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     <ReportContext.Provider value={{ 
       images, setImages, 
       contextText, setContextText, 
-      priority, setPriority, 
+      priority, setPriority,
       fullName, setFullName, 
       contact, setContact 
     }}>
