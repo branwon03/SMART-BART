@@ -2,6 +2,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { formatPostedAt } from "../lib/formatPostedAt";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -25,7 +26,7 @@ export function IncidentDetailPanel({
       <div className="fixed inset-0 bg-black/20 z-20" onClick={onClose} />
 
       <aside className="fixed top-0 right-0 w-[450px] bg-white border-l-4 border-black h-screen p-6 shadow-2xl z-30 overflow-y-auto font-sans text-sm">
-        <div className="border-b-2 border-gray-300 pb-4 mb-4 relative pr-36">
+        <div className="relative min-h-[14rem] border-b-2 border-gray-300 pb-4 pr-36 mb-8">
           <h2 className="text-xl font-bold mb-4 leading-tight">{incident.vlm_summary}</h2>
 
           <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
@@ -107,14 +108,14 @@ export function IncidentDetailPanel({
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mt-4 mb-6">
           <h3 className="font-bold text-lg mb-2">Description:</h3>
-          <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 h-48 overflow-y-auto text-[11px] leading-relaxed space-y-4">
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-5 h-48 overflow-y-auto text-[15px] leading-relaxed space-y-10">
             {evidence.map((ev, idx) => (
               <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
                   <span>Report summary {idx + 1}:</span>
-                  <span>TODO:timestamp</span>
+                  <span>{formatPostedAt(ev.submitted_at)}</span>
                 </div>
                 <p className="text-gray-800">
                   - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;
