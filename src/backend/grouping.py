@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from src.backend.database import Incident, PhotoReport
 
 # Minimum cosine similarity required to attach a new report to an existing incident instead of creating new one
-GROUPING_THRESHOLD = 0.85   # Can tune later
+GROUPING_THRESHOLD = 0.60   # Can tune later
 
 def cosine_similarity(vec_a, vec_b) -> float:
     """
@@ -75,8 +75,8 @@ def find_matching_incident(
         .filter(PhotoReport.embedding.isnot(None))
     )
 
-    if user_context:
-        candidates_query = candidates_query.filter(PhotoReport.user_context == user_context)
+    #if user_context:
+        #candidates_query = candidates_query.filter(PhotoReport.user_context == user_context)
 
     candidates = candidates_query.all()
 
