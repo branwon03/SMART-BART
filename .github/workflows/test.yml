@@ -33,9 +33,6 @@ jobs:
   frontend:
     name: Frontend (lint + test + build)
     runs-on: arc-runner-cse120
-    defaults:
-      run:
-        working-directory: src/frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,14 +44,25 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      # Run npm from src/frontend so package-lock.json is found. (npm ci does not
+      # reliably use --prefix for the lockfile path; self-hosted runners may also
+      # ignore defaults.run.working-directory.)
       - name: Install frontend dependencies
-        run: npm ci
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm ci
 
       - name: Run frontend lint
-        run: npm run lint
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run lint
 
       - name: Run frontend tests
-        run: npm run test
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run test
 
       - name: Run frontend build
-        run: npm run build
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run build
