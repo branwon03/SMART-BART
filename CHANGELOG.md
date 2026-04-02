@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.6.0 (2026-04-02)
+
+### Continuous Integration
+
+- Update test.yml
+  ([`f2af082`](https://github.com/cse120-ucm/S26-CSE-312/commit/f2af082514d8770032e8b4d8abdab22e502e8f2b))
+
+
 ## v0.5.0 (2026-04-02)
 
 ### Chores
