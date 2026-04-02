@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useReportContext } from '@/src/context/ReportContext';
+import { useReportContext } from '@/context/ReportContext';
 
 export default function UserContext() {
   const router = useRouter();
@@ -16,13 +16,10 @@ export default function UserContext() {
   } = useReportContext();
 
   const handleSubmit = () => {
-    // Check if the required text fields are empty
     if (!contextText.trim() || !fullName.trim() || !contact.trim() || !priority.trim()) {
       alert("Please provide the incident context, priority, your full name, and contact information before submitting.");
       return;
     }
-
-    // If all validation passes, navigate to the confirmation page
     router.push('/confirmation');
   };
 
@@ -32,7 +29,7 @@ export default function UserContext() {
         
         <header className="w-full bg-black h-[72px] flex items-center px-4 gap-3 shrink-0">
           <div className="bg-white w-[52px] h-[36px] flex items-center justify-center p-1 rounded-sm">
-            <img src="/bart-logo.png" alt="BART" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="BART" className="w-full h-full object-contain" />
           </div>
           <div className="text-white text-[15px] font-bold leading-tight tracking-wide">
             Bay Area<br />Rapid Transit
@@ -41,7 +38,6 @@ export default function UserContext() {
 
         <div className="flex flex-col items-center w-full pt-6 flex-1">
           
-          {/* Dynamic Image Display Box */}
           <div className="w-[85%] h-[180px] border-[3px] border-[#0099D8] bg-[#D1D5DB] flex items-center justify-center mb-5 p-2 relative overflow-y-auto">
             {images.length > 0 ? (
               <div className="w-full h-full flex flex-wrap gap-2 content-start justify-center">
@@ -55,12 +51,7 @@ export default function UserContext() {
                 ))}
               </div>
             ) : (
-              <img 
-                  src="/bart-train-placeholder.jpg" 
-                  alt="Uploaded preview placeholder" 
-                  className="w-full h-full object-cover"
-                  style={{ backgroundColor: '#9CA3AF' }} 
-              />
+              <div className="w-full h-full bg-[#9CA3AF]" />
             )}
           </div>
 
@@ -89,8 +80,6 @@ export default function UserContext() {
               </svg>
             </div>
           </div>
-
-        
 
           <input 
             type="text" 
