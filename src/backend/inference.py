@@ -24,6 +24,14 @@ DISCIPLINES = [
     "MECHANICAL",
     "SYSTEM SERVICE",
     "ELECTRICAL",
+    "UNCLASSIFIED",
+]
+
+PRIORITIES = [
+    "LOW",
+    "STANDARD",
+    "HIGH",
+    "CRITICAL",
 ]
 
 BASE_QUERY = (
