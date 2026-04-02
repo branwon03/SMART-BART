@@ -3,7 +3,6 @@ import shutil
 import tempfile
 import uuid
 import re
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from src.backend.inference import build_query, chat_with_media, generate_embedding, get_extension, kSupportedList
 from pgvector.sqlalchemy import Vector
