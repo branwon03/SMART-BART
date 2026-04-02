@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v0.5.0 (2026-04-02)
+
+### Chores
+
+- Removing duplicate assets
+  ([`5905bb9`](https://github.com/cse120-ucm/S26-CSE-312/commit/5905bb950a4f906fe975942925b33086a2813f23))
+
+### Features
+
+- Setup isolated frontend, UI, and privacy blur
+  ([`6f3c555`](https://github.com/cse120-ucm/S26-CSE-312/commit/6f3c5553ea35a0ec4c12ba4d806a7e337a7eec0e))
+
+- Setup isolated frontend, UI, and privacy blur
+  ([`eb7f423`](https://github.com/cse120-ucm/S26-CSE-312/commit/eb7f4236d0340409768f5634585bcfe0cd430b3c))
+
+### Refactoring
+
+- User landing page
+  ([`959a6b9`](https://github.com/cse120-ucm/S26-CSE-312/commit/959a6b9fb9dc9ae3e2ab85358e937f7d7be594e9))
+
+
 ## v0.4.4 (2026-04-02)
 
 ### Bug Fixes
