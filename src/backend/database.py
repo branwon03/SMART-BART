@@ -2,7 +2,6 @@ import os
 import re
 from pathlib import Path
 from pgvector.sqlalchemy import Vector
-
 from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
@@ -12,14 +11,9 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:CSE_312!@db:5432/bart_db",
-)
-DATABASE_URL = re.sub(r"^postgresql://", "postgresql+psycopg://", DATABASE_URL)
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
