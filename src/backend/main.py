@@ -40,18 +40,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-"""
-app = FastAPI(title="BART Incident Classifier & Dashboard API")
-
-
-@app.on_event("startup")
-def _startup_create_tables() -> None:
-    print("Starting API, ensuring db tables exist...")
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as exc:
-        print(f"[startup] create_all failed: {exc}")
-"""
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
