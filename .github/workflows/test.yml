@@ -33,6 +33,9 @@ jobs:
   frontend:
     name: Frontend (lint + test + build)
     runs-on: arc-runner-cse120
+    defaults:
+      run:
+        working-directory: src/frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,17 +48,13 @@ jobs:
           cache-dependency-path: src/frontend/package-lock.json
 
       - name: Install frontend dependencies
-        working-directory: src/frontend
         run: npm ci
 
       - name: Run frontend lint
-        working-directory: src/frontend
         run: npm run lint
 
       - name: Run frontend tests
-        working-directory: src/frontend
         run: npm run test
 
       - name: Run frontend build
-        working-directory: src/frontend
         run: npm run build
