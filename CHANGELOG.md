@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.4 (2026-04-02)
+
+### Bug Fixes
+
+- Passing all linter error cases
+  ([`e5a2e55`](https://github.com/cse120-ucm/S26-CSE-312/commit/e5a2e557c2003bf5b0baef241001166c8272a6cb))
+
+
 ## v0.4.3 (2026-03-31)
 
 ### Bug Fixes
