@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Upload, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useReportContext } from '../context/ReportContext';
+import { useReportContext } from '../../../context/ReportContext';
 import * as tf from '@tensorflow/tfjs';
 import * as blazeface from '@tensorflow-models/blazeface';
 
@@ -20,13 +20,11 @@ export default function ImageUpload() {
     setImageError(null);
 
     try {
-      // Initialize TensorFlow and load Blazeface
       await tf.ready();
       const model = await blazeface.load();
 
       const newImages: string[] = [];
 
-      // Loop through all uploaded files
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         
@@ -35,47 +33,39 @@ export default function ImageUpload() {
           continue; 
         }
 
-        // Convert pitcure to an HTML image element
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await new Promise((resolve) => { img.onload = resolve; });
 
-        // Create an invisible Canvas
         const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext("2d");
         if (!ctx) continue;
 
-        // Draw the original image onto the canvas
         ctx.drawImage(img, 0, 0);
 
-        // Detect Faces using the AI model (Passing the canvas instead of img is more reliable)
         const predictions = await model.estimateFaces(canvas, false);
         
         console.log(`Image ${i + 1}: Found ${predictions.length} face(s)`);
 
-        // Blur faces
         if (predictions.length > 0) {
           predictions.forEach((prediction) => {
             const topLeft = prediction.topLeft as [number, number];
             const bottomRight = prediction.bottomRight as [number, number];
             
-            // Padding blurs whole head, can be adjusted if we need to minimize
             const padding = 40; 
             const x = topLeft[0] - padding;
             const y = topLeft[1] - padding;
             const width = (bottomRight[0] - topLeft[0]) + (padding * 2);
             const height = (bottomRight[1] - topLeft[1]) + (padding * 2);
 
-            ctx.save(); // Save unblurred canvas state
+            ctx.save();
             
-            // Draw an invisible path around the face
             ctx.beginPath();
             ctx.rect(x, y, width, height);
             ctx.clip();
 
-            // Adjust blur if needed in the future
             ctx.filter = "blur(30px)";
             ctx.drawImage(img, 0, 0);
 
@@ -83,7 +73,6 @@ export default function ImageUpload() {
           });
         }
 
-        // Export blurred canvas
         newImages.push(canvas.toDataURL("image/jpeg", 0.8));
       }
 
@@ -111,7 +100,7 @@ export default function ImageUpload() {
         
         <header className="w-full bg-black h-[72px] flex items-center px-4 gap-3 shrink-0">
           <div className="bg-white w-[52px] h-[36px] flex items-center justify-center p-1 rounded-sm">
-            <img src="/bart-logo.png" alt="BART" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="BART" className="w-full h-full object-contain" />
           </div>
           <div className="text-white text-[15px] font-bold leading-tight tracking-wide">
             Bay Area<br />Rapid Transit
@@ -150,7 +139,6 @@ export default function ImageUpload() {
             )}
           </div>
 
-          {/* Upload Button */}
           <label className={`cursor-pointer bg-[#0099D8] text-white py-2 px-6 text-[15px] font-bold shadow-md transition-colors mb-6 ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8]'}`}>
             {isProcessing ? 'Processing...' : 'Upload Images'}
             <input 
