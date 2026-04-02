@@ -18,7 +18,31 @@ from contextlib import asynccontextmanager
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# 1. Define the Lifespan logic
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- STARTUP LOGIC ---
+    print("Initializing BART Incident Classifier.")
+    try:
+        # Create database tables if they don't exist
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        print(f"[startup] create_all failed: {exc}")
+    
+    yield  # The app runs while it sits here
+    
+    # --- SHUTDOWN LOGIC ---
+    print("Shutting down. Cleaning up resources")
+
+app = FastAPI(
+    title="BART Incident Classifier & Dashboard API",
+    lifespan=lifespan
+)
+
+"""
 app = FastAPI(title="BART Incident Classifier & Dashboard API")
+
 
 @app.on_event("startup")
 def _startup_create_tables() -> None:
@@ -27,7 +51,7 @@ def _startup_create_tables() -> None:
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
         print(f"[startup] create_all failed: {exc}")
-
+"""
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
