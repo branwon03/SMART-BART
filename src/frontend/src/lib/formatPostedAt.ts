@@ -1,5 +1,5 @@
 /**
- * Posted time for evidence rows: D/M/YY and 12-hour clock, e.g. 1/1/26 12:32PM
+ * Posted time for evidence rows: M/D/YY with 12-hour clock, e.g. 1/1/26 @ 12:32PM
  */
 export function formatPostedAt(isoString: string | null | undefined): string {
   if (!isoString) return "—";
