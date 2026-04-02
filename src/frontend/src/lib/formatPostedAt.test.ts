@@ -25,7 +25,7 @@ describe("formatPostedAt", () => {
   });
 
   it("uses two-digit year modulo 100", () => {
-    expect(formatPostedAt("2000-07-04T09:00:00")).toBe("7/4/0 @ 9:00AM");
+    expect(formatPostedAt("2000-07-04T09:00:00")).toBe("7/4/00 @ 9:00AM");
   });
 
   it("matches the expected display shape for any valid parseable string", () => {
