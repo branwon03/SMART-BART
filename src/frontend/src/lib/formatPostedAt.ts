@@ -8,7 +8,7 @@ export function formatPostedAt(isoString: string | null | undefined): string {
 
   const day = d.getDate();
   const month = d.getMonth() + 1;
-  const yy = d.getFullYear() % 100;
+  const yy = (d.getFullYear() % 100).toString().padStart(2, "0");
 
   let hours = d.getHours();
   const minutes = d.getMinutes();
