@@ -5,23 +5,16 @@ import uuid
 import re
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
-from .inference import generate_embedding, chat_with_media
+from src.backend.inference import build_query, chat_with_media, generate_embedding, get_extension, kSupportedList
 from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from src.backend.grouping import find_matching_incident
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
-from src.backend.inference import (
-    build_query,
-    chat_with_media,
-    generate_embedding,
-    get_extension,
-    kSupportedList,
-)
+from contextlib import asynccontextmanager
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -30,6 +23,7 @@ app = FastAPI(title="BART Incident Classifier & Dashboard API")
 
 @app.on_event("startup")
 def _startup_create_tables() -> None:
+    print("Starting API, ensuring db tables exist...")
     try:
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
