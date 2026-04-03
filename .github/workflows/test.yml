@@ -44,18 +44,25 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      # Run npm from src/frontend so package-lock.json is found. (npm ci does not
+      # reliably use --prefix for the lockfile path; self-hosted runners may also
+      # ignore defaults.run.working-directory.)
       - name: Install frontend dependencies
-        working-directory: src/frontend
-        run: npm ci
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm ci
 
       - name: Run frontend lint
-        working-directory: src/frontend
-        run: npm run lint
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run lint
 
       - name: Run frontend tests
-        working-directory: src/frontend
-        run: npm run test
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run test
 
       - name: Run frontend build
-        working-directory: src/frontend
-        run: npm run build
+        run: |
+          cd "${GITHUB_WORKSPACE}/src/frontend"
+          npm run build
