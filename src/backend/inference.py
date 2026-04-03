@@ -1,15 +1,11 @@
-import argparse
-import base64
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from google import genai
 from google.genai import types
 from google.oauth2 import service_account
 from dotenv import load_dotenv
-import requests
 
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
@@ -36,7 +32,7 @@ TUNED_MODEL_ID = "projects/178919740846/locations/us-central1/endpoints/54410927
 
 EMBEDDING_MODEL_ID = "gemini-embedding-2-preview"
 
-def generate_embedding(text: str, image_paths: list[Path] = None):
+def generate_embedding(text: str, image_paths: list[Path] | None = None):
     """Generates a multimodal embedding for the issue."""
     parts = [types.Part.from_text(text=text)]
     
@@ -54,8 +50,11 @@ def generate_embedding(text: str, image_paths: list[Path] = None):
             contents=parts,
             config=types.EmbedContentConfig(task_type="CLASSIFICATION")
         )
-        
-        return result.embeddings[0].values
+
+        embeddings = result.embeddings
+        if not embeddings:
+            return None
+        return embeddings[0].values
     except Exception as e:
         print(f"Embedding Error: {e}")
         return None
@@ -178,7 +177,7 @@ if __name__ == "__main__":
     media_paths = [TEST_IMAGE_PATH]
     final_query = build_query(TEST_DESCRIPTION)
     
-    print(f"--- TRIGGERING HARDCODED INFERENCE TEST ---")
+    print("--- TRIGGERING HARDCODED INFERENCE TEST ---")
     print(f"Target: {TEST_IMAGE_PATH}")
     
     # 4. Execute Inference
