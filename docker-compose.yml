@@ -28,6 +28,19 @@ services:
       db:
         condition: service_healthy
 
+  processor:
+    build: .
+    restart: unless-stopped
+    command: python -m src.backend.processor
+    env_file: .env
+    environment:
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: src/frontend

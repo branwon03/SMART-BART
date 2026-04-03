@@ -1,11 +1,13 @@
 import os
 import time
+import math
 import mimetypes
 from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from google.genai.types import GenerateContentConfig
 from sqlalchemy.orm import Session
 
 from src.backend.database import SessionLocal, Incident, PhotoReport
@@ -48,11 +50,11 @@ def resolve_local_image_path(photo: PhotoReport) -> str:
 
 def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
     """
-    Gemini call for MVP steel-thread testing.
+    Gemini 2.5 Flash call with logprobs for real confidence scoring.
 
     Returns:
     - raw structured text response for parse_classification(...)
-    - temporary confidence score placeholder
+    - confidence score derived from avg_logprobs
     """
     print(f"  [model] Running inference on {os.path.basename(image_path)}")
 
@@ -78,11 +80,12 @@ vlm_summary: <one concise sentence>
 """.strip()
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.5-flash",
         contents=[
             prompt,
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         ],
+        config=GenerateContentConfig(response_logprobs=True, logprobs=3)
     )
 
     raw_response = (response.text or "").strip()
@@ -90,7 +93,10 @@ vlm_summary: <one concise sentence>
     if not raw_response:
         raise ValueError("Gemini returned an empty response")
 
-    confidence = 1.0
+    #converting the log probs to a confidence score
+    avg_logprobs = response.candidates[0].avg_logprobs or 0.0
+    confidence = math.exp(avg_logprobs)
+
     return raw_response, confidence
 
 def process_incident(incident: Incident, db: Session):
@@ -113,6 +119,7 @@ def process_incident(incident: Incident, db: Session):
 
     best_category = None
     best_summary = None
+    best_priority = None
     best_confidence = -1.0
     missing_files = []
 
