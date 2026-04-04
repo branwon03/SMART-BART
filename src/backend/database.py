@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    JSON,
     String,
     create_engine,
 )
@@ -15,6 +16,9 @@ load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set (check .env)")
+
+# pgvector.Vector is not used for SQLite (tests / local without Postgres).
+_USE_SQLITE = DATABASE_URL.startswith("sqlite")
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -45,7 +49,7 @@ class PhotoReport(Base):
     submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
-    embedding = Column(Vector(3072))
+    embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)

@@ -11,22 +11,37 @@ env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # --- VERTEX AI CONFIGURATION ---
-KEY_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
 PROJECT_ID = "project-51a9be3f-d2d4-42cc-b2d"
 LOCATION = "us-central1"
 
-# Load Service Account
-credentials = service_account.Credentials.from_service_account_file(
-    KEY_PATH, 
-    scopes=['https://www.googleapis.com/auth/cloud-platform']
-)
+_client: genai.Client | None = None
 
-client = genai.Client(
-    vertexai=True, 
-    project=PROJECT_ID,
-    location=LOCATION, 
-    credentials=credentials
-)
+
+def _get_genai_client() -> genai.Client:
+    """Lazily build the Vertex client so imports work without credentials (e.g. CI tests)."""
+    global _client
+    if _client is not None:
+        return _client
+    key_path = os.path.expanduser(
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+    )
+    creds_path = Path(key_path)
+    if not creds_path.is_file():
+        raise FileNotFoundError(
+            f"Vertex AI credentials not found at {creds_path.resolve()}. "
+            "Set GOOGLE_APPLICATION_CREDENTIALS or add credentials.json."
+        )
+    credentials = service_account.Credentials.from_service_account_file(
+        str(creds_path),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+    _client = genai.Client(
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
+        credentials=credentials,
+    )
+    return _client
 
 TUNED_MODEL_ID = "projects/178919740846/locations/us-central1/endpoints/544109271923556352"
 
@@ -45,7 +60,7 @@ def generate_embedding(text: str, image_paths: list[Path] | None = None):
 
     try:
         # Generate the embedding
-        result = client.models.embed_content(
+        result = _get_genai_client().models.embed_content(
             model=EMBEDDING_MODEL_ID,
             contents=parts,
             config=types.EmbedContentConfig(task_type="CLASSIFICATION")
@@ -142,7 +157,7 @@ def chat_with_media(media_paths, query, description=None, submission_id=None):
 
     try:
         # 2. Run Classification
-        response = client.models.generate_content(
+        response = _get_genai_client().models.generate_content(
             model=TUNED_MODEL_ID,
             config=types.GenerateContentConfig(temperature=0.1),
             contents=content_parts

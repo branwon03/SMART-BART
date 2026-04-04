@@ -22,6 +22,9 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    # Host .env often uses localhost/127.0.0.1; inside this container Postgres is the `db` service.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
     volumes:
       - ./src:/app/src
       - uploads:/app/uploads
