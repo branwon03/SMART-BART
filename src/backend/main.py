@@ -5,7 +5,6 @@ import uuid
 import re
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from src.backend.inference import build_query, chat_with_media, generate_embedding, get_extension, kSupportedList
-from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -210,7 +209,19 @@ async def submissions(
 
 @app.get("/api/incidents")
 async def get_incidents(db: Session = Depends(get_db)):
-    return db.query(Incident).all()
+    rows = db.query(Incident).all()
+    return [
+        {
+            "incident_id": r.incident_id,
+            "status": r.status,
+            "issue_priority": r.issue_priority,
+            "discipline": r.discipline,
+            "vlm_summary": r.vlm_summary,
+            "location_id": r.location_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
 
 MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
 
@@ -220,7 +231,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context
+        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context, found_priority
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -234,6 +245,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         image_val = row[3]
         submitted_val = row[4]
         user_context_val = row[5]
+        found_pri_val = row[6]
 
         clean_data.append({
             "evidence_id": str(row[0]),
@@ -242,7 +254,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
             "image_url": None if image_val is None else str(image_val),
             "submitted_at": submitted_val if isinstance(submitted_val, str)
             else submitted_val.isoformat() if submitted_val else None,
-            "user_context": user_context_val if user_context_val is not None else ""
+            "user_context": user_context_val if user_context_val is not None else "",
+            "found_priority": None if found_pri_val is None else str(found_pri_val),
         })
     # Bypass FastAPI's automatic encoder completely
     return JSONResponse(content=clean_data)

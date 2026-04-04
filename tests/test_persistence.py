@@ -34,6 +34,20 @@ def _make_png_bytes() -> bytes:
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
 
+def _distinct_embedding_factory():
+    """Return orthogonal unit-ish vectors so cosine similarity stays ~0 between calls."""
+    i = 0
+
+    def _fake(*_a, **_kw):
+        nonlocal i
+        v = [0.0] * 3072
+        v[i % 3072] = 1.0
+        i += 1
+        return v
+
+    return _fake
+
+
 # ── RED-GREEN #1: submission persists Incident + PhotoReport ──────────────────
 
 @patch("src.backend.main.chat_with_media")
@@ -76,8 +90,9 @@ def test_submission_persists_and_returns_incident_id(mock_chat):
 
 # ── RED-GREEN #2: GET /api/incidents accumulates multiple submissions ─────────
 
+@patch("src.backend.main.generate_embedding", side_effect=_distinct_embedding_factory())
 @patch("src.backend.main.chat_with_media")
-def test_incidents_accumulate(mock_chat):
+def test_incidents_accumulate(mock_chat, _mock_embed):
     mock_chat.side_effect = lambda *a, **kw: {
         **MOCK_INFERENCE,
         "submission_id": kw.get("submission_id"),
@@ -107,8 +122,9 @@ def test_incidents_accumulate(mock_chat):
 
 # ── RED-GREEN #3: photo reports are scoped to their incident ──────────────────
 
+@patch("src.backend.main.generate_embedding", side_effect=_distinct_embedding_factory())
 @patch("src.backend.main.chat_with_media")
-def test_photo_reports_scoped_to_incident(mock_chat):
+def test_photo_reports_scoped_to_incident(mock_chat, _mock_embed):
     mock_chat.side_effect = lambda *a, **kw: {
         **MOCK_INFERENCE,
         "submission_id": kw.get("submission_id"),

@@ -1,7 +1,6 @@
 import os
-import re
 from pathlib import Path
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
@@ -14,8 +13,10 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set (check .env)")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
