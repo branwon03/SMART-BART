@@ -95,6 +95,7 @@ BASE_QUERY = (
     "- GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals\n"
     "- MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans\n"
     "- SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning\n"
+    "- SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning\n"
     "- ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems\n"
     "- UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline\n\n"
 )
