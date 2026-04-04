@@ -1,4 +1,4 @@
-p[project]
+[project]
 name = "BART_Image_Classifier"
 version = "0.6.0"
 description = "Add your description here"
