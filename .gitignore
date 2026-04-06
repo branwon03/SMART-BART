@@ -20,11 +20,15 @@ venv*/
 *.log
 .python-version
 credentials.json
-
 BART_Image_Classifier.egg-info/
+
+# datasets
 Akash's Dataset 1 (jpeg)_resized/
 datasets/312 Raw Campus Pictures-selected/
+samples/
 
+# docker volumes
 uploads/
 
+# gemini 
 credentials.json
