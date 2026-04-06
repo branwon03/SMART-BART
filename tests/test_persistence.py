@@ -8,7 +8,6 @@ from src.backend.main import app
 
 client = TestClient(app)
 
-
 def _make_png_bytes() -> bytes:
     import struct
     import zlib

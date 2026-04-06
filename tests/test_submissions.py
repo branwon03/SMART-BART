@@ -8,7 +8,6 @@ client = TestClient(app)
 
 EXPECTED_KEYS = {"incident_id", "submission_id", "description", "timestamp"}
 
-
 def _make_png_bytes() -> bytes:
     import struct
     import zlib
