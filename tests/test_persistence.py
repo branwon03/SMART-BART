@@ -23,6 +23,20 @@ def _make_png_bytes() -> bytes:
     return sig + ihdr_chunk + idat_chunk + iend_chunk
 
 
+def _distinct_embedding_factory():
+    """Return orthogonal unit-ish vectors so cosine similarity stays ~0 between calls."""
+    i = 0
+
+    def _fake(*_a, **_kw):
+        nonlocal i
+        v = [0.0] * 3072
+        v[i % 3072] = 1.0
+        i += 1
+        return v
+
+    return _fake
+
+
 # ── RED-GREEN #1: submission persists Incident + PhotoReport ──────────────────
 
 def test_submission_persists_and_returns_incident_id():

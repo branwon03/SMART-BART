@@ -13,10 +13,9 @@ def test_build_query_without_description_uses_new_maintenance_prompt():
     assert "- UNCLASSIFIED:" in query
 
 
-def test_build_query_with_description_marks_user_text_as_primary_evidence():
+def test_build_query_with_description_appends_user_context():
     query = build_query("Escalator is making a loud grinding noise")
 
-    assert "User Description" in query
-    assert "primary evidence" in query
-    assert "secondary context" not in query
+    assert "User Context:" in query
     assert "Escalator is making a loud grinding noise" in query
+    assert "You are a BART maintenance issue classifier." in query

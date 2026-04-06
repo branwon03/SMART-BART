@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.7.0 (2026-04-06)
+
+### Bug Fixes
+
+- Resolving test errors + compose url
+  ([`28ad99e`](https://github.com/cse120-ucm/S26-CSE-312/commit/28ad99e5ef08b271deef3858b589896c611ec707))
+
+
 ## v0.6.0 (2026-04-02)
 
 ### Continuous Integration
