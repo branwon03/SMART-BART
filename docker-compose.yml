@@ -40,6 +40,9 @@ services:
       context: src/frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+    environment:
+      # Used by Next rewrites when the app calls same-origin /api/* (BACKEND_PROXY_URL for server-side proxy).
+      BACKEND_PROXY_URL: "http://backend:8000"
     restart: unless-stopped
     ports:
       - "3000:3000"
