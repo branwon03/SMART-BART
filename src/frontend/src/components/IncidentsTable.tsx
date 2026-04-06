@@ -1,5 +1,6 @@
 import type { Incident } from "../types/api";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { isHighPriority } from "../lib/priorityUi";
 
 type IncidentsTableProps = {
   activeTab: string;
@@ -75,7 +76,7 @@ export function IncidentsTable({
                   <td className="p-5">
                     <div
                       className={`h-1.5 w-10 rounded-full ${
-                        item.issue_priority === 1
+                        isHighPriority(item.issue_priority)
                           ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                           : "bg-yellow-400"
                       }`}

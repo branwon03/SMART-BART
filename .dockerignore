@@ -12,4 +12,8 @@ dist/
 .coverage
 htmlcov/
 uploads/
+tools/
+tests/
+.ruff_cache/
+.mypy_cache/
 .env

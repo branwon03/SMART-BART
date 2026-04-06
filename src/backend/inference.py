@@ -1,21 +1,80 @@
-import argparse
-import base64
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-
-import requests
+from google import genai
+from google.genai import types
+from google.oauth2 import service_account
 from dotenv import load_dotenv
 
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
-invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-stream = False
+# --- VERTEX AI CONFIGURATION ---
+PROJECT_ID = "project-51a9be3f-d2d4-42cc-b2d"
+LOCATION = "us-central1"
 
-DISCIPLINES = [
+_client: genai.Client | None = None
+
+
+def _get_genai_client() -> genai.Client:
+    """Lazily build the Vertex client so imports work without credentials (e.g. CI tests)."""
+    global _client
+    if _client is not None:
+        return _client
+    key_path = os.path.expanduser(
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+    )
+    creds_path = Path(key_path)
+    if not creds_path.is_file():
+        raise FileNotFoundError(
+            f"Vertex AI credentials not found at {creds_path.resolve()}. "
+            "Set GOOGLE_APPLICATION_CREDENTIALS or add credentials.json."
+        )
+    credentials = service_account.Credentials.from_service_account_file(
+        str(creds_path),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+    _client = genai.Client(
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
+        credentials=credentials,
+    )
+    return _client
+
+TUNED_MODEL_ID = "projects/178919740846/locations/us-central1/endpoints/544109271923556352"
+
+EMBEDDING_MODEL_ID = "gemini-embedding-2-preview"
+
+def generate_embedding(text: str, image_paths: list[Path] | None = None):
+    """Generates a multimodal embedding for the issue."""
+    parts = [types.Part.from_text(text=text)]
+    
+    if image_paths:
+        for path in image_paths:
+            with open(path, "rb") as f:
+                parts.append(
+                    types.Part.from_bytes(data=f.read(), mime_type="image/jpeg")
+                )
+
+    try:
+        # Generate the embedding
+        result = _get_genai_client().models.embed_content(
+            model=EMBEDDING_MODEL_ID,
+            contents=parts,
+            config=types.EmbedContentConfig(task_type="CLASSIFICATION")
+        )
+
+        embeddings = result.embeddings
+        if not embeddings:
+            return None
+        return embeddings[0].values
+    except Exception as e:
+        print(f"Embedding Error: {e}")
+        return None
+    
+DISCIPLINES = [ 
     "FARE COLLECTION",
     "BUILDINGS",
     "COMMS",
@@ -24,25 +83,25 @@ DISCIPLINES = [
     "MECHANICAL",
     "SYSTEM SERVICE",
     "ELECTRICAL",
-    "UNCLASSIFIED",
+    "UNCLASSIFIED"
 ]
 
 PRIORITIES = [
     "LOW",
     "STANDARD",
     "HIGH",
-    "CRITICAL",
+    "CRITICAL"
 ]
 
 BASE_QUERY = (
     "You are a BART maintenance issue classifier. Your goal is to output a Brief Summary, a Discipline, and a Priority Level. You will receive an image and/or text input.\n"
     "The Logic Rule: If the image appears visually NOMINAL but the user describes a functional failure, you must treat the situation as an active issue.\n"
-    "If the image appears visually NOMINAL but there is NO user description, assign a LOW priority" #after MVP deadline, we can worry about more granularity in assigning defaults
-    "Use the image AND/or text input to:\n"
+    "If the image appears visually NOMINAL and there is NO user description, assign a LOW priority, unless the photo is of a blue phone tower or a fire sprinkler system, then it MUST be CRITICAL."
+    "Reason from the image AND/or text input to:\n"
     "1) Output the name of exactly ONE discipline from the list below\n"
     "2) Output exactly ONE fitting priority level from this list: LOW, STANDARD, HIGH, CRITICAL\n"
-    "3) Output a very Brief Summary of the issue.\n\n"
-   
+    "3) Output what the problem is about the object in 2-5 words (e.g. broken light, non-functional power socket)\n\n"
+    
     "Possible disciplines are:\n"
     "- FARE COLLECTION: Card scanners\n"
     "- BUILDINGS: Cracked floors, cracked walls, water intrusion, faded paint, vandalism, doors, missing signs, drainage issues\n"
@@ -51,16 +110,10 @@ BASE_QUERY = (
     "- GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals\n"
     "- MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans\n"
     "- SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning\n"
+    "- SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning\n"
     "- ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems\n"
     "- UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline\n\n"
 )
-
-kApiKey = os.getenv("NVIDIA_API_KEY")
-
-if not kApiKey:
-    raise RuntimeError(
-        f"Missing NVIDIA_API_KEY. Add it to {env_path} or set it in the environment."
-    )
 
 kSupportedList = {
     "png": ["image/png", "image_url"],
@@ -70,15 +123,11 @@ kSupportedList = {
 }
 
 
-def build_query(user_summary: str | None = None) -> str:
-    """Build final prompt by appending optional user summary context."""
-    if not user_summary:
+def build_query(description: str | None = None):
+    """Combines the static base query with optional user context."""
+    if not description:
         return BASE_QUERY
-    return (
-        f"{BASE_QUERY}\n\n"
-        "User Description (treat as primary evidence for functional state when provided):\n"
-        f"{user_summary.strip()}"
-    )
+    return f"{BASE_QUERY}\n\nUser Context: {description}"
 
 
 def get_extension(filename):
@@ -87,106 +136,80 @@ def get_extension(filename):
     return ext
 
 
-def mime_type(ext):
-    return kSupportedList[ext][0]
+def chat_with_media(media_paths, query, description=None, submission_id=None):
+    """
+    Runs Gemini classification on uploaded media and returns the
+    structured result needed by the submissions endpoint.
 
+    Notes:
+    - submission_id is accepted so tests / callers can pass it through
+      without breaking the real function
+    - description is optional and currently unused here
+    """
+    # 1. Prepare parts for the prompt
+    content_parts = [query]
 
-def media_type(ext):
-    return kSupportedList[ext][1]
+    for path in media_paths:
+        with open(path, "rb") as f:
+            content_parts.append(
+                types.Part.from_bytes(data=f.read(), mime_type="image/jpeg")
+            )
 
+    try:
+        # 2. Run Classification
+        response = _get_genai_client().models.generate_content(
+            model=TUNED_MODEL_ID,
+            config=types.GenerateContentConfig(temperature=0.1),
+            contents=content_parts
+        )
+        classification = response.text.strip()
 
-def encode_media_base64(media_file):
-    """Encode media file to base64 string."""
-    with open(media_file, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+        vector = generate_embedding(classification, media_paths)
 
+        return {
+            "submission_id": submission_id,
+            "discipline": classification,
+            "embedding": vector,
+            "num_images": len(media_paths),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
-def chat_with_media(
-    infer_url,
-    media_files,
-    query: str,
-    description: str | None = None,
-    stream: bool = False,
-    submission_id: str | None = None,
-):
-    assert isinstance(media_files, list), f"{media_files}"
-
-    content: str | list[dict[str, Any]]
-    if len(media_files) == 0:
-        content = query
-    else:
-        content = [{"type": "text", "text": query}]
-
-        for media_file in media_files:
-            ext = get_extension(media_file)
-            assert ext in kSupportedList, f"{media_file} format is not supported"
-
-            print(f"Encoding {media_file} as base64...")
-            base64_data = encode_media_base64(media_file)
-
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type(ext)};base64,{base64_data}"
-                },
-            })
-
-    headers = {
-        "Authorization": f"Bearer {kApiKey}",
-        "Accept": "text/event-stream" if stream else "application/json",
-    }
-
-    payload = {
-        "model": "mistralai/ministral-14b-instruct-2512",
-        "messages": [
-            {"role": "user", "content": content},
-        ],
-        "max_tokens": 2048,
-        "temperature": 0.15,
-        "top_p": 1.00,
-        "stream": stream,
-    }
-
-    response = requests.post(infer_url, headers=headers, json=payload, stream=stream)
-
-    if response.status_code != 200:
-        print(f"API error {response.status_code}: {response.text}", file=sys.stderr)
+    except Exception as e:
+        print(f"Inference Error: {e}")
         return None
-
-    if stream:
-        for line in response.iter_lines():
-            if line:
-                print(line.decode("utf-8"))
-        return None
-
-    result = response.json()
-    classification = result["choices"][0]["message"]["content"]
-    print(classification)
-
-    return {
-        "submission_id": submission_id,
-        "discipline": classification,
-        "description": description,
-        "num_images": len(media_files),
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ministral 14B multimodal inference helper")
-    parser.add_argument("media", nargs="*", help="Optional image files")
-    parser.add_argument(
-        "-d",
-        "--description",
-        default=None,
-        help="Optional user summary to append to the classification prompt",
-    )
-    args = parser.parse_args()
+    # 1. Hardcoded Test Configuration
+    TEST_IMAGE_PATH = Path("src/backend/test_outlet.jpg")
+    TEST_DESCRIPTION = "The outlet is sparking and has black char marks."
+    
+    # 2. Path Validation
+    if not TEST_IMAGE_PATH.exists():
+        print(f"ERROR: Could not find test image at: {TEST_IMAGE_PATH.absolute()}")
+        print("Make sure you are running the script from the project root.")
+        sys.exit(1)
 
-    final_query = build_query(args.description)
-    result = chat_with_media(
-        invoke_url, list(args.media), final_query,
-        description=args.description, stream=stream,
-    )
+    # 3. Prepare the Query
+    media_paths = [TEST_IMAGE_PATH]
+    final_query = build_query(TEST_DESCRIPTION)
+    
+    print("--- TRIGGERING HARDCODED INFERENCE TEST ---")
+    print(f"Target: {TEST_IMAGE_PATH}")
+    
+    # 4. Execute Inference
+    result = chat_with_media(media_paths, final_query)
+    
+    # 5. Output Results
     if result:
-        print(result)
+        print("\n" + "="*60)
+        print("FINAL CLASSIFICATION:")
+        print(f"  {result['discipline']}")
+        
+        # Access the vector from the result dictionary
+        vector = result.get("embedding")
+        if vector:
+            print("\nVECTOR PREVIEW (First 5 values):")
+            print(f"  {vector[:5]}")
+            print(f"  (Total Dimensions: {len(vector)})")
+        
+        print("="*60 + "\n")
