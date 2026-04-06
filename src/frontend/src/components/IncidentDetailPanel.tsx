@@ -2,11 +2,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
-<<<<<<< feat/frontend/time-stamp
-import { formatPostedAt } from "../lib/formatPostedAt";
-=======
 import { isHighPriority } from "../lib/priorityUi";
->>>>>>> main
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -123,15 +119,11 @@ export function IncidentDetailPanel({
               <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
                   <span>Report summary {idx + 1}:</span>
-<<<<<<< feat/frontend/time-stamp
-                  <span>{formatPostedAt(ev.submitted_at)}</span>
-=======
                   <span className="font-mono text-[10px] font-normal text-slate-500">
                     {ev.submitted_at
                       ? `${formatElapsedSince(ev.submitted_at, now)} ago`
                       : "—"}
                   </span>
->>>>>>> main
                 </div>
                 <p className="text-gray-800">
                   - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;

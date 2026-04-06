@@ -96,13 +96,8 @@ PRIORITIES = [
 BASE_QUERY = (
     "You are a BART maintenance issue classifier. Your goal is to output a Brief Summary, a Discipline, and a Priority Level. You will receive an image and/or text input.\n"
     "The Logic Rule: If the image appears visually NOMINAL but the user describes a functional failure, you must treat the situation as an active issue.\n"
-<<<<<<< feat/frontend/time-stamp
-    "If the image appears visually NOMINAL but there is NO user description, assign a LOW priority\n"  # after MVP deadline, we can worry about more granularity in assigning defaults
-    "Use the image AND/or text input to:\n"
-=======
     "If the image appears visually NOMINAL and there is NO user description, assign a LOW priority, unless the photo is of a blue phone tower or a fire sprinkler system, then it MUST be CRITICAL."
     "Reason from the image AND/or text input to:\n"
->>>>>>> main
     "1) Output the name of exactly ONE discipline from the list below\n"
     "2) Output exactly ONE fitting priority level from this list: LOW, STANDARD, HIGH, CRITICAL\n"
     "3) Output what the problem is about the object in 2-5 words (e.g. broken light, non-functional power socket)\n\n"
