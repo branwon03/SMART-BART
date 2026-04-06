@@ -4,6 +4,11 @@ Shared test fixtures.
 Swaps the production Postgres engine for an in-memory SQLite so tests run
 without Docker / a live database.  Redirects image uploads to a temp directory.
 """
+import os
+
+# CI and fresh clones may not have .env; database.py requires a URL at import time.
+os.environ.setdefault("DATABASE_URL", "sqlite://")
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

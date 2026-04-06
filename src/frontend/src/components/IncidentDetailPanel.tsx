@@ -2,7 +2,11 @@ import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
+<<<<<<< feat/frontend/time-stamp
 import { formatPostedAt } from "../lib/formatPostedAt";
+=======
+import { isHighPriority } from "../lib/priorityUi";
+>>>>>>> main
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -64,10 +68,14 @@ export function IncidentDetailPanel({
             <span className="font-bold text-gray-700">Priority:</span>
             <span
               className={
-                incident.issue_priority === 1 ? "text-black-500" : "text-yellow-600 font-bold"
+                isHighPriority(incident.issue_priority)
+                  ? "text-red-600 font-bold"
+                  : "text-yellow-600 font-bold"
               }
             >
-              {incident.issue_priority === 1 ? "TODO" : "Standard"}
+              {incident.issue_priority != null && incident.issue_priority !== ""
+                ? String(incident.issue_priority)
+                : "—"}
             </span>
 
             <span className="font-bold text-gray-700">Status:</span>
@@ -115,7 +123,15 @@ export function IncidentDetailPanel({
               <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
                   <span>Report summary {idx + 1}:</span>
+<<<<<<< feat/frontend/time-stamp
                   <span>{formatPostedAt(ev.submitted_at)}</span>
+=======
+                  <span className="font-mono text-[10px] font-normal text-slate-500">
+                    {ev.submitted_at
+                      ? `${formatElapsedSince(ev.submitted_at, now)} ago`
+                      : "—"}
+                  </span>
+>>>>>>> main
                 </div>
                 <p className="text-gray-800">
                   - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;
