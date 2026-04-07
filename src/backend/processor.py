@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from google.genai.types import GenerateContentConfig
+from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 
 from src.backend.database import SessionLocal, Incident, PhotoReport
@@ -16,7 +17,14 @@ from src.backend.gemini_parser import parse_classification, DISCIPLINES
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
+_genai_client: genai.Client | None = None
+
 def get_genai_client():
+    """Vertex client using a service account file (same pattern as inference.py), not host-only ADC."""
+    global _genai_client
+    if _genai_client is not None:
+        return _genai_client
+
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
@@ -26,10 +34,24 @@ def get_genai_client():
             "Gemini/Vertex is not configured. Set GOOGLE_GENAI_USE_VERTEXAI=true and GOOGLE_CLOUD_PROJECT."
         )
 
+    key_path = os.path.expanduser(
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+    )
+    creds_path = Path(key_path)
+    if not creds_path.is_file():
+        raise FileNotFoundError(
+            f"Vertex AI credentials not found at {creds_path.resolve()}. "
+            "Set GOOGLE_APPLICATION_CREDENTIALS or add credentials.json (e.g. mount it in Docker)."
+        )
+    credentials = service_account.Credentials.from_service_account_file(
+        str(creds_path),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
     return genai.Client(
         vertexai=True,
         project=project,
         location=location,
+        credentials=credentials,
     )
 
 def resolve_local_image_path(photo: PhotoReport) -> str:
