@@ -133,9 +133,6 @@
 
 ### Bug Fixes
 
-- Adding submission_id to json dict to be returned
-  ([`770b18f`](https://github.com/cse120-ucm/S26-CSE-312/commit/770b18fdd7bd1775445fa9b7a506e6abede6a209))
-
 - Clean restructure: setup employee dashboard and backend integration
   ([`0b32c3f`](https://github.com/cse120-ucm/S26-CSE-312/commit/0b32c3fa92c16ca04d1afbca6baee18dd33d9241))
 

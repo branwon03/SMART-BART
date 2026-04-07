@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -6,13 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
-from src.backend.grouping import find_matching_incident
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
 from src.backend.inference import (
     get_extension,
     kSupportedList,
 )
+from contextlib import asynccontextmanager
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -117,8 +119,7 @@ async def submissions(
             tmp.close()
             tmp_paths.append(Path(tmp.name))
 
-        # 2. Run Inference
-        submission_id = uuid.uuid4().hex
+        # 2. Enqueue a blank incident and photo report
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
 
@@ -142,7 +143,6 @@ async def submissions(
 
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
-                submission_id=submission_id,
                 incident_id=incident_id,
                 image_url=saved_image_url,
                 embedding=None,
@@ -157,7 +157,6 @@ async def submissions(
                 # 6. Return Clean Response
         return {
             "incident_id": incident_id,
-            "submission_id": submission_id,
             "description": description,
             "timestamp": now.isoformat(),
         }
@@ -190,7 +189,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -201,15 +200,14 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     # Manually building a clean list of standard Python dicts
     clean_data = []
     for row in result:
-        image_val = row[3]
-        submitted_val = row[4]
-        user_context_val = row[5]
-        found_pri_val = row[6]
+        image_val = row[2]
+        submitted_val = row[3]
+        user_context_val = row[4]
+        found_pri_val = row[5]
 
         clean_data.append({
             "evidence_id": str(row[0]),
-            "submission_id": str(row[1]),
-            "incident_id": str(row[2]),
+            "incident_id": str(row[1]),
             "image_url": None if image_val is None else str(image_val),
             "submitted_at": submitted_val if isinstance(submitted_val, str)
             else submitted_val.isoformat() if submitted_val else None,
