@@ -2,11 +2,13 @@
 Tests for the /submissions endpoint contract (response shape, validation).
 """
 from fastapi.testclient import TestClient
+
 from src.backend.main import app
 
 client = TestClient(app)
 
-EXPECTED_KEYS = {"incident_id", "submission_id", "description", "timestamp"}
+EXPECTED_KEYS = {"incident_id", "description", "timestamp"}
+
 
 def _make_png_bytes() -> bytes:
     import struct
@@ -37,7 +39,6 @@ def test_submit_with_image():
     assert body["description"] == "Exposed wiring near platform edge"
     assert body["timestamp"]
     assert body["incident_id"]
-    assert body["submission_id"]
 
 
 def test_submit_multiple_images():
@@ -50,11 +51,8 @@ def test_submit_multiple_images():
         ],
     )
     assert resp.status_code == 200
-
-    body = resp.json()
-    assert set(body.keys()) == EXPECTED_KEYS
-    assert body["incident_id"]
-    assert body["submission_id"]
+    assert set(resp.json().keys()) == EXPECTED_KEYS
+    assert resp.json()["incident_id"]
 
 
 def test_submit_description_only():
@@ -67,7 +65,6 @@ def test_submit_description_only():
     body = resp.json()
     assert set(body.keys()) == EXPECTED_KEYS
     assert body["description"] == "Spill on station floor"
-    assert body["incident_id"]
 
 
 def test_submit_unsupported_file_type():

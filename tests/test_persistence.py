@@ -52,7 +52,6 @@ def test_submission_persists_and_returns_incident_id():
     assert "submission_id" in body
     assert body["description"] == "Exposed wiring near platform edge"
 
-    # Verify DB persistence via the GET endpoints
     incidents = client.get("/api/incidents").json()
     assert len(incidents) == 1
     inc = incidents[0]
@@ -64,7 +63,14 @@ def test_submission_persists_and_returns_incident_id():
     reports = client.get(f"/api/photo-reports/{body['incident_id']}").json()
     assert len(reports) == 1
     rpt = reports[0]
-    assert rpt["submission_id"] == body["submission_id"]
+    assert set(rpt.keys()) == {
+        "evidence_id",
+        "incident_id",
+        "image_url",
+        "submitted_at",
+        "user_context",
+        "found_priority",
+    }
     assert rpt["incident_id"] == body["incident_id"]
     assert rpt["user_context"] == "Exposed wiring near platform edge"
 
@@ -74,7 +80,6 @@ def test_submission_persists_and_returns_incident_id():
 def test_incidents_accumulate():
     png = _make_png_bytes()
 
-    # Two separate submissions
     r1 = client.post(
         "/submissions",
         files=[("media", ("a.png", png, "image/png"))],
@@ -124,7 +129,6 @@ def test_photo_reports_scoped_to_incident():
     assert rpt1[0]["user_context"] == "Issue A"
     assert rpt2[0]["user_context"] == "Issue B"
 
-    # Non-existent incident returns empty
     assert client.get("/api/photo-reports/does-not-exist").json() == []
 
 
