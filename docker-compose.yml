@@ -35,6 +35,23 @@ services:
       db:
         condition: service_healthy
 
+  processor:
+    build: .
+    restart: unless-stopped
+    command: python -m src.backend.processor
+    env_file: .env
+    # Same as backend: .env often uses localhost; inside Compose Postgres is the `db` service.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+      UPLOAD_DIR: /app/uploads
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+    volumes:
+      - uploads:/app/uploads
+      - ./credentials.json:/app/credentials.json
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: src/frontend

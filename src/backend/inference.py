@@ -136,14 +136,12 @@ def get_extension(filename):
     return ext
 
 
-def chat_with_media(media_paths, query, description=None, submission_id=None):
+def chat_with_media(media_paths, query, description=None):
     """
     Runs Gemini classification on uploaded media and returns the
     structured result needed by the submissions endpoint.
 
     Notes:
-    - submission_id is accepted so tests / callers can pass it through
-      without breaking the real function
     - description is optional and currently unused here
     """
     # 1. Prepare parts for the prompt
@@ -167,7 +165,6 @@ def chat_with_media(media_paths, query, description=None, submission_id=None):
         vector = generate_embedding(classification, media_paths)
 
         return {
-            "submission_id": submission_id,
             "discipline": classification,
             "embedding": vector,
             "num_images": len(media_paths),

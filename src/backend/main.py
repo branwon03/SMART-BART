@@ -1,17 +1,19 @@
 import os
+import re
 import shutil
 import tempfile
 import uuid
-import re
-from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
-from src.backend.inference import build_query, chat_with_media, generate_embedding, get_extension, kSupportedList
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
-from src.backend.grouping import find_matching_incident
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+from src.backend.inference import (
+    get_extension,
+    kSupportedList,
+)
 from contextlib import asynccontextmanager
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -117,90 +119,46 @@ async def submissions(
             tmp.close()
             tmp_paths.append(Path(tmp.name))
 
-        # 2. Run Inference
-        submission_id = uuid.uuid4().hex
-        query_text = build_query(description)
-        result = chat_with_media(
-            tmp_paths,
-            query_text,
-            submission_id=submission_id,
-        )
-
-        if result is None:
-            raise HTTPException(status_code=502, detail="Inference API unavailable")
-
-        
-        # 3. Parse the long string from Gemini into clean fields
-        parsed_data = parse_vlm_response(result["discipline"])
-
-        summary_text = parsed_data["summary"]
-        if summary_text == "No summary available":
-            summary_text = description or "No summary available"
-        
+        # 2. Enqueue a blank incident and photo report
         incident_id = uuid.uuid4().hex
-        evidence_id = uuid.uuid4().hex
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
-        # 4. Save the first image to permanent storage
-        saved_image_url = None
-        if tmp_paths:
-            first = tmp_paths[0]
-            dest = UPLOAD_DIR / f"{evidence_id}{first.suffix}"
-            shutil.copy2(str(first), str(dest))
+        incident = Incident(
+            incident_id=incident_id,
+            status="New",           
+            issue_priority=None,
+            discipline=None,
+            vlm_summary=description or None,
+            location_id=None,
+            created_at=now,
+        )
+        db.add(incident)
+
+        for tmp_path in tmp_paths:
+            evidence_id = uuid.uuid4().hex
+            ext = tmp_path.suffix
+            dest = UPLOAD_DIR / f"{evidence_id}{ext}"
+            shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
 
-        embedding_vector = generate_embedding(
-            text=description if description else "No description provided",
-            image_paths=tmp_paths
-        )
-
-        matched_incident_id, grouping_score = find_matching_incident(
-            db=db,
-            new_embedding=embedding_vector,
-            discipline=parsed_data["discipline"],
-            user_context=description,
-        )
-        grouped_into_existing = matched_incident_id is not None
-
-        # 5. Save to Database
-        if grouped_into_existing:
-            incident_id = matched_incident_id
-        else:
-            incident_id = uuid.uuid4().hex
-            incident = Incident(
+            photo_report = PhotoReport(
+                evidence_id=evidence_id,
                 incident_id=incident_id,
-                status="Open",
-                issue_priority=parsed_data["priority"],
-                discipline=parsed_data["discipline"],
-                vlm_summary=summary_text,
-                location_id=None,
-                created_at=now,
+                image_url=saved_image_url,
+                embedding=None,
+                submitted_at=now,
+                user_context=description,
+                found_priority="Standard",
             )
-            db.add(incident)
+            db.add(photo_report)
 
-        
-        photo_report = PhotoReport(
-            evidence_id=evidence_id,
-            submission_id=submission_id,
-            incident_id=incident_id,
-            image_url=saved_image_url,
-            embedding = embedding_vector,
-            submitted_at=now,
-            user_context=description,
-            found_priority=parsed_data["priority"],
-        )
-
-        db.add(photo_report)
         db.commit()
 
                 # 6. Return Clean Response
         return {
             "incident_id": incident_id,
-            "submission_id": submission_id,
-            "discipline": parsed_data["discipline"],
             "description": description,
-            "num_images": result["num_images"],
-            "timestamp": result["timestamp"],
+            "timestamp": now.isoformat(),
         }
     finally:
         # Cleanup temp files
@@ -231,7 +189,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -242,15 +200,14 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     # Manually building a clean list of standard Python dicts
     clean_data = []
     for row in result:
-        image_val = row[3]
-        submitted_val = row[4]
-        user_context_val = row[5]
-        found_pri_val = row[6]
+        image_val = row[2]
+        submitted_val = row[3]
+        user_context_val = row[4]
+        found_pri_val = row[5]
 
         clean_data.append({
             "evidence_id": str(row[0]),
-            "submission_id": str(row[1]),
-            "incident_id": str(row[2]),
+            "incident_id": str(row[1]),
             "image_url": None if image_val is None else str(image_val),
             "submitted_at": submitted_val if isinstance(submitted_val, str)
             else submitted_val.isoformat() if submitted_val else None,

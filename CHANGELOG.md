@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v0.9.0 (2026-04-07)
+
+### Bug Fixes
+
+- Verifying google creds + container db url
+  ([`aac5ff1`](https://github.com/cse120-ucm/S26-CSE-312/commit/aac5ff1d66a3d33992822f763b40a1327f3e725f))
+
+### Chores
+
+- Organize image directories
+  ([`52dc2d7`](https://github.com/cse120-ucm/S26-CSE-312/commit/52dc2d7f460b22c967b8c8d40ff4ddc808d3efb9))
+
+- Removing old frontend + updating change logs
+  ([`768b321`](https://github.com/cse120-ucm/S26-CSE-312/commit/768b3219e98aa42cf9f01ecba7c591e441f2b025))
+
+### Refactoring
+
+- Removing all instances of chat_with_media func
+  ([`ffeb275`](https://github.com/cse120-ucm/S26-CSE-312/commit/ffeb275d364d162a0f5dc5759fdec4d766522fd8))
+
+
 ## v0.8.0 (2026-04-06)
 
 ### Refactoring
@@ -132,9 +153,6 @@
 ## v0.1.1 (2026-03-24)
 
 ### Bug Fixes
-
-- Adding submission_id to json dict to be returned
-  ([`770b18f`](https://github.com/cse120-ucm/S26-CSE-312/commit/770b18fdd7bd1775445fa9b7a506e6abede6a209))
 
 - Clean restructure: setup employee dashboard and backend integration
   ([`0b32c3f`](https://github.com/cse120-ucm/S26-CSE-312/commit/0b32c3fa92c16ca04d1afbca6baee18dd33d9241))
