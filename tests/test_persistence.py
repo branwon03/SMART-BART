@@ -28,7 +28,7 @@ def _make_png_bytes() -> bytes:
 
 def test_submission_persists_and_returns_incident_id():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("test.png", _make_png_bytes(), "image/png"))],
         data={"description": "Exposed wiring near platform edge"},
     )
@@ -68,12 +68,12 @@ def test_incidents_accumulate():
     png = _make_png_bytes()
 
     r1 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("a.png", png, "image/png"))],
         data={"description": "Broken escalator"},
     )
     r2 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("b.png", png, "image/png"))],
         data={"description": "Graffiti on wall"},
     )
@@ -94,12 +94,12 @@ def test_photo_reports_scoped_to_incident():
     png = _make_png_bytes()
 
     r1 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("a.png", png, "image/png"))],
         data={"description": "Issue A"},
     )
     r2 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("b.png", png, "image/png"))],
         data={"description": "Issue B"},
     )
@@ -121,7 +121,7 @@ def test_photo_reports_scoped_to_incident():
 
 def test_new_incident_has_null_discipline():
     client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("a.png", _make_png_bytes(), "image/png"))],
         data={"description": "Cracked wall"},
     )
@@ -146,7 +146,7 @@ def test_submission_persists_image_and_serves_it():
     png = _make_png_bytes()
 
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("test.png", png, "image/png"))],
         data={"description": "Broken light fixture"},
     )
@@ -171,7 +171,7 @@ def test_submission_persists_image_and_serves_it():
 
 def test_text_only_submission_has_no_photo_reports():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         data={"description": "Spill on floor"},
     )
     assert resp.status_code == 200
@@ -185,7 +185,7 @@ def test_text_only_submission_has_no_photo_reports():
 
 def test_text_only_submission_persists_incident():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         data={"description": "Spill on station floor"},
     )
     assert resp.status_code == 200

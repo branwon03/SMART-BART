@@ -17,10 +17,10 @@ export function dataUrlToFile(dataUrl: string, filename: string): File {
 }
 
 /**
- * Submit an incident report to POST /submissions.
+ * Submit an incident report to POST /api/submissions.
  *
  * Images must be data-URL strings (as stored in ReportContext.images).
- * Priority must be one of the frontend labels: "low" | "high" | "emergency" | "unknown".
+ * Priority is accepted but not sent — the processor determines priority via Gemini.
  */
 export async function submitReport(params: {
   images: string[];
@@ -35,11 +35,7 @@ export async function submitReport(params: {
 
   form.append("description", params.description);
 
-  if (params.priority) {
-    form.append("user_priority", params.priority);
-  }
-
-  const res = await fetch(`${API_BASE_URL}/submissions`, {
+  const res = await fetch(`${API_BASE_URL}/api/submissions`, {
     method: "POST",
     body: form,
   });
