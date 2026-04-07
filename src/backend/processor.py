@@ -1,11 +1,14 @@
 import os
 import time
+import math
 import mimetypes
 from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from google.genai.types import GenerateContentConfig
+from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 
 from src.backend.database import SessionLocal, Incident, PhotoReport
@@ -14,7 +17,14 @@ from src.backend.gemini_parser import parse_classification, DISCIPLINES
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
+_genai_client: genai.Client | None = None
+
 def get_genai_client():
+    """Vertex client using a service account file (same pattern as inference.py), not host-only ADC."""
+    global _genai_client
+    if _genai_client is not None:
+        return _genai_client
+
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
@@ -24,10 +34,24 @@ def get_genai_client():
             "Gemini/Vertex is not configured. Set GOOGLE_GENAI_USE_VERTEXAI=true and GOOGLE_CLOUD_PROJECT."
         )
 
+    key_path = os.path.expanduser(
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+    )
+    creds_path = Path(key_path)
+    if not creds_path.is_file():
+        raise FileNotFoundError(
+            f"Vertex AI credentials not found at {creds_path.resolve()}. "
+            "Set GOOGLE_APPLICATION_CREDENTIALS or add credentials.json (e.g. mount it in Docker)."
+        )
+    credentials = service_account.Credentials.from_service_account_file(
+        str(creds_path),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
     return genai.Client(
         vertexai=True,
         project=project,
         location=location,
+        credentials=credentials,
     )
 
 def resolve_local_image_path(photo: PhotoReport) -> str:
@@ -48,11 +72,11 @@ def resolve_local_image_path(photo: PhotoReport) -> str:
 
 def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
     """
-    Gemini call for MVP steel-thread testing.
+    Gemini 2.5 Flash call with logprobs for real confidence scoring.
 
     Returns:
     - raw structured text response for parse_classification(...)
-    - temporary confidence score placeholder
+    - confidence score derived from avg_logprobs
     """
     print(f"  [model] Running inference on {os.path.basename(image_path)}")
 
@@ -78,11 +102,12 @@ vlm_summary: <one concise sentence>
 """.strip()
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.5-flash",
         contents=[
             prompt,
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         ],
+        config=GenerateContentConfig(response_logprobs=True, logprobs=3)
     )
 
     raw_response = (response.text or "").strip()
@@ -90,7 +115,10 @@ vlm_summary: <one concise sentence>
     if not raw_response:
         raise ValueError("Gemini returned an empty response")
 
-    confidence = 1.0
+    #converting the log probs to a confidence score
+    avg_logprobs = response.candidates[0].avg_logprobs or 0.0
+    confidence = math.exp(avg_logprobs)
+
     return raw_response, confidence
 
 def process_incident(incident: Incident, db: Session):
@@ -113,6 +141,7 @@ def process_incident(incident: Incident, db: Session):
 
     best_category = None
     best_summary = None
+    best_priority = None
     best_confidence = -1.0
     missing_files = []
 

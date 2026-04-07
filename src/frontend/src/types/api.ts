@@ -10,7 +10,6 @@ export type Incident = {
 
 export type PhotoReport = {
   evidence_id: string;
-  submission_id?: string | null;
   incident_id: string;
   image_url?: string | null;
   embedding?: string | null;
@@ -21,10 +20,8 @@ export type PhotoReport = {
 
 export type SubmissionResult = {
   incident_id: string;
-  submission_id: string;
   discipline: string;
   description: string | null;
-  num_images: number;
   timestamp: string;
 };
 

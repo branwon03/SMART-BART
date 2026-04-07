@@ -46,7 +46,6 @@ class PhotoReport(Base):
     __tablename__ = "photo_reports"
 
     evidence_id = Column(String, primary_key=True)
-    submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
