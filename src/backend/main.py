@@ -3,13 +3,11 @@ import re
 import shutil
 import tempfile
 import uuid
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
 from src.backend.inference import (
