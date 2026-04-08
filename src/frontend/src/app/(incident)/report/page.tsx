@@ -103,8 +103,9 @@ export default function ImageUpload() {
 
     setImages((prev) => [...prev, ...newImages]);
 
-  } catch (error: any) {
-    console.error("Processing error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Processing error:", message);
     setImageError("Something went wrong while applying the privacy blur.");
   } finally {
     setIsProcessing(false);
