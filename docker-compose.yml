@@ -45,6 +45,8 @@ services:
       DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
       UPLOAD_DIR: /app/uploads
       GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+      GOOGLE_GENAI_USE_VERTEXAI: "true"
+      GOOGLE_CLOUD_PROJECT: "project-51a9be3f-d2d4-42cc-b2d"
     volumes:
       - uploads:/app/uploads
       - ./credentials.json:/app/credentials.json
