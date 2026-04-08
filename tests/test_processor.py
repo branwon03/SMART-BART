@@ -1,5 +1,5 @@
 import src.backend.processor as processor
-from src.backend.processor import process_incident
+from src.backend.processor import process_single_photo
 from unittest.mock import MagicMock, patch
 
 #intended to mimic a gemini-style response string 
@@ -38,7 +38,7 @@ def test_incident_locked_as_in_progress():
 
     with patch("os.path.exists", return_value=True):
         db = make_db([photo])
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert db.commit.call_count >= 2  #once for lock, once for save
 
@@ -51,7 +51,7 @@ def test_single_photo_happy_path():
 
     with patch("os.path.exists", return_value=True):
         db = make_db([photo])
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert incident.status == "Completed"
     assert incident.discipline == "MECHANICAL"
@@ -73,7 +73,7 @@ def test_multiple_photos_picks_highest_confidence():
          patch.object(processor, "identify_objects", side_effect=responses):
 
         db = make_db(photos)
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert incident.status == "Completed"
     assert incident.discipline == "MECHANICAL"
@@ -87,7 +87,7 @@ def test_missing_file_is_skipped():
 
     with patch("os.path.exists", side_effect=lambda p: "missing" not in p):
         db = make_db(photos)
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert incident.status == "Completed"
     assert incident.discipline == "MECHANICAL"
@@ -99,7 +99,7 @@ def test_no_photos_sets_error_status():
     incident = make_incident()
     db = make_db([])
 
-    process_incident(incident, db)
+    process_single_photo(incident, db)
 
     assert incident.status == "Error: No Photos"
 
@@ -111,7 +111,7 @@ def test_all_files_missing_sets_error_status():
 
     with patch("os.path.exists", return_value=False):
         db = make_db(photos)
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert incident.status == "Error: All Files Missing"
 
@@ -127,7 +127,7 @@ def test_model_returns_no_discipline_sets_error():
          patch.object(processor, "identify_objects", return_value=(bad_response, 0.91)):
 
         db = make_db([photo])
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert incident.status == "Error: Model Returned No Results"
 
@@ -139,6 +139,6 @@ def test_db_committed_at_least_twice():
 
     with patch("os.path.exists", return_value=True):
         db = make_db([photo])
-        process_incident(incident, db)
+        process_single_photo(incident, db)
 
     assert db.commit.call_count >= 2
