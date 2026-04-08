@@ -12,9 +12,9 @@ from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
-
 from src.backend.database import SessionLocal, Incident, PhotoReport
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
+from src.backend.grouping import find_matching_incident, GROUPING_THRESHOLD
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -239,12 +239,44 @@ def process_single_photo(photo: PhotoReport, db: Session):
             user_description=description
         )
         parsed = parse_classification(raw_response)
+        discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
 
         print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
         vector = generate_embedding(
             text=description, 
             image_paths=[Path(file_path)]
         )
+
+        # 4, GROUPING LOGIC
+        incident_match_id, match_score = find_matching_incident(
+            db, 
+            new_embedding=vector, 
+            discipline=discipline
+        )
+        if incident_match_id:
+            # 1. Store the ID of the 'hardcoded' empty incident created by main.py
+            original_incident_id = photo.incident_id 
+            
+            print(f"  [+] Match found! Moving photo to Incident {incident_match_id}")
+            
+            # 2. Re-assign the photo to the existing incident
+            photo.incident_id = incident_match_id
+            db.commit() # Commit the move first
+
+            # 3. CLEANUP: Delete the original incident IF it is now empty
+            # This prevents 'ghost' incidents from showing up on your dashboard.
+            db.execute(
+                text("""
+                    DELETE FROM incidents 
+                    WHERE incident_id = :old_id 
+                    AND NOT EXISTS (SELECT 1 FROM photo_reports WHERE incident_id = :old_id)
+                """),
+                {"old_id": original_incident_id}
+            )
+            db.commit()
+        else:
+            print(f"  [-] No match. Keeping photo in its original Incident.")
+
 
         # 4. Update the PhotoReport specific fields
         photo.vlm_summary = parsed["vlm_summary"]
