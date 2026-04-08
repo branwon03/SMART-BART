@@ -116,6 +116,7 @@ async def submissions(
                 vlm_summary=None,
                 photo_report_status="New",
                 photo_report_confidence=None,
+                photo_report_discipline=None,
             )
             db.add(photo_report)
 

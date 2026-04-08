@@ -282,10 +282,9 @@ def process_single_photo(photo: PhotoReport, db: Session):
 
         # 4. Update the PhotoReport specific fields
         photo.vlm_summary = parsed["vlm_summary"]
-        photo.vlm_confidence = confidence
-        photo.vlm_discipline = parsed["discipline"]
+        photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
-        photo.vlm_priority = parsed["issue_priority"]
+        photo.found_priority = parsed["issue_priority"]
         photo.photo_report_status = "Completed"
         photo.photo_report_confidence = confidence
         

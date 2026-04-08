@@ -56,6 +56,7 @@ class PhotoReport(Base):
     vlm_summary = Column(String)
     photo_report_status = Column(String)
     photo_report_confidence = Column(Float, nullable=True)
+    photo_report_discipline = Column(String, nullable=True)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────
