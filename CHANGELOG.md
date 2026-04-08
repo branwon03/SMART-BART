@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.10.0 (2026-04-08)
+
+### Bug Fixes
+
+- Type lint errors in face blurring
+  ([`7523444`](https://github.com/cse120-ucm/S26-CSE-312/commit/7523444e5da396a78e54df23499a07b544834917))
+
+### Features
+
+- **frontend**: Replace blazeface with mediapipe full_range and optimize blur bounds for backend VLM
+  visibility
+  ([`238037e`](https://github.com/cse120-ucm/S26-CSE-312/commit/238037e28f05cf71d15178d6d808b4f4a7ede269))
+
+
 ## v0.9.2 (2026-04-08)
 
 ### Bug Fixes
