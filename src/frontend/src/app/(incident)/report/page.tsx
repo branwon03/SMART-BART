@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Upload, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useReportContext } from '../../../context/ReportContext';
-import * as tf from '@tensorflow/tfjs';
-import * as blazeface from '@tensorflow-models/blazeface';
+import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
 
 export default function ImageUpload() {
   const { images, setImages } = useReportContext();
@@ -20,71 +19,97 @@ export default function ImageUpload() {
     setImageError(null);
 
     try {
-      await tf.ready();
-      const model = await blazeface.load();
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+      const faceDetector = await FaceDetector.createFromOptions(vision, {
+        baseOptions: {
+          // Use full range model for side profiles and long distances
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite",
+          delegate: "GPU"
+        },
+        runningMode: "IMAGE",
+        // NEW: Lower the threshold. 
+        // Default is 0.5. Lowering to 0.3 makes it "paranoid" and more likely to catch half-covered faces.
+        minDetectionConfidence: 0.3,
+        minSuppressionThreshold: 0.3
+      });
 
       const newImages: string[] = [];
 
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
-        
-        if (file.size < 100 * 1024) {
-          setImageError("One or more images were too low quality and were skipped.");
-          continue; 
-        }
+      
+        if (file.size < 100 * 1024) continue; 
 
         const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await new Promise((resolve) => { img.onload = resolve; });
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error("Image failed to load"));
+          setTimeout(() => reject(new Error("Image load timed out")), 10000);
+        });
+
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = (MAX_WIDTH / width) * height;
+          width = MAX_WIDTH;
+        }
 
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) continue;
 
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, width, height);
+      
+        // Free up mobile RAM immediately
+        URL.revokeObjectURL(objectUrl); 
 
-        const predictions = await model.estimateFaces(canvas, false);
-        
-        console.log(`Image ${i + 1}: Found ${predictions.length} face(s)`);
+        // MediaPipe Detection
+        const detections = faceDetector.detect(canvas).detections;
 
-        if (predictions.length > 0) {
-          predictions.forEach((prediction) => {
-            const topLeft = prediction.topLeft as [number, number];
-            const bottomRight = prediction.bottomRight as [number, number];
-            
-            const padding = 40; 
-            const x = topLeft[0] - padding;
-            const y = topLeft[1] - padding;
-            const width = (bottomRight[0] - topLeft[0]) + (padding * 2);
-            const height = (bottomRight[1] - topLeft[1]) + (padding * 2);
+        if (detections.length > 0) {
+          detections.forEach((detection) => {
+            if (!detection.boundingBox) return;
+            const { originX, originY, width: bboxWidth, height: bboxHeight } = detection.boundingBox;
+          
+            const centerX = originX + (bboxWidth / 2);
+            const centerY = originY + (bboxHeight / 2);
+
+            const radiusX = bboxWidth / 2;
+            const radiusY = (bboxHeight / 2) * 1.1;
 
             ctx.save();
-            
             ctx.beginPath();
-            ctx.rect(x, y, width, height);
+            ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
             ctx.clip();
 
-            ctx.filter = "blur(30px)";
-            ctx.drawImage(img, 0, 0);
+            ctx.filter = "blur(15px)";
+            ctx.drawImage(canvas, 0, 0); 
 
             ctx.restore();
           });
         }
 
-        newImages.push(canvas.toDataURL("image/jpeg", 0.8));
-      }
-
-      setImages((prev) => [...prev, ...newImages]);
-
-    } catch (error) {
-      console.error("Error processing image:", error);
-      setImageError("Something went wrong while applying the privacy blur.");
-    } finally {
-      setIsProcessing(false);
+      newImages.push(canvas.toDataURL("image/jpeg", 0.7));
     }
-  };
+
+    setImages((prev) => [...prev, ...newImages]);
+
+  } catch (error: any) {
+    console.error("Processing error:", error);
+    setImageError("Something went wrong while applying the privacy blur.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleNextPage = () => {
     if (images.length === 0) {
