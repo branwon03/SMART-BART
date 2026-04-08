@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -22,8 +22,32 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    # Host .env often uses localhost/127.0.0.1; inside this container Postgres is the `db` service.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+    volumes:
+      - ./src:/app/src
+      - uploads:/app/uploads
+      - ./.env:/app/.env
+      - ./credentials.json:/app/credentials.json
+    
+    depends_on:
+      db:
+        condition: service_healthy
+
+  processor:
+    build: .
+    restart: unless-stopped
+    command: python -m src.backend.processor
+    env_file: .env
+    # Same as backend: .env often uses localhost; inside Compose Postgres is the `db` service.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+      UPLOAD_DIR: /app/uploads
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
     volumes:
       - uploads:/app/uploads
+      - ./credentials.json:/app/credentials.json
     depends_on:
       db:
         condition: service_healthy
@@ -33,6 +57,9 @@ services:
       context: src/frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+    environment:
+      # Used by Next rewrites when the app calls same-origin /api/* (BACKEND_PROXY_URL for server-side proxy).
+      BACKEND_PROXY_URL: "http://backend:8000"
     restart: unless-stopped
     ports:
       - "3000:3000"

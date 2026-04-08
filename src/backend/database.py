@@ -1,26 +1,26 @@
 import os
-import re
 from pathlib import Path
-
+from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    JSON,
     String,
     create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set (check .env)")
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+# pgvector.Vector is not used for SQLite (tests / local without Postgres).
+_USE_SQLITE = DATABASE_URL.startswith("sqlite")
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:CSE_312!@db:5432/bart_db",
-)
-DATABASE_URL = re.sub(r"^postgresql://", "postgresql+psycopg://", DATABASE_URL)
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -46,10 +46,9 @@ class PhotoReport(Base):
     __tablename__ = "photo_reports"
 
     evidence_id = Column(String, primary_key=True)
-    submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
-    embedding = Column(String)
+    embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)
