@@ -12,7 +12,7 @@ from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
-from src.backend.database import Incident, PhotoReport
+from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
  
@@ -274,8 +274,10 @@ def process_single_photo(photo: PhotoReport, db: Session):
                 {"old_id": original_incident_id}
             )
             db.commit()
+
+            
         else:
-            print(f"  [-] No match. Keeping photo in its original Incident.")
+            print("  [-] No match. Keeping photo in its original Incident.")
 
 
         # 4. Update the PhotoReport specific fields
@@ -343,7 +345,7 @@ def run_processor():
 
             if photo:
                 print(f"[*] Processing Photo: {photo.evidence_id}")
-                result = process_single_photo(photo, db)
+                process_single_photo(photo, db)
                 print(f"[*] Processed Photo: {photo.evidence_id}")
                 
                 #if result:
