@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v0.9.1 (2026-04-07)
+
+### Bug Fixes
+
+- Multiple library call to JSON
+  ([`98748a4`](https://github.com/cse120-ucm/S26-CSE-312/commit/98748a475adce9fb4e4ca2d085ae48af12159012))
+
+- Update submission_id to test cases
+  ([`01611b9`](https://github.com/cse120-ucm/S26-CSE-312/commit/01611b96b0acf61c4c862631c46386de6601c8f5))
+
+
 ## v0.9.0 (2026-04-07)
 
 ### Bug Fixes
