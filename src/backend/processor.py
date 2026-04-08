@@ -12,9 +12,9 @@ from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
-from src.backend.database import SessionLocal, Incident, PhotoReport
+from src.backend.database import Incident, PhotoReport
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
-from src.backend.grouping import find_matching_incident, GROUPING_THRESHOLD
+from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
