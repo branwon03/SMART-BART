@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v0.9.2 (2026-04-08)
+
+### Bug Fixes
+
+- Corrected typo
+  ([`e176bbd`](https://github.com/cse120-ucm/S26-CSE-312/commit/e176bbd71746e6a95e30c6ea871c25e5be70cc81))
+
+- Typo in test_persistance.py
+  ([`d0de5bc`](https://github.com/cse120-ucm/S26-CSE-312/commit/d0de5bc5913b37138edb1d793e87d96272b93428))
+
+
 ## v0.9.1 (2026-04-07)
 
 ### Bug Fixes
