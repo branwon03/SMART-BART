@@ -28,7 +28,7 @@ def _make_png_bytes() -> bytes:
 def test_submit_with_image():
     png = _make_png_bytes()
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("test.png", png, "image/png"))],
         data={"description": "Exposed wiring near platform edge"},
     )
@@ -45,7 +45,7 @@ def test_submit_with_image():
 def test_submit_multiple_images():
     png = _make_png_bytes()
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[
             ("media", ("a.png", png, "image/png")),
             ("media", ("b.jpg", png, "image/jpeg")),
@@ -59,7 +59,7 @@ def test_submit_multiple_images():
 
 def test_submit_description_only():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         data={"description": "Spill on station floor"},
     )
     assert resp.status_code == 200
@@ -72,7 +72,7 @@ def test_submit_description_only():
 
 def test_submit_unsupported_file_type():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("video.mp4", b"\x00\x00", "video/mp4"))],
     )
     assert resp.status_code == 422

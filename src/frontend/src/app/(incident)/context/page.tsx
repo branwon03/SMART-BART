@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useReportContext } from '@/context/ReportContext';
+import { submitReport } from '@/lib/submissions';
 
 export default function UserContext() {
   const router = useRouter();
@@ -14,13 +16,30 @@ export default function UserContext() {
     fullName, setFullName,
     contact, setContact
   } = useReportContext();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!contextText.trim() || !fullName.trim() || !contact.trim() || !priority.trim()) {
       alert("Please provide the incident context, priority, your full name, and contact information before submitting.");
       return;
     }
-    router.push('/confirmation');
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await submitReport({
+        images,
+        description: contextText,
+        priority,
+      });
+      router.push('/confirmation');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -101,11 +120,25 @@ export default function UserContext() {
             In case of emergency, please contact 911 first
           </div>
 
+          {submitError && (
+            <div className="w-[85%] bg-red-50 border border-red-300 text-red-700 text-sm p-3 mb-4 rounded">
+              {submitError}
+            </div>
+          )}
+
           <button 
             onClick={handleSubmit}
-            className="mb-6 shrink-0 bg-[#0099D8] text-white font-bold py-2.5 px-8 text-[15px] border-2 border-gray-300 shadow-[2px_2px_0_0_#9CA3AF] hover:bg-[#007AB8] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#9CA3AF] transition-all"
+            disabled={isSubmitting}
+            className={`mb-6 shrink-0 bg-[#0099D8] text-white font-bold py-2.5 px-8 text-[15px] border-2 border-gray-300 shadow-[2px_2px_0_0_#9CA3AF] transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#9CA3AF]'}`}
           >
-            Submit
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                Submitting...
+              </span>
+            ) : (
+              "Submit"
+            )}
           </button>
 
           <Link href="/" className="pb-8 shrink-0">

@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 import tempfile
 import uuid
@@ -48,55 +47,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def parse_vlm_response(raw_text: str):
-    # Initialize with clean defaults, NOT the raw_text
-    data = {"discipline": "UNKNOWN", "priority": "Standard", "summary": "No summary available"}
-
-    KNOWN_DISCIPLINES = {
-        "FARE COLLECTION",
-        "BUILDINGS",
-        "COMMS",
-        "ELEVATOR AND ESCALATOR",
-        "GROUNDS",
-        "MECHANICAL",
-        "SYSTEM SERVICE",
-        "ELECTRICAL",
-        "UNCLASSIFIED",
-    }
-
-    if not raw_text:
-        return data
-
-    raw_upper = raw_text.strip().upper()
-    if raw_upper in KNOWN_DISCIPLINES:
-        data["discipline"] = raw_upper
-        return data
-
-    try:
-        # The [^,:\n\r]+ part tells it to STOP at a comma, a colon, OR a newline
-        disc_match = re.search(r"Discipline\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-        pri_match = re.search(r"Priority\s*(?:Level)?\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-        sum_match = re.search(r"(?:Brief\s+)?Summary\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-
-        if disc_match:
-            data["discipline"] = disc_match.group(1).strip().upper()
-        if pri_match:
-            data["priority"] = pri_match.group(1).strip()
-        if sum_match:
-            data["summary"] = sum_match.group(1).strip()
-
-    except Exception:
-        pass
-
-    return data
-
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-@app.post("/submissions")
+@app.post("/api/submissions")
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),

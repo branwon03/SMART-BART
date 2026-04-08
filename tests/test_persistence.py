@@ -41,7 +41,7 @@ def _distinct_embedding_factory():
 
 def test_submission_persists_and_returns_incident_id():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("test.png", _make_png_bytes(), "image/png"))],
         data={"description": "Exposed wiring near platform edge"},
     )
@@ -81,12 +81,12 @@ def test_incidents_accumulate():
     png = _make_png_bytes()
 
     r1 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("a.png", png, "image/png"))],
         data={"description": "Broken escalator"},
     )
     r2 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("b.png", png, "image/png"))],
         data={"description": "Graffiti on wall"},
     )
@@ -110,12 +110,12 @@ def test_photo_reports_scoped_to_incident():
     png = _make_png_bytes()
 
     r1 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("a.png", png, "image/png"))],
         data={"description": "Issue A"},
     )
     r2 = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("b.png", png, "image/png"))],
         data={"description": "Issue B"},
     )
@@ -132,7 +132,23 @@ def test_photo_reports_scoped_to_incident():
     assert client.get("/api/photo-reports/does-not-exist").json() == []
 
 
-# ── RED-GREEN #4: GET /api/images returns 404 for unknown evidence_id ────────────────────────
+# ── new incidents have null discipline until processed ────────────────────────
+
+
+def test_new_incident_has_null_discipline():
+    client.post(
+        "/api/submissions",
+        files=[("media", ("a.png", _make_png_bytes(), "image/png"))],
+        data={"description": "Cracked wall"},
+    )
+
+    incidents = client.get("/api/incidents").json()
+    assert len(incidents) == 1
+    assert incidents[0]["discipline"] is None
+
+
+# ── GET /api/images returns 404 for unknown evidence_id ────────────────────────
+
 
 def test_get_image_unknown_returns_404():
     resp = client.get("/api/images/does-not-exist")
@@ -144,7 +160,7 @@ def test_submission_persists_image_and_serves_it():
     png = _make_png_bytes()
  
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[("media", ("test.png", png, "image/png"))],
         data={"description": "Broken light fixture"},
     )
@@ -171,7 +187,7 @@ def test_multiple_photos_all_saved():
     png = _make_png_bytes()
  
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[
             ("media", ("a.png", png, "image/png")),
             ("media", ("b.png", png, "image/png")),
@@ -190,7 +206,7 @@ def test_multiple_photos_all_saved():
  
 def test_text_only_submission_has_null_image_url():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         data={"description": "Spill on floor"},
     )
     assert resp.status_code == 200
@@ -203,7 +219,7 @@ def test_text_only_submission_has_null_image_url():
  
 def test_text_only_submission_persists():
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         data={"description": "Spill on station floor"},
     )
     assert resp.status_code == 200
