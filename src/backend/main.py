@@ -114,6 +114,8 @@ async def submissions(
                 user_context=description or None,
                 found_priority="Standard",
                 vlm_summary=None,
+                photo_report_status="New",
+                photo_report_confidence=None,
             )
             db.add(photo_report)
 

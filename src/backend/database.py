@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
     DateTime,
+    Float,
     ForeignKey,
     JSON,
     String,
@@ -53,6 +54,8 @@ class PhotoReport(Base):
     user_context = Column(String)
     found_priority = Column(String)
     vlm_summary = Column(String)
+    photo_report_status = Column(String)
+    photo_report_confidence = Column(Float, nullable=True)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────

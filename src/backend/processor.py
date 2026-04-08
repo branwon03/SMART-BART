@@ -3,7 +3,8 @@ import time
 import math
 import mimetypes
 from pathlib import Path
-
+from sqlalchemy import text
+from src.backend.database import Base, engine, SessionLocal, PhotoReport
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -140,6 +141,7 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
 
     return raw_response, confidence
 
+"""
 def process_incident(incident: Incident, db: Session):
     #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save
 
@@ -208,35 +210,115 @@ def process_incident(incident: Incident, db: Session):
         print(f"  [✓] Incident {incident_id} -> {best_category} | {best_priority} (confidence: {best_confidence:.2f})")
 
     db.commit()
+"""
+
+def process_single_photo(photo: PhotoReport, db: Session):
+    """Processes a single photo and updates both the Photo and the Parent Incident."""
+    file_path = resolve_local_image_path(photo)
+    description = getattr(photo, "user_context", "Not provided")
+    incident_id = photo.incident_id
+
+    #if no photos exit early
+    if not file_path or not os.path.exists(file_path):
+        print(f"[!] File not found for photo {photo.evidence_id}: {file_path}")
+        photo.photo_report_status = "Error: File Missing"
+        db.commit()
+        return None
+
+    #Lock the photo_report
+    photo.photo_report_status = "In-Progress"
+    db.commit()
+    print(f"[*] Photo {photo.evidence_id} (Incident {incident_id}) locked as In-Progress")
+
+    try:
+        # call identify_object for this photo_report
+        raw_response, confidence = identify_objects(
+            file_path, 
+            DISCIPLINES, 
+            user_description=description
+        )
+        parsed = parse_classification(raw_response)
+
+        # 4. Update the PhotoReport specific fields
+        photo.vlm_summary = parsed["vlm_summary"]
+        photo.vlm_confidence = confidence
+        photo.vlm_discipline = parsed["discipline"]
+        photo.vlm_priority = parsed["issue_priority"]
+        photo.photo_report_status = "Completed"
+        photo.photo_report_confidence = confidence
+        
+        db.commit()
+        print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
+
+        # 5. Aggregate to the Incident level
+        # We fetch the parent incident to update its global state
+        incident = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+        if incident:
+            # Check if this new photo is more 'confident' than the current incident data
+            # Or if the incident hasn't been set yet
+            if incident.discipline is None or confidence > getattr(incident, 'best_confidence', -1.0):
+                incident.discipline = parsed["discipline"]
+                incident.vlm_summary = parsed["vlm_summary"]
+                incident.issue_priority = parsed["issue_priority"]
+                incident.status = "Completed"
+                # We store confidence on a temp attribute to help with the next photo comparison
+                setattr(incident, 'best_confidence', confidence) 
+                
+                db.commit()
+                print(f"  [✓] Updated Incident {incident_id} -> {parsed['discipline']} | {parsed['issue_priority']}")
+
+        return parsed | {"confidence": confidence}
+
+    except Exception as e:
+        print(f"[!] Error processing photo {photo.evidence_id}: {e}")
+        photo.photo_report_status = "Error: Inference Failed"
+        db.commit()
+        return None
+    
 
 def run_processor():
-    print("[*] Starting Incident Processor...")
+    print("[*] Initializing database foundation...")
+    try:
+        with engine.connect() as conn:
+            # 1. Enable pgvector (required for your embeddings)
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            conn.commit()
+            print("[*] pgvector extension enabled.")
 
+        # 2. Create the tables if they don't exist
+        Base.metadata.create_all(bind=engine)
+        print("[*] Database tables created/verified.")
+        
+    except Exception as e:
+        print(f"[!] Initialization failed: {e}")
+        # If DB isn't ready, wait 5 seconds and let Docker restart the container
+        time.sleep(5)
+        return
+    
     while True:
         db = SessionLocal()
-
         try:
-            incident = db.query(Incident).filter(Incident.status == "New").first()
+            # Look for the next photo that hasn't been processed yet
+            photo = db.query(PhotoReport).filter(PhotoReport.photo_report_status == "New").first()
 
-            if incident:
-                print(f"\n[*] Found New Incident: {incident.incident_id}")
-                process_incident(incident, db)
-
+            if photo:
+                print(f"[*] Processing Photo: {photo.evidence_id}")
+                result = process_single_photo(photo, db)
+                print(f"[*] Processed Photo: {photo.evidence_id}")
+                
+                #if result:
+                    # Optional: Update the parent Incident based on this new info
+                    #update_parent_incident(photo.incident_id, db)
+                
             else:
-                print("[~] No new incidents. Waiting...")
+                print("[~] No new photos. Waiting...")
 
-        except Exception as e:
-            print(f"[!] Unexpected error: {e}")
-            try:
-                incident.status = "Error: Processing Failed"
-                db.commit()
-            except Exception:
-                db.rollback()
-
+        # ... error handling ...
         finally:
             db.close()
-    
         time.sleep(10)
+
+
 
 if __name__ == "__main__":
     run_processor()
