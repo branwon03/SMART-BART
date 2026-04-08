@@ -7,7 +7,7 @@ from src.backend.main import app
 
 client = TestClient(app)
 
-EXPECTED_KEYS = {"incident_id", "description", "timestamp"}
+EXPECTED_KEYS = {"incident_id", "submission_id""description", "timestamp"}
 
 
 def _make_png_bytes() -> bytes:
