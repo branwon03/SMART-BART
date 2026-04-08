@@ -11,6 +11,7 @@ from google.genai import types
 from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
+from src.backend.inference import generate_embedding
 
 from src.backend.database import SessionLocal, Incident, PhotoReport
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
@@ -239,10 +240,17 @@ def process_single_photo(photo: PhotoReport, db: Session):
         )
         parsed = parse_classification(raw_response)
 
+        print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
+        vector = generate_embedding(
+            text=description, 
+            image_paths=[Path(file_path)]
+        )
+
         # 4. Update the PhotoReport specific fields
         photo.vlm_summary = parsed["vlm_summary"]
         photo.vlm_confidence = confidence
         photo.vlm_discipline = parsed["discipline"]
+        photo.embedding = vector
         photo.vlm_priority = parsed["issue_priority"]
         photo.photo_report_status = "Completed"
         photo.photo_report_confidence = confidence
