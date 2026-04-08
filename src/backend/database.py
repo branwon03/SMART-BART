@@ -52,6 +52,7 @@ class PhotoReport(Base):
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)
+    photo_location_id = Column(String)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────

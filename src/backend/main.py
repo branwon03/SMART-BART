@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
@@ -25,15 +26,20 @@ async def lifespan(app: FastAPI):
     # --- STARTUP LOGIC ---
     print("Initializing BART Incident Classifier.")
     try:
-        # Create database tables if they don't exist
+        # 1. Manually enable the pgvector extension first
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            conn.commit()
+            print("[startup] pgvector extension enabled.")
+
+        # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
+        print("[startup] Database tables created successfully.")
+        
     except Exception as exc:
-        print(f"[startup] create_all failed: {exc}")
-    
-    yield  # The app runs while it sits here
-    
-    # --- SHUTDOWN LOGIC ---
-    print("Shutting down. Cleaning up resources")
+        print(f"[startup] Initialization failed: {exc}")
+
+    yield 
 
 app = FastAPI(
     title="BART Incident Classifier & Dashboard API",
@@ -57,6 +63,7 @@ async def health_check() -> dict[str, str]:
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
+    photo_location_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -99,6 +106,7 @@ async def submissions(
             shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
 
+
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
                 incident_id=incident_id,
@@ -107,6 +115,7 @@ async def submissions(
                 submitted_at=now,
                 user_context=description,
                 found_priority="Standard",
+                photo_location_id=photo_location_id,
             )
             db.add(photo_report)
 
@@ -148,7 +157,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
