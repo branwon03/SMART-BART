@@ -70,7 +70,7 @@ def resolve_local_image_path(photo: PhotoReport) -> str:
 
     return ""
 
-def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
+def identify_objects(image_path: str, class_list: list, user_description: str = "Not provided") -> tuple[str, float]:
     """
     Gemini 2.5 Flash call with logprobs for real confidence scoring.
 
@@ -116,6 +116,8 @@ def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
         issue_priority: <LOW|MEDIUM|HIGH|CRITICAL>
         vlm_summary: <Describe the type of object in 3 words or less. Append "broken", "disfunctional", "giving error", "flickering", "stuck", "overflowing", or 
             another relevant one word adjective that is NOT "nominal" or "working" even if the object appears visually fine, since the user submitted a report which indicates a functional issue.>
+
+        USER DESCRIPTION: {user_description}
         """.strip()
 
     response = client.models.generate_content(
@@ -164,13 +166,18 @@ def process_incident(incident: Incident, db: Session):
 
     for photo in photos:
         file_path = resolve_local_image_path(photo)
+        description = getattr(photo, "user_context", "")
 
         if not file_path or not os.path.exists(file_path):
             print(f"[!] File not found: {file_path}")
             missing_files.append(file_path)
             continue
 
-        raw_response, confidence = identify_objects(file_path, DISCIPLINES)
+        raw_response, confidence = identify_objects(
+            file_path, 
+            DISCIPLINES, 
+            user_description=description
+        )
         parsed = parse_classification(raw_response)
 
         if confidence > best_confidence:
