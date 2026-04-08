@@ -268,7 +268,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
                 incident.discipline = parsed["discipline"]
                 incident.vlm_summary = parsed["vlm_summary"]
                 incident.issue_priority = parsed["issue_priority"]
-                incident.status = "Completed"
+                #incident.status = "Completed" #this was accidentally marking the entire incident as completed, as in, the engineers have fixed the incident already
                 # We store confidence on a temp attribute to help with the next photo comparison
                 setattr(incident, 'best_confidence', confidence) 
                 
