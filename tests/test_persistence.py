@@ -187,7 +187,7 @@ def test_multiple_photos_all_saved():
     png = _make_png_bytes()
  
     resp = client.post(
-        "/submissions",
+        "/api/submissions",
         files=[
             ("media", ("a.png", png, "image/png")),
             ("media", ("b.png", png, "image/png")),
