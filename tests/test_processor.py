@@ -1,163 +1,144 @@
-import os
-import time
-import math
-import mimetypes
-from pathlib import Path
-from sqlalchemy import text
-from dotenv import load_dotenv
-from google import genai
-from google.genai import types
-from google.genai.types import GenerateContentConfig
-from google.oauth2 import service_account
-from sqlalchemy.orm import Session
+import src.backend.processor as processor
+from src.backend.processor import process_incident
+from unittest.mock import MagicMock, patch
 
-# Internal imports
-from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident
-from src.backend.inference import generate_embedding
-from src.backend.gemini_parser import parse_classification, DISCIPLINES
-from src.backend.grouping import find_matching_incident, GROUPING_THRESHOLD
+#intended to mimic a gemini-style response string 
+FAKE_RESPONSE = (
+    "discipline: MECHANICAL\n"
+    "issue_priority: HIGH\n"
+    "vlm_summary: Placeholder summary of identified issue."
+)
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
+processor.identify_objects = lambda path, class_list: (FAKE_RESPONSE, 0.91)
 
-_genai_client: genai.Client | None = None
+#helper functions to create fake database objects
+def make_incident(incident_id="TEST-001", status="New"):
+    incident = MagicMock()
+    incident.incident_id = incident_id
+    incident.status = status
+    return incident
 
-def get_genai_client():
-    global _genai_client
-    if _genai_client is not None:
-        return _genai_client
 
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+def make_photo(image_url="test_image.jpg"):
+    photo = MagicMock()
+    photo.image_url = image_url
+    return photo
 
-    if not use_vertex or not project:
-        raise RuntimeError("Gemini/Vertex is not configured.")
 
-    key_path = os.path.expanduser(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json"))
-    creds_path = Path(key_path)
-    
-    if not creds_path.is_file():
-        raise FileNotFoundError(f"Vertex AI credentials not found at {creds_path.resolve()}.")
-        
-    credentials = service_account.Credentials.from_service_account_file(
-        str(creds_path),
-        scopes=["https://www.googleapis.com/auth/cloud-platform"],
-    )
-    return genai.Client(vertexai=True, project=project, location=location, credentials=credentials)
+def make_db(photos: list):
+    db = MagicMock()
+    db.query().filter().all.return_value = photos
+    return db
 
-def resolve_local_image_path(photo: PhotoReport) -> str:
-    image_url = getattr(photo, "image_url", None)
-    evidence_id = getattr(photo, "evidence_id", None)
+#this locks the incident
+def test_incident_locked_as_in_progress():
+    """Incident should be committed as In-Progress before model runs."""
+    incident = make_incident()
+    photo = make_photo()
 
-    # If image_url is a direct string path (common in tests)
-    if image_url and isinstance(image_url, str) and not image_url.startswith("/api/images/"):
-        return os.path.join(str(UPLOAD_DIR), image_url)
+    with patch("os.path.exists", return_value=True):
+        db = make_db([photo])
+        process_incident(incident, db)
 
-    # Real app case: resolve via evidence_id
-    if evidence_id and not isinstance(evidence_id, (type(None), object)): # Avoid globbing on Mocks
-        matches = list(Path(UPLOAD_DIR).glob(f"{evidence_id}.*"))
-        if matches:
-            return str(matches[0])
-            
-    # Fallback for testing: if it's a mock, just return a dummy string that os.path.exists can catch
-    return str(UPLOAD_DIR / f"{evidence_id}.jpg")
+    assert db.commit.call_count >= 2  #once for lock, once for save
 
-def identify_objects(image_path: str, class_list: list, user_description: str = "Not provided") -> tuple[str, float]:
-    print(f"  [model] Running inference on {os.path.basename(image_path)}")
-    client = get_genai_client()
 
-    mime_type, _ = mimetypes.guess_type(image_path)
-    if mime_type is None:
-        mime_type = "image/jpeg"
+#run the model and parsing 
+def test_single_photo_happy_path():
+    """One photo, model runs, parsed correctly, incident saved as Completed."""
+    incident = make_incident()
+    photo = make_photo("photo1.jpg")
 
-    with open(image_path, "rb") as f:
-        image_bytes = f.read()
+    with patch("os.path.exists", return_value=True):
+        db = make_db([photo])
+        process_incident(incident, db)
 
-    prompt = f"USER DESCRIPTION: {user_description}" # Simplified for brevity
+    assert incident.status == "Completed"
+    assert incident.discipline == "MECHANICAL"
+    assert incident.issue_priority == "HIGH"
+    assert incident.vlm_summary == "Placeholder summary of identified issue."
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[prompt, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)],
-        config=GenerateContentConfig(response_logprobs=True, logprobs=3)
-    )
 
-    raw_response = (response.text or "").strip()
-    if not raw_response:
-        raise ValueError("Gemini returned an empty response")
+def test_multiple_photos_picks_highest_confidence():
+    """With multiple photos the highest confidence result wins."""
+    incident = make_incident()
+    photos = [make_photo("photo1.jpg"), make_photo("photo2.jpg")]
 
-    avg_logprobs = response.candidates[0].avg_logprobs or 0.0
-    confidence = math.exp(avg_logprobs)
-    return raw_response, confidence
+    responses = [
+        ("discipline: ELECTRICAL\nissue_priority: LOW\nvlm_summary: Low confidence result.", 0.55),
+        ("discipline: MECHANICAL\nissue_priority: HIGH\nvlm_summary: High confidence result.", 0.95),
+    ]
 
-def process_single_photo(photo: PhotoReport, db: Session):
-    """Processes a single photo and updates both the Photo and the Parent Incident."""
-    file_path = resolve_local_image_path(photo)
-    description = getattr(photo, "user_context", "Not provided")
-    incident_id = photo.incident_id
-    
-    # 1. Fetch Incident and LOCK immediately (Satisfies test_incident_locked_as_in_progress)
-    incident = db.query(Incident).filter(Incident.incident_id == incident_id).first()
-    if incident:
-        incident.status = "In-Progress"
-        db.commit() 
+    with patch("os.path.exists", return_value=True), \
+         patch.object(processor, "identify_objects", side_effect=responses):
 
-    # 2. Validate Files
-    if not file_path or not os.path.exists(file_path):
-        print(f"[!] File not found for photo {photo.evidence_id}")
-        photo.photo_report_status = "Error: File Missing"
-        if incident:
-            incident.status = "Error: All Files Missing"
-        db.commit()
-        return None
+        db = make_db(photos)
+        process_incident(incident, db)
 
-    # Update photo status
-    photo.photo_report_status = "In-Progress"
-    db.commit()
+    assert incident.status == "Completed"
+    assert incident.discipline == "MECHANICAL"
+    assert incident.vlm_summary == "High confidence result."
 
-    try:
-        # 3. Model Inference
-        raw_response, confidence = identify_objects(file_path, DISCIPLINES, user_description=description)
-        parsed = parse_classification(raw_response)
-        
-        # Check if model actually returned a discipline
-        if not parsed.get("discipline"):
-            if incident:
-                incident.status = "Error: Model Returned No Results"
-            db.commit()
-            return None
 
-        # 4. Generate Embeddings & Grouping
-        vector = generate_embedding(text=description, image_paths=[Path(file_path)])
-        
-        # Update Photo fields
-        photo.vlm_summary = parsed["vlm_summary"]
-        photo.vlm_confidence = confidence
-        photo.vlm_discipline = parsed["discipline"]
-        photo.embedding = vector
-        photo.vlm_priority = parsed["issue_priority"]
-        photo.photo_report_status = "Completed"
-        db.commit()
+def test_missing_file_is_skipped():
+    """Missing photo is skipped, processing continues on remaining photos."""
+    incident = make_incident()
+    photos = [make_photo("missing.jpg"), make_photo("exists.jpg")]
 
-        # 5. Aggregate to Incident (Satisfies test_single_photo_happy_path)
-        if incident:
-            # Logic: highest confidence wins
-            current_best = getattr(incident, 'best_confidence', -1.0)
-            if incident.discipline is None or confidence > current_best:
-                incident.discipline = parsed["discipline"]
-                incident.vlm_summary = parsed["vlm_summary"]
-                incident.issue_priority = parsed["issue_priority"]
-                setattr(incident, 'best_confidence', confidence)
-            
-            incident.status = "Completed" # Required by pytest
-            db.commit()
+    with patch("os.path.exists", side_effect=lambda p: "missing" not in p):
+        db = make_db(photos)
+        process_incident(incident, db)
 
-        return parsed | {"confidence": confidence}
+    assert incident.status == "Completed"
+    assert incident.discipline == "MECHANICAL"
 
-    except Exception as e:
-        print(f"[!] Error: {e}")
-        photo.photo_report_status = "Error: Inference Failed"
-        if incident:
-            incident.status = "Error: Inference Failed"
-        db.commit()
-        return None
+
+#error cases
+def test_no_photos_sets_error_status():
+    """No photos attached → Error: No Photos."""
+    incident = make_incident()
+    db = make_db([])
+
+    process_incident(incident, db)
+
+    assert incident.status == "Error: No Photos"
+
+
+def test_all_files_missing_sets_error_status():
+    """All photo files missing on disk → Error: All Files Missing."""
+    incident = make_incident()
+    photos = [make_photo("missing1.jpg"), make_photo("missing2.jpg")]
+
+    with patch("os.path.exists", return_value=False):
+        db = make_db(photos)
+        process_incident(incident, db)
+
+    assert incident.status == "Error: All Files Missing"
+
+
+def test_model_returns_no_discipline_sets_error():
+    """If parser can't extract a discipline → Error: Model Returned No Results."""
+    incident = make_incident()
+    photo = make_photo("photo.jpg")
+
+    bad_response = "issue_priority: HIGH\nvlm_summary: Something happened."  # no discipline field
+
+    with patch("os.path.exists", return_value=True), \
+         patch.object(processor, "identify_objects", return_value=(bad_response, 0.91)):
+
+        db = make_db([photo])
+        process_incident(incident, db)
+
+    assert incident.status == "Error: Model Returned No Results"
+
+
+def test_db_committed_at_least_twice():
+    """DB should commit on lock and again on final save."""
+    incident = make_incident()
+    photo = make_photo()
+
+    with patch("os.path.exists", return_value=True):
+        db = make_db([photo])
+        process_incident(incident, db)
+
+    assert db.commit.call_count >= 2
