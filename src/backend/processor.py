@@ -222,12 +222,12 @@ def process_single_photo(photo: PhotoReport, db: Session):
     #if no photos exit early
     if not file_path or not os.path.exists(file_path):
         print(f"[!] File not found for photo {photo.evidence_id}: {file_path}")
-        photo.photo_report_status = "Error: File Missing"
+        photo.photo_report_status = "Error: File Missing"   # type: ignore[assignment]
         db.commit()
         return None
 
     #Lock the photo_report
-    photo.photo_report_status = "In-Progress"
+    photo.photo_report_status = "In-Progress"       # type: ignore[assignment]
     db.commit()
     print(f"[*] Photo {photo.evidence_id} (Incident {incident_id}) locked as In-Progress")
 
@@ -285,8 +285,8 @@ def process_single_photo(photo: PhotoReport, db: Session):
         photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
         photo.found_priority = parsed["issue_priority"]
-        photo.photo_report_status = "Completed"
-        photo.photo_report_confidence = confidence
+        photo.photo_report_status = "Completed"     # type: ignore[assignment]
+        photo.photo_report_confidence = confidence  # type: ignore[assignment]
         
         db.commit()
         print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
@@ -312,7 +312,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
 
     except Exception as e:
         print(f"[!] Error processing photo {photo.evidence_id}: {e}")
-        photo.photo_report_status = "Error: Inference Failed"
+        photo.photo_report_status = "Error: Inference Failed"       # type: ignore[assignment]
         db.commit()
         return None
     
