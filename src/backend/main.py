@@ -4,9 +4,9 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
 from src.backend.inference import (
@@ -76,7 +76,8 @@ async def submissions(
             tmp.close()
             tmp_paths.append(Path(tmp.name))
 
-        # 2. Enqueue a blank incident and photo report
+        # 2. Run Inference
+        submission_id = uuid.uuid4().hex
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
 
@@ -114,6 +115,7 @@ async def submissions(
                 # 6. Return Clean Response
         return {
             "incident_id": incident_id,
+            "submission_id": submission_id,
             "description": description,
             "timestamp": now.isoformat(),
         }
