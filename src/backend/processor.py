@@ -90,16 +90,33 @@ def identify_objects(image_path: str, class_list: list) -> tuple[str, float]:
         image_bytes = f.read()
 
     prompt = f"""
-You are classifying a BART maintenance incident from an image.
+        You are a BART agent classifying objects given an image and/or text description, submitted by a train commuter to the maintenance routing system.
+        You should assign the priority level in the way a large scale transit agency would.
 
-Choose exactly ONE discipline from:
-{", ".join(class_list)}
-
-Return exactly these 3 lines and nothing else:
-discipline: <one label from the list above>
-issue_priority: <LOW|MEDIUM|HIGH|CRITICAL>
-vlm_summary: <one concise sentence>
-""".strip()
+        The Logic Rule: If it exists, treat the User Description as the primary evidence for the object's functional state. Even if the image appears visually NOMINAL (clean/intact),
+        if the user describes a functional failure (e.g., flickering, strange noises, 'stuck' buttons), you must treat the situation as an active issue.
+        The object you should visually focus on is most likely located in the center of the image.
+        Since the user has submitted a report, assume that the object is in some way not functioning as intended.
+        If the image pertains to an emergency blue phone, fire sprinkler, or exit signage, assign CRITICAL priority regardless of visual state or user description.
+        Otherwise, if the image appears visually NOMINAL but there is NO user description, assign a LOW priority
+        Overflowing garbage cans are HIGH priority.
+   
+        - FARE COLLECTION: Card scanners (they are colored black)
+        - BUILDINGS: Cracked floors, cracked walls, water intrusion, faded paint, vandalism, doors, missing signs, drainage issues
+        - COMMS: Emergency telephones, electronic destination signs
+        - ELEVATOR AND ESCALATOR: All elevator and escalator related issues (except cleaning — that is System Service)
+        - GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals
+        - MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans
+        - SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning
+        - ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems
+        - UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline"
+        
+        Return exactly these 3 lines and nothing else:
+        discipline: <one label from the list above>
+        issue_priority: <LOW|MEDIUM|HIGH|CRITICAL>
+        vlm_summary: <Describe the type of object in 3 words or less. Append "broken", "disfunctional", "giving error", "flickering", "stuck", "overflowing", or 
+            another relevant one word adjective that is NOT "nominal" or "working" even if the object appears visually fine, since the user submitted a report which indicates a functional issue.>
+        """.strip()
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
