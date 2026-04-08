@@ -35,10 +35,11 @@ This project bridges that gap by building an image-based system that automatical
 Required:
 - [ ] Photo subject detection & routing
 - [ ] Incident de-duplication
-- [ ] Ingestion via web app & email
+- [ ] Ingestion via web app
 - [ ] Photo confidence scoring
 
 Bonus:
+- [ ] Email injestion
 - [ ] Face blurring
 - [ ] Video processing
 
