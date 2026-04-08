@@ -111,7 +111,7 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
         - MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans
         - SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning
         - ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems
-        - UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline"
+        - UNCLASSIFIED: If the issue cannot be confidently classified into any of the above disciplines, choose this pseudo-discipline
         
         Return exactly these 3 lines and nothing else:
         discipline: <one label from the list above>
