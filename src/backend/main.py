@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
@@ -25,15 +26,20 @@ async def lifespan(app: FastAPI):
     # --- STARTUP LOGIC ---
     print("Initializing BART Incident Classifier.")
     try:
-        # Create database tables if they don't exist
+        # 1. Manually enable the pgvector extension first
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            conn.commit()
+            print("[startup] pgvector extension enabled.")
+
+        # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
+        print("[startup] Database tables created successfully.")
+        
     except Exception as exc:
-        print(f"[startup] create_all failed: {exc}")
-    
-    yield  # The app runs while it sits here
-    
-    # --- SHUTDOWN LOGIC ---
-    print("Shutting down. Cleaning up resources")
+        print(f"[startup] Initialization failed: {exc}")
+
+    yield 
 
 app = FastAPI(
     title="BART Incident Classifier & Dashboard API",
@@ -105,8 +111,9 @@ async def submissions(
                 image_url=saved_image_url,
                 embedding=None,
                 submitted_at=now,
-                user_context=description,
+                user_context=description or None,
                 found_priority="Standard",
+                vlm_summary=None,
             )
             db.add(photo_report)
 

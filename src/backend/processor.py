@@ -180,6 +180,9 @@ def process_incident(incident: Incident, db: Session):
         )
         parsed = parse_classification(raw_response)
 
+        photo.vlm_summary = parsed["vlm_summary"]
+        db.commit()
+        
         if confidence > best_confidence:
             best_confidence = confidence
             best_category = parsed["discipline"]
