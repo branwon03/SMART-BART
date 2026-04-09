@@ -11,16 +11,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
-
-
-class IncidentUpdate(BaseModel):
-    issue_priority: str | None = None
-    status: str | None = None
 from src.backend.inference import (
     get_extension,
     kSupportedList,
 )
 from contextlib import asynccontextmanager
+
+
+class IncidentUpdate(BaseModel):
+    issue_priority: str | None = None
+    status: str | None = None
+
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,16 +42,14 @@ async def lifespan(app: FastAPI):
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
         print("[startup] Database tables created successfully.")
-        
+
     except Exception as exc:
         print(f"[startup] Initialization failed: {exc}")
 
-    yield 
+    yield
 
-app = FastAPI(
-    title="BART Incident Classifier & Dashboard API",
-    lifespan=lifespan
-)
+
+app = FastAPI(title="BART Incident Classifier & Dashboard API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,9 +60,11 @@ app.add_middleware(
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
 
 @app.post("/api/submissions")
 async def submissions(
@@ -81,7 +82,7 @@ async def submissions(
                     status_code=422,
                     detail=f"Unsupported file type '.{ext}'. Accepted: {', '.join(sorted(kSupportedList))}",
                 )
-            
+
             suffix = f".{ext}"
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
             tmp.write(await upload.read())
@@ -95,7 +96,7 @@ async def submissions(
 
         incident = Incident(
             incident_id=incident_id,
-            status="New",           
+            status="New",
             issue_priority=None,
             discipline=None,
             vlm_summary=description or None,
@@ -128,7 +129,7 @@ async def submissions(
 
         db.commit()
 
-                # 6. Return Clean Response
+        # 6. Return Clean Response
         return {
             "incident_id": incident_id,
             "submission_id": submission_id,
@@ -139,6 +140,7 @@ async def submissions(
         # Cleanup temp files
         for p in tmp_paths:
             p.unlink(missing_ok=True)
+
 
 @app.get("/api/incidents")
 async def get_incidents(db: Session = Depends(get_db)):
@@ -156,16 +158,19 @@ async def get_incidents(db: Session = Depends(get_db)):
         for r in rows
     ]
 
+
 @app.put("/api/incidents/{incident_id}")
-async def update_incident(incident_id: str, body: IncidentUpdate, db: Session = Depends(get_db)):
+async def update_incident(
+    incident_id: str, body: IncidentUpdate, db: Session = Depends(get_db)
+):
     row = db.query(Incident).filter(Incident.incident_id == incident_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     if body.issue_priority is not None:
-        row.issue_priority = body.issue_priority
+        setattr(row, "issue_priority", body.issue_priority)
     if body.status is not None:
-        row.status = body.status
+        setattr(row, "status", body.status)
 
     db.commit()
     db.refresh(row)
@@ -180,22 +185,29 @@ async def update_incident(incident_id: str, body: IncidentUpdate, db: Session = 
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 
-MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
+
+MIME_MAP = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+}
+
 
 @app.get("/api/photo-reports/{incident_id}")
 async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     # Using a clean dictionary-based query to avoid the 3072-dim vector entirely
     from sqlalchemy import text
-    
+
     query = text("""
         SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
     """)
-    
+
     result = db.execute(query, {"inc_id": incident_id}).fetchall()
-    
+
     # Manually building a clean list of standard Python dicts
     clean_data = []
     for row in result:
@@ -204,17 +216,25 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         user_context_val = row[4]
         found_pri_val = row[5]
 
-        clean_data.append({
-            "evidence_id": str(row[0]),
-            "incident_id": str(row[1]),
-            "image_url": None if image_val is None else str(image_val),
-            "submitted_at": submitted_val if isinstance(submitted_val, str)
-            else submitted_val.isoformat() if submitted_val else None,
-            "user_context": user_context_val if user_context_val is not None else "",
-            "found_priority": None if found_pri_val is None else str(found_pri_val),
-        })
+        clean_data.append(
+            {
+                "evidence_id": str(row[0]),
+                "incident_id": str(row[1]),
+                "image_url": None if image_val is None else str(image_val),
+                "submitted_at": submitted_val
+                if isinstance(submitted_val, str)
+                else submitted_val.isoformat()
+                if submitted_val
+                else None,
+                "user_context": user_context_val
+                if user_context_val is not None
+                else "",
+                "found_priority": None if found_pri_val is None else str(found_pri_val),
+            }
+        )
     # Bypass FastAPI's automatic encoder completely
     return JSONResponse(content=clean_data)
+
 
 @app.get("/api/images/{evidence_id}")
 def get_image(evidence_id: str):
