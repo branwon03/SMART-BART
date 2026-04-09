@@ -113,8 +113,12 @@ async def submissions(
                 image_url=saved_image_url,
                 embedding=None,
                 submitted_at=now,
-                user_context=description,
+                user_context=description or None,
                 found_priority="Standard",
+                vlm_summary=None,
+                photo_report_status="New",
+                photo_report_confidence=None,
+                photo_report_discipline=None,
                 photo_location_id=photo_location_id,
             )
             db.add(photo_report)

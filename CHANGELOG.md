@@ -2,6 +2,71 @@
 
 <!-- version list -->
 
+## v0.10.1 (2026-04-08)
+
+### Bug Fixes
+
+- Added photo_report_discipline to photo_reports
+  ([`e967bf3`](https://github.com/cse120-ucm/S26-CSE-312/commit/e967bf3d61a1b2144306341cfdea9253f4d9e66b))
+
+- Changed locking from incident table's status attribute to photo_report table's status attribute.
+  Added confidence score column to photo_reports
+  ([`10e921e`](https://github.com/cse120-ucm/S26-CSE-312/commit/10e921ea0e6d78dbbdaca37f184d543440bb6704))
+
+- Connected processor to Gemini Embedding 2, successful vector db storage
+  ([`9ede336`](https://github.com/cse120-ucm/S26-CSE-312/commit/9ede33634e6c0734795bad79936a19747fc29622))
+
+- Included user_context in VLM inference call
+  ([`2776962`](https://github.com/cse120-ucm/S26-CSE-312/commit/277696243ec86d32e67c633ae210da4942f8384d))
+
+- Integrated processor.py with grouping logic, end to end connection complete
+  ([`aa9ac5f`](https://github.com/cse120-ucm/S26-CSE-312/commit/aa9ac5fec4efe537fc0431cbfd3806d811e20d36))
+
+- Minor inference prompt typo
+  ([`426e9f4`](https://github.com/cse120-ucm/S26-CSE-312/commit/426e9f4e87392374c993dd9f092abb4f6566ed2b))
+
+- Passing lint test
+  ([`d4b9345`](https://github.com/cse120-ucm/S26-CSE-312/commit/d4b9345dfe069a4d59457da9e209ead44c476986))
+
+- Passing test cases
+  ([`b506263`](https://github.com/cse120-ucm/S26-CSE-312/commit/b5062631b203cd75db9ffac0771d2d0e174104c3))
+
+- Prevented incident status (field status) from being set to "Completed" on creation
+  ([`71c7517`](https://github.com/cse120-ucm/S26-CSE-312/commit/71c75170fa32320b73363c2a51136f744879e3ac))
+
+- Removed linting errors
+  ([`076d45e`](https://github.com/cse120-ucm/S26-CSE-312/commit/076d45e42f29b67b2d374f98f163319b6c47aec8))
+
+- Test case changes
+  ([`ad4fffc`](https://github.com/cse120-ucm/S26-CSE-312/commit/ad4fffc8d3cc824a707e81b848d546e54ce6bf77))
+
+- Test typos
+  ([`7d27b02`](https://github.com/cse120-ucm/S26-CSE-312/commit/7d27b02c6e2930908f1309f504ca2180e3da4f0b))
+
+- Test update
+  ([`e0f9fb8`](https://github.com/cse120-ucm/S26-CSE-312/commit/e0f9fb85fd0f8314c8548a3b6648610c29542ad4))
+
+- Test update
+  ([`c866166`](https://github.com/cse120-ucm/S26-CSE-312/commit/c86616665e21335c5c75fb7f48230f80e67bdb35))
+
+- Test updates
+  ([`343ac2c`](https://github.com/cse120-ucm/S26-CSE-312/commit/343ac2c3b3d00ec4070f885bf97b5aa114269090))
+
+
+## v0.10.0 (2026-04-08)
+
+### Bug Fixes
+
+- Type lint errors in face blurring
+  ([`7523444`](https://github.com/cse120-ucm/S26-CSE-312/commit/7523444e5da396a78e54df23499a07b544834917))
+
+### Features
+
+- **frontend**: Replace blazeface with mediapipe full_range and optimize blur bounds for backend VLM
+  visibility
+  ([`238037e`](https://github.com/cse120-ucm/S26-CSE-312/commit/238037e28f05cf71d15178d6d808b4f4a7ede269))
+
+
 ## v0.9.2 (2026-04-08)
 
 ### Bug Fixes
