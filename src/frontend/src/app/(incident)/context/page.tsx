@@ -34,6 +34,7 @@ export default function UserContext() {
         images,
         description: contextText,
         priority,
+        location,
       });
       router.push('/confirmation');
     } catch (err) {

@@ -26,6 +26,7 @@ export async function submitReport(params: {
   images: string[];
   description: string;
   priority: string;
+  location: string;
 }): Promise<SubmissionResult> {
   const form = new FormData();
 
@@ -34,6 +35,7 @@ export async function submitReport(params: {
   });
 
   form.append("description", params.description);
+  form.append("photo_location_id", params.location);
 
   const res = await fetch(`${API_BASE_URL}/api/submissions`, {
     method: "POST",
