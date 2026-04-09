@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v0.11.0 (2026-04-09)
+
+### Bug Fixes
+
+- Lint + mypy build errors
+  ([`0e8e3d8`](https://github.com/cse120-ucm/S26-CSE-312/commit/0e8e3d89889f0296d208cdc309c8f95d609196cf))
+
+### Chores
+
+- Update ignore files
+  ([`d84f851`](https://github.com/cse120-ucm/S26-CSE-312/commit/d84f851a24c0e991af558ccd821e27c4c7767085))
+
+### Features
+
+- Adding issue editing e2e + status column
+  ([`c987dd5`](https://github.com/cse120-ucm/S26-CSE-312/commit/c987dd55d1610174ecfb2f4d9d7fff475205b030))
+
+
 ## v0.10.2 (2026-04-09)
 
 ### Bug Fixes

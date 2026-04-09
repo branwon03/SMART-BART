@@ -17,6 +17,7 @@ export default function MaintenanceDashboard() {
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    updateSelectedIncident,
   } = useMaintenanceDashboard();
 
   return (
@@ -68,6 +69,7 @@ export default function MaintenanceDashboard() {
               setIncidentIdExpanded(false);
               setSelectedIncident(null);
             }}
+            onIncidentUpdated={updateSelectedIncident}
           />
         )}
       </div>

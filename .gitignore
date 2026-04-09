@@ -17,6 +17,7 @@ env/
 venv/
 venv*/
 .vscode/
+.cursor/
 *.log
 .python-version
 credentials.json

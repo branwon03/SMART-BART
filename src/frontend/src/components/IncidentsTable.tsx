@@ -41,6 +41,7 @@ export function IncidentsTable({
               <th className="p-5">Issue Title</th>
               <th className="p-5">Incident ID</th>
               <th className="p-5">Priority</th>
+              <th className="p-5">Status</th>
               <th className="p-5">Location</th>
               <th className="p-5 text-right font-bold text-blue-600 uppercase">Time Elapsed</th>
             </tr>
@@ -48,7 +49,7 @@ export function IncidentsTable({
           <tbody className="divide-y divide-slate-50">
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-20 text-center text-slate-400 italic">
+                <td colSpan={7} className="p-20 text-center text-slate-400 italic">
                   No reports currently active for {activeTab}.
                 </td>
               </tr>
@@ -81,6 +82,9 @@ export function IncidentsTable({
                           : "bg-yellow-400"
                       }`}
                     />
+                  </td>
+                  <td className="p-5 text-xs font-semibold text-slate-600">
+                    {item.status ?? "—"}
                   </td>
                   <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">
                     {item.location_id}

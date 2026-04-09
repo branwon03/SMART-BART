@@ -85,6 +85,15 @@ export function useMaintenanceDashboard() {
     setSelectedIncident(null);
   }, []);
 
+  const updateSelectedIncident = useCallback((updated: Incident) => {
+    setData((prev) =>
+      prev.map((inc) => (inc.incident_id === updated.incident_id ? updated : inc)),
+    );
+    setSelectedIncident((prev) =>
+      prev && prev.incident_id === updated.incident_id ? updated : prev,
+    );
+  }, []);
+
   return {
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
@@ -96,5 +105,6 @@ export function useMaintenanceDashboard() {
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    updateSelectedIncident,
   };
 }
