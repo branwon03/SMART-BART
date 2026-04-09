@@ -63,6 +63,7 @@ async def health_check() -> dict[str, str]:
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
+    photo_location_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -105,6 +106,7 @@ async def submissions(
             shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
 
+
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
                 incident_id=incident_id,
@@ -117,6 +119,7 @@ async def submissions(
                 photo_report_status="New",
                 photo_report_confidence=None,
                 photo_report_discipline=None,
+                photo_location_id=photo_location_id,
             )
             db.add(photo_report)
 
@@ -158,7 +161,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     query = text("""
-        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
