@@ -9,11 +9,17 @@ export default function ImageUpload() {
   const { images, setImages } = useReportContext();
   const router = useRouter(); 
   const [imageError, setImageError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false); 
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
+
+    // 1. Lock the files into a static array immediately
+    const filesArray = Array.from(fileList);
+    
+    // 2. Clear the input so Safari lets you upload the same photo twice if needed
+    e.target.value = '';
 
     setIsProcessing(true);
     setImageError(null);
@@ -24,24 +30,19 @@ export default function ImageUpload() {
       );
       const faceDetector = await FaceDetector.createFromOptions(vision, {
         baseOptions: {
-          // Use full range model for side profiles and long distances
           modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite",
           delegate: "GPU"
         },
         runningMode: "IMAGE",
-        // NEW: Lower the threshold. 
-        // Default is 0.5. Lowering to 0.3 makes it "paranoid" and more likely to catch half-covered faces.
         minDetectionConfidence: 0.3,
         minSuppressionThreshold: 0.3
       });
 
       const newImages: string[] = [];
 
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      for (let i = 0; i < filesArray.length; i++) {
+        const file = filesArray[i];
       
-        if (file.size < 100 * 1024) continue; 
-
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
         img.src = objectUrl;
@@ -69,10 +70,8 @@ export default function ImageUpload() {
 
         ctx.drawImage(img, 0, 0, width, height);
       
-        // Free up mobile RAM immediately
         URL.revokeObjectURL(objectUrl); 
 
-        // MediaPipe Detection
         const detections = faceDetector.detect(canvas).detections;
 
         if (detections.length > 0) {
@@ -82,7 +81,6 @@ export default function ImageUpload() {
           
             const centerX = originX + (bboxWidth / 2);
             const centerY = originY + (bboxHeight / 2);
-
             const radiusX = bboxWidth / 2;
             const radiusY = (bboxHeight / 2) * 1.1;
 
@@ -90,27 +88,25 @@ export default function ImageUpload() {
             ctx.beginPath();
             ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
             ctx.clip();
-
             ctx.filter = "blur(15px)";
             ctx.drawImage(canvas, 0, 0); 
-
             ctx.restore();
           });
         }
 
-      newImages.push(canvas.toDataURL("image/jpeg", 0.7));
+        newImages.push(canvas.toDataURL("image/jpeg", 0.7));
+      }
+
+      setImages((prev) => [...prev, ...newImages]);
+
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Processing error:", message);
+      setImageError("Something went wrong while applying the privacy blur.");
+    } finally {
+      setIsProcessing(false);
     }
-
-    setImages((prev) => [...prev, ...newImages]);
-
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("Processing error:", message);
-    setImageError("Something went wrong while applying the privacy blur.");
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   const handleNextPage = () => {
     if (images.length === 0) {
@@ -165,17 +161,20 @@ export default function ImageUpload() {
             )}
           </div>
 
-          <label className={`cursor-pointer bg-[#0099D8] text-white py-2 px-6 text-[15px] font-bold shadow-md transition-colors mb-6 ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8]'}`}>
-            {isProcessing ? 'Processing...' : 'Upload Images'}
+          {/* The Invisible Overlay Upload Button */}
+          <div className="relative inline-block mb-6">
+            <div className={`flex items-center justify-center bg-[#0099D8] text-white py-2 px-6 text-[15px] font-bold shadow-md transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8]'}`}>
+              {isProcessing ? 'Processing...' : 'Upload Images'}
+            </div>
             <input 
               type="file" 
               multiple 
               accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden" 
               disabled={isProcessing}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+              onChange={handleImageUpload}
             />
-          </label>
+          </div>
 
           {imageError && (
             <div className="flex items-start gap-2 text-red-600 bg-red-50 p-3 border border-red-200 rounded-md w-[85%] mb-6 shadow-sm">
