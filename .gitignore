@@ -17,6 +17,7 @@ env/
 venv/
 venv*/
 .vscode/
+.cursor/
 *.log
 .python-version
 credentials.json
@@ -31,4 +32,3 @@ uploads/
 
 # gemini 
 credentials.json
-/.cursor/plans

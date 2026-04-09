@@ -8,8 +8,14 @@ from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+
+
+class IncidentUpdate(BaseModel):
+    issue_priority: str | None = None
+    status: str | None = None
 from src.backend.inference import (
     get_extension,
     kSupportedList,
@@ -149,6 +155,30 @@ async def get_incidents(db: Session = Depends(get_db)):
         }
         for r in rows
     ]
+
+@app.put("/api/incidents/{incident_id}")
+async def update_incident(incident_id: str, body: IncidentUpdate, db: Session = Depends(get_db)):
+    row = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if body.issue_priority is not None:
+        row.issue_priority = body.issue_priority
+    if body.status is not None:
+        row.status = body.status
+
+    db.commit()
+    db.refresh(row)
+
+    return {
+        "incident_id": row.incident_id,
+        "status": row.status,
+        "issue_priority": row.issue_priority,
+        "discipline": row.discipline,
+        "vlm_summary": row.vlm_summary,
+        "location_id": row.location_id,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
 
 MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
 
