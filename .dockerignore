@@ -17,3 +17,4 @@ tests/
 .ruff_cache/
 .mypy_cache/
 .env
+.cursor/

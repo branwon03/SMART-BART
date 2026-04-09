@@ -9,3 +9,17 @@ export function getPhotoReports(incidentId: string): Promise<PhotoReport[]> {
   return apiFetch<PhotoReport[]>(`/api/photo-reports/${encodeURIComponent(incidentId)}`);
 }
 
+export function updateIncident(
+  incidentId: string,
+  fields: { issue_priority?: string; status?: string },
+): Promise<Incident> {
+  return apiFetch<Incident>(
+    `/api/incidents/${encodeURIComponent(incidentId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    },
+  );
+}
+

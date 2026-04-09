@@ -1,8 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
+import { EditIssueModal } from "./EditIssueModal";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -11,6 +15,7 @@ type IncidentDetailPanelProps = {
   incidentIdExpanded: boolean;
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
+  onIncidentUpdated: (updated: Incident) => void;
 };
 
 export function IncidentDetailPanel({
@@ -20,7 +25,10 @@ export function IncidentDetailPanel({
   incidentIdExpanded,
   onToggleIncidentIdExpanded,
   onClose,
+  onIncidentUpdated,
 }: IncidentDetailPanelProps) {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-20" onClick={onClose} />
@@ -87,12 +95,7 @@ export function IncidentDetailPanel({
           <div className="absolute top-10 right-0 flex flex-col gap-2 w-32">
             <button
               type="button"
-              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
-            >
-              Begin
-            </button>
-            <button
-              type="button"
+              onClick={() => setEditModalOpen(true)}
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
             >
               Edit Issue
@@ -172,6 +175,17 @@ export function IncidentDetailPanel({
           </button>
         </div>
       </aside>
+
+      {editModalOpen && (
+        <EditIssueModal
+          incident={incident}
+          onSave={(updated) => {
+            setEditModalOpen(false);
+            onIncidentUpdated(updated);
+          }}
+          onCancel={() => setEditModalOpen(false)}
+        />
+      )}
     </>
   );
 }
