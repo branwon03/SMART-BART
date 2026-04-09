@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.12.0 (2026-04-09)
+
+### Features
+
+- Delete button in incident panel
+  ([`f2b3158`](https://github.com/cse120-ucm/S26-CSE-312/commit/f2b3158a39860325d1ef796e09bdbe13e262ff06))
+
+
 ## v0.11.1 (2026-04-09)
 
 ### Bug Fixes
