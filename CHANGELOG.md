@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.11.1 (2026-04-09)
+
+### Bug Fixes
+
+- Merge conflict lint errors
+  ([`8246a78`](https://github.com/cse120-ucm/S26-CSE-312/commit/8246a7856aedee4ecb1fb323f602d11f9e53e89c))
+
+
 ## v0.11.0 (2026-04-09)
 
 ### Bug Fixes
