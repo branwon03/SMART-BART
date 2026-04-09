@@ -94,7 +94,7 @@ async def submissions(
             issue_priority=None,
             discipline=None,
             vlm_summary=description or None,
-            location_id=None,
+            location_id=photo_location_id or None,
             created_at=now,
         )
         db.add(incident)
@@ -147,7 +147,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "issue_priority": r.issue_priority,
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
-            "location_id": r.location_id,
+            "location_id": r.location_id, 
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
