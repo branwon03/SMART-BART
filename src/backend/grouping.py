@@ -1,11 +1,9 @@
 from math import sqrt
 from sqlalchemy.orm import Session
-from src.backend.database import PhotoReport
+from src.backend.database import Incident, PhotoReport
 
 # Minimum cosine similarity required to attach a new report to an existing incident instead of creating new one
-# to an existing incident instead of leaving it separate.
-# Higher threshold = stricter grouping, fewer accidental merges.
-GROUPING_THRESHOLD = 0.90   # Can tune later
+GROUPING_THRESHOLD = 0.60   # Can tune later
 
 def cosine_similarity(vec_a, vec_b) -> float:
     """
@@ -47,58 +45,54 @@ def find_matching_incident(
     user_context: str | None = None,
     threshold: float = GROUPING_THRESHOLD,
 ):
+
     """
-    Try to group a newly processed photo into an existing incident.
-
-    Current MVP grouping strategy:
-    1. Only compare against completed photo reports
-    2. Only compare within the same predicted discipline bucket
-    3. Choose the candidate with the highest cosine similarity
-    4. Reuse that incident only if similarity passes the threshold
-
-    Why discipline filtering helps:
-    - prevents unrelated categories from competing directly
-    - reduces false matches across very different issue types
+    Try to find an existing incident that this new report should be grouped into.
+    MVP Grouping Rule:
+    1. Only compare against reports from same discipline
+    2. Only compare against rows that already have embeddings
+    3. Choose highest similarity score
+    4. Reuse that incident_id only if score passes threshold
 
     Returns:
-    - (incident_id, score) if a strong match is found
-    - (None, score) if candidates were checked but none passed threshold
-    - (None, None) if grouping could not be attempted
+    - (incident_id, score) if we found a strong enough match
+    - (None, score) if we compared candidates but none passed threshold
+    - (None, None) if grouping could not even be attempted
     """
-    # If we have no embedding, we cannot do similarity-based grouping
     if new_embedding is None:
         return None, None
-
-    # Skip grouping when classification is missing or too weak
+    
+    # Skip grouping for missing/weak classifications
+    # We only want to compare inside a real discipline bucket
     if not discipline or discipline in {"UNKNOWN", "UNCLASSIFIED"}:
         return None, None
 
-    # Compare only against photo reports that:
-    # - already finished processing
-    # - already have embeddings
-    # - belong to the same predicted discipline
-    candidates = (
-        db.query(PhotoReport)
-        .filter(PhotoReport.photo_report_discipline == discipline)
+    # Pull all previously saved photo reports that belong to incidents of same discipline + already have embedding stored
+    candidates_query = (
+        db.query(PhotoReport, Incident)
+        .join(Incident, Incident.incident_id == PhotoReport.incident_id)
+        .filter(Incident.discipline == discipline)
         .filter(PhotoReport.embedding.isnot(None))
-        .filter(PhotoReport.photo_report_status == "Completed")
-        .all()
     )
 
+    #if user_context:
+        #candidates_query = candidates_query.filter(PhotoReport.user_context == user_context)
+
+    candidates = candidates_query.all()
+
+    # Track strongest match we see
     best_incident_id = None
     best_score = -1.0
 
-    # Find the strongest similarity match among all valid candidates
-    for candidate in candidates:
-        score = cosine_similarity(new_embedding, candidate.embedding)
-
+    # Compare the new embedding against each stored embedding
+    for photo_report, incident in candidates:
+        score = cosine_similarity(new_embedding, photo_report.embedding)
         if score > best_score:
             best_score = score
-            best_incident_id = candidate.incident_id
+            best_incident_id = incident.incident_id
 
-    # Only group when similarity is strong enough
+    # If best similarity passes threshold, group into that incident
     if best_score >= threshold:
         return best_incident_id, best_score
-
-    # Otherwise keep the photo in its current incident
+    # Else, signal that no existing incident was a strong enough match
     return None, best_score
