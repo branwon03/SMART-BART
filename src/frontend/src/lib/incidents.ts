@@ -23,3 +23,12 @@ export function updateIncident(
   );
 }
 
+export function deleteIncident(
+  incidentId: string,
+): Promise<{ deleted_incident_id: string }> {
+  return apiFetch<{ deleted_incident_id: string }>(
+    `/api/incidents/${encodeURIComponent(incidentId)}`,
+    { method: "DELETE" },
+  );
+}
+
