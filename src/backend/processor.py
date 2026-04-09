@@ -241,72 +241,98 @@ def process_single_photo(photo: PhotoReport, db: Session):
         parsed = parse_classification(raw_response)
         discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
 
+        # Build a richer text representation for grouping.
+        # This lets the embedding capture:
+        # - the predicted discipline
+        # - the short model summary
+        # - the commuter's text description
+        embedding_text = (
+            f"discipline: {parsed['discipline']}; "
+            f"summary: {parsed['vlm_summary']}; "
+            f"user_context: {description}"
+        )
+
         print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
         vector = generate_embedding(
-            text=description, 
+            text=embedding_text,
             image_paths=[Path(file_path)]
         )
 
-        # 4, GROUPING LOGIC
+        # 4. GROUPING LOGIC
+        # Try to match this photo to an existing incident using:
+        # - embedding similarity
+        # - same discipline bucket
+        # - threshold-based reuse
         incident_match_id, match_score = find_matching_incident(
-            db, 
-            new_embedding=vector, 
+            db,
+            new_embedding=vector,
             discipline=discipline
         )
-        if incident_match_id:
-            # 1. Store the ID of the 'hardcoded' empty incident created by main.py
-            original_incident_id = photo.incident_id 
-            
-            print(f"  [+] Match found! Moving photo to Incident {incident_match_id}")
-            
-            # 2. Re-assign the photo to the existing incident
-            photo.incident_id = incident_match_id
-            db.commit() # Commit the move first
 
-            # 3. CLEANUP: Delete the original incident IF it is now empty
-            # This prevents 'ghost' incidents from showing up on your dashboard.
+        if incident_match_id:
+            # 4.1 Store the original incident ID created at upload time
+            original_incident_id = photo.incident_id
+
+            print(
+                f"  [+] Match found! Moving photo to Incident "
+                f"{incident_match_id} (score={match_score:.3f})"
+            )
+
+            # 4.2 Re-assign the photo to the matched existing incident
+            photo.incident_id = incident_match_id
+            db.commit()  # Commit the move first
+
+            # 4.3 CLEANUP: Delete the original incident if it is now empty
+            # This prevents placeholder / ghost incidents from showing up.
             db.execute(
                 text("""
-                    DELETE FROM incidents 
-                    WHERE incident_id = :old_id 
-                    AND NOT EXISTS (SELECT 1 FROM photo_reports WHERE incident_id = :old_id)
+                    DELETE FROM incidents
+                    WHERE incident_id = :old_id
+                    AND NOT EXISTS (
+                        SELECT 1 FROM photo_reports WHERE incident_id = :old_id
+                    )
                 """),
                 {"old_id": original_incident_id}
             )
             db.commit()
 
-            
         else:
-            print("  [-] No match. Keeping photo in its original Incident.")
+            print(f"  [-] No match. Best score was {match_score}")
 
-
-        # 4. Update the PhotoReport specific fields
+        # 5. Update the PhotoReport specific fields
         photo.vlm_summary = parsed["vlm_summary"]
         photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
         photo.found_priority = parsed["issue_priority"]
         photo.photo_report_status = "Completed"     # type: ignore[assignment]
         photo.photo_report_confidence = confidence  # type: ignore[assignment]
-        
+
         db.commit()
         print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
 
-        # 5. Aggregate to the Incident level
-        # We fetch the parent incident to update its global state
-        incident = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+        # 6. Aggregate to the Incident level
+        # Use the photo's current incident_id because grouping may have
+        # reassigned the photo to a different incident above.
+        final_incident_id = photo.incident_id
+        incident = db.query(Incident).filter(Incident.incident_id == final_incident_id).first()
+
         if incident:
-            # Check if this new photo is more 'confident' than the current incident data
-            # Or if the incident hasn't been set yet
-            if incident.discipline is None or confidence > getattr(incident, 'best_confidence', -1.0):
+            # 6.1 If this photo is the first result for the incident, or it has
+            # higher confidence than the current incident summary, promote it.
+            if incident.discipline is None or confidence > getattr(incident, "best_confidence", -1.0):
                 incident.discipline = parsed["discipline"]
                 incident.vlm_summary = parsed["vlm_summary"]
                 incident.issue_priority = parsed["issue_priority"]
-                #incident.status = "Completed" #this was accidentally marking the entire incident as completed, as in, the engineers have fixed the incident already
-                # We store confidence on a temp attribute to help with the next photo comparison
-                setattr(incident, 'best_confidence', confidence) 
-                
+
+                # Store a temporary confidence marker for choosing the best
+                # incident-level summary during processing.
+                setattr(incident, "best_confidence", confidence)
+
                 db.commit()
-                print(f"  [✓] Updated Incident {incident_id} -> {parsed['discipline']} | {parsed['issue_priority']}")
+                print(
+                    f"  [✓] Updated Incident {final_incident_id} -> "
+                    f"{parsed['discipline']} | {parsed['issue_priority']}"
+                )
 
         return parsed | {"confidence": confidence}
 
