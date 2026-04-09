@@ -13,6 +13,7 @@ export default function UserContext() {
     images, 
     contextText, setContextText,
     priority, setPriority,
+    location, setLocation,
     fullName, setFullName,
     contact, setContact
   } = useReportContext();
@@ -80,6 +81,71 @@ export default function UserContext() {
             onChange={(e) => setContextText(e.target.value)}
             className="w-[85%] h-28 bg-[#D1D5DB] border border-black p-3 text-sm mb-4 resize-none text-black placeholder:text-gray-700 focus:outline-none focus:border-[#0099D8]"
           />
+
+          <div className="w-[85%] relative mb-4">
+            <select 
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full bg-[#D1D5DB] border border-black p-3 text-sm appearance-none text-gray-700 focus:outline-none focus:border-[#0099D8] cursor-pointer"
+            >
+              <option value="" disabled>Select Station</option>
+              <option value="12th St. Oakland City Center">12th St. Oakland City Center</option>
+              <option value="16th St. Mission">16th St. Mission</option>
+              <option value="19th St. Oakland">19th St. Oakland</option>
+              <option value="24th St. Mission">24th St. Mission</option>
+              <option value="Antioch">Antioch</option>
+              <option value="Ashby">Ashby</option>
+              <option value="Balboa Park">Balboa Park</option>
+              <option value="Bay Fair">Bay Fair</option>
+              <option value="Berryessa / North San Jose">Berryessa / North San Jose</option>
+              <option value="Castro Valley">Castro Valley</option>
+              <option value="Civic Center / UN Plaza">Civic Center / UN Plaza</option>
+              <option value="Coliseum">Coliseum</option>
+              <option value="Colma">Colma</option>
+              <option value="Concord">Concord</option>
+              <option value="Daly City">Daly City</option>
+              <option value="Downtown Berkeley">Downtown Berkeley</option>
+              <option value="Dublin / Pleasanton">Dublin / Pleasanton</option>
+              <option value="El Cerrito del Norte">El Cerrito del Norte</option>
+              <option value="El Cerrito Plaza">El Cerrito Plaza</option>
+              <option value="Embarcadero">Embarcadero</option>
+              <option value="Fremont">Fremont</option>
+              <option value="Fruitvale">Fruitvale</option>
+              <option value="Glen Park">Glen Park</option>
+              <option value="Hayward">Hayward</option>
+              <option value="Lafayette">Lafayette</option>
+              <option value="Lake Merritt">Lake Merritt</option>
+              <option value="MacArthur">MacArthur</option>
+              <option value="Millbrae">Millbrae</option>
+              <option value="Milpitas">Milpitas</option>
+              <option value="Montgomery St.">Montgomery St.</option>
+              <option value="North Berkeley">North Berkeley</option>
+              <option value="North Concord / Martinez">North Concord / Martinez</option>
+              <option value="Oakland International Airport">Oakland International Airport</option>
+              <option value="Orinda">Orinda</option>
+              <option value="Pittsburg / Bay Point">Pittsburg / Bay Point</option>
+              <option value="Pittsburg Center">Pittsburg Center</option>
+              <option value="Pleasant Hill / Contra Costa Centre">Pleasant Hill / Contra Costa Centre</option>
+              <option value="Powell St.">Powell St.</option>
+              <option value="Richmond">Richmond</option>
+              <option value="Rockridge">Rockridge</option>
+              <option value="San Bruno">San Bruno</option>
+              <option value="San Francisco International Airport">San Francisco International Airport</option>
+              <option value="San Leandro">San Leandro</option>
+              <option value="South Hayward">South Hayward</option>
+              <option value="South San Francisco">South San Francisco</option>
+              <option value="Union City">Union City</option>
+              <option value="Walnut Creek">Walnut Creek</option>
+              <option value="Warm Springs / South Fremont">Warm Springs / South Fremont</option>
+              <option value="West Dublin / Pleasanton">West Dublin / Pleasanton</option>
+              <option value="West Oakland">West Oakland</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </div>
+          </div>
 
           <div className="w-[85%] relative mb-4">
             <select 

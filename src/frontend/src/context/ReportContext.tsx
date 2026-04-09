@@ -7,6 +7,8 @@ interface ReportContextType {
   setImages: React.Dispatch<React.SetStateAction<string[]>>;
   contextText: string;
   setContextText: React.Dispatch<React.SetStateAction<string>>;
+  location: string;
+  setLocation: React.Dispatch<React.SetStateAction<string>>;
   priority: string;
   setPriority: React.Dispatch<React.SetStateAction<string>>;
   fullName: string;
@@ -20,6 +22,7 @@ const ReportContext = createContext<ReportContextType | undefined>(undefined);
 export function ReportProvider({ children }: { children: ReactNode }) {
   const [images, setImages] = useState<string[]>([]);
   const [contextText, setContextText] = useState("");
+  const [location, setLocation] = useState("");
   const [priority, setPriority] = useState("");
   const [fullName, setFullName] = useState("");
   const [contact, setContact] = useState("");
@@ -27,7 +30,8 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   return (
     <ReportContext.Provider value={{ 
       images, setImages, 
-      contextText, setContextText, 
+      contextText, setContextText,
+      location, setLocation,
       priority, setPriority, 
       fullName, setFullName, 
       contact, setContact 
