@@ -102,12 +102,14 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
         If the image pertains to an emergency blue phone, fire sprinkler, or exit signage, assign CRITICAL priority regardless of visual state or user description.
         Otherwise, if the image appears visually NOMINAL but there is NO user description, assign a LOW priority
         Overflowing garbage cans are HIGH priority.
+        Card scanners are always MEDIUM priority, unless the user prompt mentions that several scanners are out, in which case, the priority should be set to HIGH.
+        Faded road markings are always either LOW or MEDIUM priority.
    
         - FARE COLLECTION: Card scanners (they are colored black)
-        - BUILDINGS: Cracked floors, cracked walls, water intrusion, faded paint, vandalism, doors, missing signs, drainage issues
+        - BUILDINGS: Cracked ground, Cracked floors, cracked walls, water intrusion, faded paint, vandalism, doors, missing signs, drainage issues
         - COMMS: Emergency telephones, electronic destination signs
         - ELEVATOR AND ESCALATOR: All elevator and escalator related issues (except cleaning — that is System Service)
-        - GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals
+        - GROUNDS: Landscaping, fencing, maintaining outdoor spaces, grass, trimming, irrigation systems, tree removals. Faded road paint and grounds cracks DO NOT BELONG IN THIS DISCIPLINE, they belong in BUILDINGS.
         - MECHANICAL: Fire suppression (sprinklers, extinguishers), piping (water, in/out of station), HVAC, ventilation fans
         - SYSTEM SERVICE: Garbage collection, spills on floors, bathroom cleaning
         - ELECTRICAL: Lights, light switches, electrical plugs, exposed cables, anything related to electrical systems
