@@ -5,7 +5,7 @@ from src.backend.database import PhotoReport
 # Minimum cosine similarity required to attach a new report to an existing incident instead of creating new one
 # to an existing incident instead of leaving it separate.
 # Higher threshold = stricter grouping, fewer accidental merges.
-GROUPING_THRESHOLD = 0.90   # Can tune later
+GROUPING_THRESHOLD = 0.95
 
 def cosine_similarity(vec_a, vec_b) -> float:
     """
