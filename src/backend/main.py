@@ -70,6 +70,7 @@ async def health_check() -> dict[str, str]:
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
+    photo_location_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -100,7 +101,7 @@ async def submissions(
             issue_priority=None,
             discipline=None,
             vlm_summary=description or None,
-            location_id=None,
+            location_id=photo_location_id or None,
             created_at=now,
         )
         db.add(incident)
@@ -111,6 +112,7 @@ async def submissions(
             dest = UPLOAD_DIR / f"{evidence_id}{ext}"
             shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
+
 
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
@@ -124,6 +126,7 @@ async def submissions(
                 photo_report_status="New",
                 photo_report_confidence=None,
                 photo_report_discipline=None,
+                photo_location_id=photo_location_id,
             )
             db.add(photo_report)
 
@@ -152,7 +155,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "issue_priority": r.issue_priority,
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
-            "location_id": r.location_id,
+            "location_id": r.location_id, 
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
@@ -200,7 +203,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
 
     query = text("""
-        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
