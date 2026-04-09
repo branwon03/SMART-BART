@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
@@ -21,6 +22,17 @@ export function IncidentDetailPanel({
   onToggleIncidentIdExpanded,
   onClose,
 }: IncidentDetailPanelProps) {
+  // Added state for cycling
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev === 0 ? evidence.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev === evidence.length - 1 ? 0 : prev + 1));
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-20" onClick={onClose} />
@@ -138,9 +150,9 @@ export function IncidentDetailPanel({
 
         <div className="flex flex-col items-center">
           <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
-            {evidence.length > 0 && evidence[0].image_url ? (
+            {evidence.length > 0 && evidence[currentIndex]?.image_url ? (
               <img
-                src={`${API_BASE_URL}${evidence[0].image_url}`}
+                src={`${API_BASE_URL}${evidence[currentIndex].image_url}`}
                 className="w-full h-full object-cover"
                 alt="Main evidence"
               />
@@ -151,12 +163,14 @@ export function IncidentDetailPanel({
             )}
             <button
               type="button"
+              onClick={handlePrev}
               className="absolute left-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors"
             >
               ←
             </button>
             <button
               type="button"
+              onClick={handleNext}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-2xl font-bold bg-white/50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors"
             >
               →
