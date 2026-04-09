@@ -31,3 +31,4 @@ uploads/
 
 # gemini 
 credentials.json
+/.cursor/plans
