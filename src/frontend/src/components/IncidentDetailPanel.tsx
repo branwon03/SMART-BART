@@ -7,6 +7,7 @@ import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
+import { DeleteIssueModal } from "./DeleteIssueModal";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -16,6 +17,7 @@ type IncidentDetailPanelProps = {
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
   onIncidentUpdated: (updated: Incident) => void;
+  onIncidentDeleted: (incidentId: string) => void;
 };
 
 export function IncidentDetailPanel({
@@ -26,8 +28,8 @@ export function IncidentDetailPanel({
   onToggleIncidentIdExpanded,
   onClose,
   onIncidentUpdated,
+  onIncidentDeleted,
 }: IncidentDetailPanelProps) {
-  // Added state for cycling
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handlePrev = () => {
@@ -38,6 +40,7 @@ export function IncidentDetailPanel({
     setCurrentIndex((prev) => (prev === evidence.length - 1 ? 0 : prev + 1));
   };
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   return (
     <>
@@ -121,6 +124,13 @@ export function IncidentDetailPanel({
             >
               Merge/Split
             </button>
+            <button
+              type="button"
+              onClick={() => setDeleteModalOpen(true)}
+              className="bg-red-600 text-white font-bold py-1 rounded-lg border-2 border-red-700 hover:bg-red-700"
+            >
+              Delete
+            </button>
           </div>
         </div>
 
@@ -195,6 +205,17 @@ export function IncidentDetailPanel({
             onIncidentUpdated(updated);
           }}
           onCancel={() => setEditModalOpen(false)}
+        />
+      )}
+
+      {deleteModalOpen && (
+        <DeleteIssueModal
+          incident={incident}
+          onConfirm={() => {
+            setDeleteModalOpen(false);
+            onIncidentDeleted(incident.incident_id);
+          }}
+          onCancel={() => setDeleteModalOpen(false)}
         />
       )}
     </>

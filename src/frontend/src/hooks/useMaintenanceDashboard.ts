@@ -94,6 +94,15 @@ export function useMaintenanceDashboard() {
     );
   }, []);
 
+  const removeIncident = useCallback((incidentId: string) => {
+    setData((prev) => prev.filter((inc) => inc.incident_id !== incidentId));
+    setSelectedIncident((prev) =>
+      prev && prev.incident_id === incidentId ? null : prev,
+    );
+    setEvidence([]);
+    setIncidentIdExpanded(false);
+  }, []);
+
   return {
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
@@ -106,5 +115,6 @@ export function useMaintenanceDashboard() {
     setIncidentIdExpanded,
     selectDiscipline,
     updateSelectedIncident,
+    removeIncident,
   };
 }

@@ -239,6 +239,19 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     return JSONResponse(content=clean_data)
 
 
+@app.delete("/api/incidents/{incident_id}")
+async def delete_incident(incident_id: str, db: Session = Depends(get_db)):
+    row = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).delete()
+    db.delete(row)
+    db.commit()
+
+    return {"deleted_incident_id": incident_id}
+
+
 @app.get("/api/images/{evidence_id}")
 def get_image(evidence_id: str):
     for ext in ("png", "jpg", "jpeg", "webp"):
