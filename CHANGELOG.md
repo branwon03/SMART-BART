@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.10.2 (2026-04-09)
+
+### Bug Fixes
+
+- Prompt now handles wrong scanner priority, and wrong GROUNDS classifications
+  ([`ce51f08`](https://github.com/cse120-ucm/S26-CSE-312/commit/ce51f08a5beae8fe405a67c19e6948980d92da7e))
+
+
 ## v0.10.1 (2026-04-08)
 
 ### Bug Fixes
