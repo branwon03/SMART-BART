@@ -246,19 +246,15 @@ def process_single_photo(photo: PhotoReport, db: Session):
         # - the predicted discipline
         # - the short model summary
         # - the commuter's text description
-        
-        embedding_instruction = (
-            f"Task: Grouping maintenance photos from different angles. "
-            f"Physical Asset: {parsed['vlm_summary']}. "
-            f"Location Context: {parsed['discipline']} area. "
-            f"Instruction: Identify the specific physical asset and scene. "
-            f"Focus on spatial surroundings and object geometry. "
-            f"Ignore lighting, blur, or camera quality."
+        embedding_text = (
+            f"discipline: {parsed['discipline']}; "
+            f"summary: {parsed['vlm_summary']}; "
+            f"user_context: {description}"
         )
 
         print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
         vector = generate_embedding(
-            text=embedding_instruction,
+            text=embedding_text,
             image_paths=[Path(file_path)]
         )
 
