@@ -80,41 +80,39 @@ Include: what constitutes passing (e.g., all tests green, coverage threshold).
 - Request peer review (if required) before merging.
 - Squash merge or rebase to keep `main` linear (unless told otherwise).
 
-## MOBILE APP DEVELOPMENT SETUP
+### MOBILE APP DEVELOPMENT SETUP
 
-The system now makes use of a native mobile app that communicates with the FastAPI backend using LAN. 
+The system now makes use of a native mobile app that communicates with the FastAPI backend using your local network. 
 Note on Geolocation: We transitioned to a native app to solve the metadata stripping issue found in mobile browsers. This allows our backend to extract exact coordinates directly from the image files even if the user submits the report after leaving the incident site.
 
 1. Prerequisite: Local Environment Setup
 Since the mobile app runs on a physical device or emulator, it cannot use localhost. You must point it to your computer's local IP address.
 
-      - **In src/mobile/**, create a .env file (this is already handled in .gitignore).
+Navigate to src/mobile/.
 
-      - Add the following line, replacing the IP with your machine's actual local IP: 
+Create a .env file (this is already in .gitignore).
 
-              EXPO_PUBLIC_API_BASE_URL=http://10.56.194.213:8000
+Add the following line, replacing the IP with your machine's actual local IP:
 
-           (Note: You can find your IP on Windows by running ipconfig in PowerShell).
+EXPO_PUBLIC_API_BASE_URL=http://10.56.194.213:8000
+(Note: You can find your IP on Windows by running ipconfig in PowerShell).
 
+2. Install & Start
+Run the following commands to start the Metro bundler:
 
-3. Install & Start
-      - Run the following commands to start the Metro bundler:
-
-            Bash
-            cd src/mobile
-            npm install
-            npx expo start
+Bash
+cd src/mobile
+npm install
+npx expo start
 
 3. Running on your device
-      - Download the Expo Go app on your Android or iOS device.
+Download the Expo Go app on your Android or iOS device.
 
-      - Ensure your phone and computer are on the same Wi-Fi network.
+Ensure your phone and computer are on the same Wi-Fi network.
 
-      - Scan the QR code displayed in your terminal.
+Scan the QR code displayed in your terminal.
 
 4. Backend Connection & Troubleshooting
-      - Ensure the correct IP address is in your src/mobile/.env file. If you switched WIFI networks, you will need to update it.
-      - FastAPI: Ensure that docker is running before attempting to submit reports, or the submit button will hang and fail.
-      - If you are still running into issues connecting, you may need to add python and node.js to the list of allowed apps on your computer. 
-      - If all else fails, turn on mobile hotspot on your phone and connect your PC to it and try again.
+Ensure the correct IP address is in your src/mobile/.env file. If you switched WIFI networks, you will need to update it.
+FastAPI: Ensure that docker is running before attempting to submit reports.
 
