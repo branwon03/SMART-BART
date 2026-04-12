@@ -1,43 +1,59 @@
 import React from 'react';
-import { Tabs, useRouter, usePathname } from 'expo-router';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Link, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
+
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+
+// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof FontAwesome>['name'];
+  color: string;
+}) {
+  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+}
 
 export default function TabLayout() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const steps = ['/mobile_report', '/mobile_context', '/mobile_review', '/mobile_confirmation'];
-  const currentIndex = steps.indexOf(pathname as string);
+  const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        tabBarStyle: { display: 'none' },
-        headerStyle: { backgroundColor: 'black', height: 110 },
-        headerTitle: () => (
-          <View style={styles.headerContainer}>
-            <View style={styles.logoBox}>
-              <Image 
-                source={require('../../assets/images/bart_logo.png')} 
-                style={styles.logo} 
-              />
-            </View>
-            <Text style={styles.headerText}>Bay Area{"\n"}Rapid Transit</Text>
-          </View>
-        ),
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        // Disable the static render of the header on web
+        // to prevent a hydration error in React Navigation v6.
+        headerShown: useClientOnlyValue(false, true),
       }}>
-      <Tabs.Screen name="mobile_report" options={{ title: 'report' }} />
-      <Tabs.Screen name="mobile_context" options={{ title: 'context' }} />
-      <Tabs.Screen name="mobile_confirmation" options={{ title: 'confirm'}} />
-      <Tabs.Screen name="mobile_review" options={{ title: 'review'}} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tab One',
+          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          headerRight: () => (
+            <Link href="/modal" asChild>
+              <Pressable>
+                {({ pressed }) => (
+                  <FontAwesome
+                    name="info-circle"
+                    size={25}
+                    color={Colors[colorScheme ?? 'light'].text}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="two"
+        options={{
+          title: 'Tab Two',
+          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  headerContainer: { flexDirection: 'row', alignItems: 'center' },
-  logoBox: { backgroundColor: 'white', padding: 4, borderRadius: 2 },
-  logo: { width: 40, height: 25, resizeMode: 'contain' },
-  headerText: { color: 'white', fontSize: 14, fontWeight: 'bold', marginLeft: 10, lineHeight: 16 },
-});

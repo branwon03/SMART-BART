@@ -5,15 +5,15 @@ export default {
   light: {
     text: '#000',
     background: '#fff',
-    tint: '#0099D8',
+    tint: tintColorLight,
     tabIconDefault: '#ccc',
-    tabIconSelected: '#0099D8',
+    tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#000',
-    background: '#fff',
-    tint: '#0099D8',
+    text: '#fff',
+    background: '#000',
+    tint: tintColorDark,
     tabIconDefault: '#ccc',
-    tabIconSelected: '#0099D8',
+    tabIconSelected: tintColorDark,
   },
 };
