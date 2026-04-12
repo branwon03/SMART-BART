@@ -79,3 +79,40 @@ Include: what constitutes passing (e.g., all tests green, coverage threshold).
 - Open a Pull Request early (draft) and link the Issue.
 - Request peer review (if required) before merging.
 - Squash merge or rebase to keep `main` linear (unless told otherwise).
+
+### MOBILE APP DEVELOPMENT SETUP
+
+The system now makes use of a native mobile app that communicates with the FastAPI backend using your local network. 
+Note on Geolocation: We transitioned to a native app to solve the metadata stripping issue found in mobile browsers. This allows our backend to extract exact coordinates directly from the image files even if the user submits the report after leaving the incident site.
+
+1. Prerequisite: Local Environment Setup
+Since the mobile app runs on a physical device or emulator, it cannot use localhost. You must point it to your computer's local IP address.
+
+Navigate to src/mobile/.
+
+Create a .env file (this is already in .gitignore).
+
+Add the following line, replacing the IP with your machine's actual local IP:
+
+EXPO_PUBLIC_API_BASE_URL=http://10.56.194.213:8000
+(Note: You can find your IP on Windows by running ipconfig in PowerShell).
+
+2. Install & Start
+Run the following commands to start the Metro bundler:
+
+Bash
+cd src/mobile
+npm install
+npx expo start
+
+3. Running on your device
+Download the Expo Go app on your Android or iOS device.
+
+Ensure your phone and computer are on the same Wi-Fi network.
+
+Scan the QR code displayed in your terminal.
+
+4. Backend Connection & Troubleshooting
+Ensure the correct IP address is in your src/mobile/.env file. If you switched WIFI networks, you will need to update it.
+FastAPI: Ensure that docker is running before attempting to submit reports.
+
