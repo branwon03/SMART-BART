@@ -167,7 +167,7 @@ export default function TabTwoScreen() {
           disabled={isSubmitting}
         >
           <Text style={styles.submitButtonText}>
-            isSubmitting ? "Submitting..." : "Submit Report"}
+            {isSubmitting ? "Submitting..." : "Submit Report"}
           </Text>
         </TouchableOpacity>
         
