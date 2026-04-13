@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native';
-
+import { submitMobileReport } from '../../lib/submissions';
 import { Text, View } from '@/components/Themed';
 import { TouchableOpacity, Image, TextInput, TouchableWithoutFeedback, Keyboard, Modal, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+
 
 export default function TabTwoScreen() {
   const router = useRouter();
