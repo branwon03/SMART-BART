@@ -26,8 +26,8 @@ export default function TabTwoScreen() {
     { label : 'Not sure', value: 'Not sure'}
   ];
 
+  //Completion validation
   const handleSubmit = async () => {
-  // 1. Basic Validation (Mirroring your web app logic)
   if (!description.trim() || !name.trim() || !contact.trim()) {
     alert("Please fill out all fields before submitting.");
     return;
@@ -41,7 +41,7 @@ export default function TabTwoScreen() {
     await submitMobileReport({
       images: imageUris,
       description: `Report by: ${name}\nContact: ${contact}\n\nNotes: ${description}`,
-      location: "MOBILE_UPLOAD", // You can update this to a specific station ID later
+      location: "MOBILE_UPLOAD_PLACEHOLDER", 
     });
 
     // 3. Success! Move to confirmation
