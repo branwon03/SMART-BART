@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { ArrowRight, ArrowLeft } from 'lucide-react-native';
 
 export default function TabLayout() {
   const router = useRouter();
@@ -28,26 +27,10 @@ export default function TabLayout() {
             <Text style={styles.headerText}>Bay Area{"\n"}Rapid Transit</Text>
           </View>
         ),
-        // Add Back Button on the left (except on the first screen)
-        headerLeft: () => currentIndex > 0 && (
-          <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
-            <ArrowLeft color="white" size={24} />
-          </TouchableOpacity>
-        ),
-        // Add Next Button on the right (except on the last screen)
-        headerRight: () => currentIndex < steps.length - 1 && (
-          <TouchableOpacity 
-            onPress={() => router.push(steps[currentIndex + 1] as any)} 
-            style={{ marginRight: 15 }}
-          >
-            <ArrowRight color="white" size={24} />
-          </TouchableOpacity>
-        ),
       }}>
       <Tabs.Screen name="mobile_report" options={{ title: '' }} />
       <Tabs.Screen name="mobile_context" options={{ title: '' }} />
-      <Tabs.Screen name="mobile_review" options={{ title: '' }} />
-      <Tabs.Screen name="mobile_confirmation" options={{ title: '' }} />
+      <Tabs.Screen name="index" options={{ title: '' }} />
     </Tabs>
   );
 }
