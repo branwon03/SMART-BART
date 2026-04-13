@@ -6,7 +6,6 @@ export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Define the order of your screens
   const steps = ['/mobile_report', '/mobile_context', '/mobile_review', '/mobile_confirmation'];
   const currentIndex = steps.indexOf(pathname as string);
 
@@ -28,9 +27,10 @@ export default function TabLayout() {
           </View>
         ),
       }}>
-      <Tabs.Screen name="mobile_report" options={{ title: '' }} />
-      <Tabs.Screen name="mobile_context" options={{ title: '' }} />
-      <Tabs.Screen name="index" options={{ title: '' }} />
+      <Tabs.Screen name="mobile_report" options={{ title: 'report' }} />
+      <Tabs.Screen name="mobile_context" options={{ title: 'context' }} />
+      <Tabs.Screen name="mobile_confirmation" options={{ title: 'confirm'}} />
+      <Tabs.Screen name="mobile_review" options={{ title: 'review'}} />
     </Tabs>
   );
 }
