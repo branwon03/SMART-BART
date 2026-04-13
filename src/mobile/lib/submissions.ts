@@ -1,5 +1,5 @@
 // src/mobile/lib/submissions.ts
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; //my .env file has EXPO_PUBLIC_API_BASE_URL=http://10.56.194.213:8000 currently
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; 
 
 export async function submitMobileReport(params: {
   images: string[]; // Array of URIs from your image picker

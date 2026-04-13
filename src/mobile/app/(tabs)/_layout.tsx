@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
   const router = useRouter();
