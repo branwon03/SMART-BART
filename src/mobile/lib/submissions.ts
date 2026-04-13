@@ -8,7 +8,7 @@ export async function submitMobileReport(params: {
 }) {
   const form = new FormData();
 
-  // In React Native, we append an object with uri, type, and name for files
+  
   params.images.forEach((uri, i) => {
     // @ts-ignore - FormData expects this specific structure in React Native
     form.append("media", {
