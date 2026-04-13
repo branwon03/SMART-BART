@@ -1,19 +1,20 @@
 import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
-import { TouchableOpacity, Image } from 'react-native';
+import { TouchableOpacity, Image, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 
 export default function TabTwoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const imageUris = params.imageUris ? JSON.parse(params.imageUris as string) : [];
+  const [description, setDescription] = useState('');
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>mobile context</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
       
       {imageUris.length > 0 && (
         <View style={styles.imagesContainer}>
@@ -24,6 +25,18 @@ export default function TabTwoScreen() {
           </View>
         </View>
       )}
+      
+      <View style={styles.descriptionSection}>
+        <Text style={styles.label}>Description of Issue</Text>
+        <TextInput
+          style={styles.textInput}
+          placeholder="Describe the issue..."
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={4}
+        />
+      </View>
       
       <View style={styles.navContainer}>
         <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
@@ -44,21 +57,18 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 80,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   imagesContainer: {
-    marginVertical: 20,
+    marginVertical: 10,
   },
   photosGrid: {
     flexDirection: 'row',
@@ -70,6 +80,22 @@ const styles = StyleSheet.create({
     height: 80,
     margin: 5,
     borderRadius: 5,
+  },
+  descriptionSection: {
+    marginTop: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#cccccc',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 14,
+    minHeight: 100,
   },
   navContainer: {
     position: 'absolute',
