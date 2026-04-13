@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
-import { TouchableOpacity, Image, TextInput } from 'react-native';
+import { TouchableOpacity, Image, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
@@ -13,37 +13,39 @@ export default function TabTwoScreen() {
   const [description, setDescription] = useState('');
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>mobile context</Text>
-      
-      {imageUris.length > 0 && (
-        <View style={styles.imagesContainer}>
-          <View style={styles.photosGrid}>
-            {imageUris.map((uri: string, index: number) => (
-              <Image key={index} source={{ uri }} style={styles.thumbnail} />
-            ))}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <Text style={styles.title}>mobile context</Text>
+        
+        {imageUris.length > 0 && (
+          <View style={styles.imagesContainer}>
+            <View style={styles.photosGrid}>
+              {imageUris.map((uri: string, index: number) => (
+                <Image key={index} source={{ uri }} style={styles.thumbnail} />
+              ))}
+            </View>
           </View>
+        )}
+        
+        <View style={styles.descriptionSection}>
+          <Text style={styles.label}>Description of Issue</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Describe the issue..."
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+          />
         </View>
-      )}
-      
-      <View style={styles.descriptionSection}>
-        <Text style={styles.label}>Description of Issue</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Describe the issue..."
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-        />
+        
+        <View style={styles.navContainer}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
       </View>
-      
-      <View style={styles.navContainer}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableWithoutFeedback>
     
   );
 }
