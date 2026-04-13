@@ -31,7 +31,6 @@ export default function ConfirmationScreen() {
         </Text>
       </View>
 
-      {/* NEW REVIEW BUTTON */}
       <TouchableOpacity style={styles.reviewButton} onPress={handleGoToReview}>
         <Text style={styles.reviewButtonText}>Review Sent Report</Text>
       </TouchableOpacity>
