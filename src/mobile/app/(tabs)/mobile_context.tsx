@@ -16,6 +16,7 @@ export default function TabTwoScreen() {
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const priorityOptions = [
     { label: 'Low', value: 'low' },
@@ -24,6 +25,34 @@ export default function TabTwoScreen() {
     { label: 'Critical', value: 'critical' },
     { label : 'Not sure', value: 'Not sure'}
   ];
+
+  const handleSubmit = async () => {
+  // 1. Basic Validation (Mirroring your web app logic)
+  if (!description.trim() || !name.trim() || !contact.trim()) {
+    alert("Please fill out all fields before submitting.");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // 2. The API Call
+    // Note: We combine name/contact combined into description for now
+    await submitMobileReport({
+      images: imageUris,
+      description: `Report by: ${name}\nContact: ${contact}\n\nNotes: ${description}`,
+      location: "MOBILE_UPLOAD", // You can update this to a specific station ID later
+    });
+
+    // 3. Success! Move to confirmation
+    router.push('/mobile_confirmation');
+  } catch (error) {
+    console.error("Submission Error:", error);
+    alert("Could not reach the server. Make sure your FastAPI backend is running at " + process.env.EXPO_PUBLIC_API_BASE_URL);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -132,8 +161,14 @@ export default function TabTwoScreen() {
         
         <Text style={styles.emergencyText}>In case of emergency, call 911</Text>
         
-        <TouchableOpacity style={styles.submitButton} onPress={() => {/* Handle submit */}}>
-          <Text style={styles.submitButtonText}>Submit</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]} 
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.submitButtonText}>
+            isSubmitting ? "Submitting..." : "Submit Report"}
+          </Text>
         </TouchableOpacity>
         
         <View style={styles.navContainer}>
