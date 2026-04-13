@@ -4,9 +4,12 @@ import { Text, View } from '@/components/Themed';
 import { useState } from 'react';
 import { TouchableOpacity, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabTwoScreen() {
   const [images, setImages] = useState([]);
+  const router = useRouter();
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -38,6 +41,11 @@ export default function TabTwoScreen() {
         {images.map((image, index) => (
           <Image key={index} source={{ uri: image.uri }} style={styles.image} />
         ))}
+      </View>
+      <View style={styles.navContainer}>
+        <TouchableOpacity onPress={() => router.push('/mobile_context')} style={styles.navButton}>
+          <Ionicons name="arrow-forward" size={24} color="black" />
+        </TouchableOpacity>
       </View>
 
     </View>
@@ -92,5 +100,15 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     margin: 5,
+  },
+  navContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  navButton: {
+    padding: 10,
   },
 });
