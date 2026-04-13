@@ -27,27 +27,34 @@ export default function TabTwoScreen() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        <Text style={styles.title}>mobile context</Text>
+        
         
         {imageUris.length > 0 && (
           <View style={styles.imagesContainer}>
             <View style={styles.photosGrid}>
-              {imageUris.map((uri: string, index: number) => (
+              {imageUris.slice(0, 3).map((uri: string, index: number) => (
                 <Image key={index} source={{ uri }} style={styles.thumbnail} />
               ))}
+              {imageUris.length > 4 && (
+                <View style={styles.morePhotosIndicator}>
+                  <Text style={styles.morePhotosText}>+{imageUris.length - 3}</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
         
+        <Text style={styles.locationText}>Exact Location will be determined by image metadata</Text>
+        
         <View style={styles.descriptionSection}>
           <Text style={styles.label}>Description of Issue</Text>
           <TextInput
-            style={styles.textInput}
+            style={styles.descriptionInput}
             placeholder="Describe the issue..."
             value={description}
             onChangeText={setDescription}
             multiline
-            numberOfLines={4}
+            numberOfLines={2}
           />
         </View>
         
@@ -172,6 +179,29 @@ const styles = StyleSheet.create({
     margin: 5,
     borderRadius: 5,
   },
+  morePhotosIndicator: {
+    width: 80,
+    height: 80,
+    margin: 5,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  morePhotosText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
   descriptionSection: {
     marginTop: 20,
   },
@@ -190,6 +220,15 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     minHeight: 40,
+    marginBottom: 0,
+  },
+  descriptionInput: {
+    borderWidth: 1,
+    borderColor: '#cccccc',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 14,
+    minHeight: 65,
     marginBottom: 15,
   },
   prioritySection: {
@@ -244,15 +283,15 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 0,
+    marginBottom: 2,
   },
   submitButton: {
     backgroundColor: '#007bff',
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 2,
     alignSelf: 'center',
   },
   submitButtonText: {
