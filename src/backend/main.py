@@ -2,17 +2,26 @@ import os
 import shutil
 import tempfile
 import uuid
-import re
-from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
-from src.backend.inference import build_query, chat_with_media, generate_embedding, get_extension, kSupportedList
-from datetime import datetime
+from sqlalchemy import text
+from datetime import datetime, timezone
 from pathlib import Path
+from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from src.backend.grouping import find_matching_incident
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+from src.backend.inference import (
+    get_extension,
+    kSupportedList,
+)
 from contextlib import asynccontextmanager
+
+
+class IncidentUpdate(BaseModel):
+    issue_priority: str | None = None
+    status: str | None = None
+
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,20 +33,23 @@ async def lifespan(app: FastAPI):
     # --- STARTUP LOGIC ---
     print("Initializing BART Incident Classifier.")
     try:
-        # Create database tables if they don't exist
-        Base.metadata.create_all(bind=engine)
-    except Exception as exc:
-        print(f"[startup] create_all failed: {exc}")
-    
-    yield  # The app runs while it sits here
-    
-    # --- SHUTDOWN LOGIC ---
-    print("Shutting down. Cleaning up resources")
+        # 1. Manually enable the pgvector extension first
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            conn.commit()
+            print("[startup] pgvector extension enabled.")
 
-app = FastAPI(
-    title="BART Incident Classifier & Dashboard API",
-    lifespan=lifespan
-)
+        # 2. Now create the tables
+        Base.metadata.create_all(bind=engine)
+        print("[startup] Database tables created successfully.")
+
+    except Exception as exc:
+        print(f"[startup] Initialization failed: {exc}")
+
+    yield
+
+
+app = FastAPI(title="BART Incident Classifier & Dashboard API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,58 +58,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def parse_vlm_response(raw_text: str):
-    # Initialize with clean defaults, NOT the raw_text
-    data = {"discipline": "UNKNOWN", "priority": "Standard", "summary": "No summary available"}
-
-    KNOWN_DISCIPLINES = {
-        "FARE COLLECTION",
-        "BUILDINGS",
-        "COMMS",
-        "ELEVATOR AND ESCALATOR",
-        "GROUNDS",
-        "MECHANICAL",
-        "SYSTEM SERVICE",
-        "ELECTRICAL",
-        "UNCLASSIFIED",
-    }
-
-    if not raw_text:
-        return data
-
-    raw_upper = raw_text.strip().upper()
-    if raw_upper in KNOWN_DISCIPLINES:
-        data["discipline"] = raw_upper
-        return data
-
-    try:
-        # The [^,:\n\r]+ part tells it to STOP at a comma, a colon, OR a newline
-        disc_match = re.search(r"Discipline\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-        pri_match = re.search(r"Priority\s*(?:Level)?\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-        sum_match = re.search(r"(?:Brief\s+)?Summary\s*:\s*([^,:\n\r]+)", raw_text, re.IGNORECASE)
-
-        if disc_match:
-            data["discipline"] = disc_match.group(1).strip().upper()
-        if pri_match:
-            data["priority"] = pri_match.group(1).strip()
-        if sum_match:
-            data["summary"] = sum_match.group(1).strip()
-
-    except Exception:
-        pass
-
-    return data
-
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-@app.post("/submissions")
+
+@app.post("/api/submissions")
 async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
+    photo_location_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -110,7 +83,7 @@ async def submissions(
                     status_code=422,
                     detail=f"Unsupported file type '.{ext}'. Accepted: {', '.join(sorted(kSupportedList))}",
                 )
-            
+
             suffix = f".{ext}"
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
             tmp.write(await upload.read())
@@ -119,93 +92,58 @@ async def submissions(
 
         # 2. Run Inference
         submission_id = uuid.uuid4().hex
-        query_text = build_query(description)
-        result = chat_with_media(
-            tmp_paths,
-            query_text,
-            submission_id=submission_id,
-        )
-
-        if result is None:
-            raise HTTPException(status_code=502, detail="Inference API unavailable")
-
-        
-        # 3. Parse the long string from Gemini into clean fields
-        parsed_data = parse_vlm_response(result["discipline"])
-
-        summary_text = parsed_data["summary"]
-        if summary_text == "No summary available":
-            summary_text = description or "No summary available"
-        
         incident_id = uuid.uuid4().hex
-        evidence_id = uuid.uuid4().hex
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
-        # 4. Save the first image to permanent storage
-        saved_image_url = None
-        if tmp_paths:
-            first = tmp_paths[0]
-            dest = UPLOAD_DIR / f"{evidence_id}{first.suffix}"
-            shutil.copy2(str(first), str(dest))
+        incident = Incident(
+            incident_id=incident_id,
+            status="New",
+            issue_priority=None,
+            discipline=None,
+            vlm_summary=description or None,
+            location_id=photo_location_id or None,
+            created_at=now,
+        )
+        db.add(incident)
+
+        for tmp_path in tmp_paths:
+            evidence_id = uuid.uuid4().hex
+            ext = tmp_path.suffix
+            dest = UPLOAD_DIR / f"{evidence_id}{ext}"
+            shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
 
-        embedding_vector = generate_embedding(
-            text=description if description else "No description provided",
-            image_paths=tmp_paths
-        )
 
-        matched_incident_id, grouping_score = find_matching_incident(
-            db=db,
-            new_embedding=embedding_vector,
-            discipline=parsed_data["discipline"],
-            user_context=description,
-        )
-        grouped_into_existing = matched_incident_id is not None
-
-        # 5. Save to Database
-        if grouped_into_existing:
-            incident_id = matched_incident_id
-        else:
-            incident_id = uuid.uuid4().hex
-            incident = Incident(
+            photo_report = PhotoReport(
+                evidence_id=evidence_id,
                 incident_id=incident_id,
-                status="Open",
-                issue_priority=parsed_data["priority"],
-                discipline=parsed_data["discipline"],
-                vlm_summary=summary_text,
-                location_id=None,
-                created_at=now,
+                image_url=saved_image_url,
+                embedding=None,
+                submitted_at=now,
+                user_context=description or None,
+                found_priority="Standard",
+                vlm_summary=None,
+                photo_report_status="New",
+                photo_report_confidence=None,
+                photo_report_discipline=None,
+                photo_location_id=photo_location_id,
             )
-            db.add(incident)
+            db.add(photo_report)
 
-        
-        photo_report = PhotoReport(
-            evidence_id=evidence_id,
-            submission_id=submission_id,
-            incident_id=incident_id,
-            image_url=saved_image_url,
-            embedding = embedding_vector,
-            submitted_at=now,
-            user_context=description,
-            found_priority=parsed_data["priority"],
-        )
-
-        db.add(photo_report)
         db.commit()
 
-                # 6. Return Clean Response
+        # 6. Return Clean Response
         return {
             "incident_id": incident_id,
             "submission_id": submission_id,
-            "discipline": parsed_data["discipline"],
             "description": description,
-            "num_images": result["num_images"],
-            "timestamp": result["timestamp"],
+            "timestamp": now.isoformat(),
         }
     finally:
         # Cleanup temp files
         for p in tmp_paths:
             p.unlink(missing_ok=True)
+
 
 @app.get("/api/incidents")
 async def get_incidents(db: Session = Depends(get_db)):
@@ -217,48 +155,102 @@ async def get_incidents(db: Session = Depends(get_db)):
             "issue_priority": r.issue_priority,
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
-            "location_id": r.location_id,
+            "location_id": r.location_id, 
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
     ]
 
-MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
+
+@app.put("/api/incidents/{incident_id}")
+async def update_incident(
+    incident_id: str, body: IncidentUpdate, db: Session = Depends(get_db)
+):
+    row = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if body.issue_priority is not None:
+        setattr(row, "issue_priority", body.issue_priority)
+    if body.status is not None:
+        setattr(row, "status", body.status)
+
+    db.commit()
+    db.refresh(row)
+
+    return {
+        "incident_id": row.incident_id,
+        "status": row.status,
+        "issue_priority": row.issue_priority,
+        "discipline": row.discipline,
+        "vlm_summary": row.vlm_summary,
+        "location_id": row.location_id,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
+
+
+MIME_MAP = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+}
+
 
 @app.get("/api/photo-reports/{incident_id}")
 async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     # Using a clean dictionary-based query to avoid the 3072-dim vector entirely
     from sqlalchemy import text
-    
+
     query = text("""
-        SELECT evidence_id, submission_id, incident_id, image_url, submitted_at, user_context, found_priority
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
     """)
-    
+
     result = db.execute(query, {"inc_id": incident_id}).fetchall()
-    
+
     # Manually building a clean list of standard Python dicts
     clean_data = []
     for row in result:
-        image_val = row[3]
-        submitted_val = row[4]
-        user_context_val = row[5]
-        found_pri_val = row[6]
+        image_val = row[2]
+        submitted_val = row[3]
+        user_context_val = row[4]
+        found_pri_val = row[5]
 
-        clean_data.append({
-            "evidence_id": str(row[0]),
-            "submission_id": str(row[1]),
-            "incident_id": str(row[2]),
-            "image_url": None if image_val is None else str(image_val),
-            "submitted_at": submitted_val if isinstance(submitted_val, str)
-            else submitted_val.isoformat() if submitted_val else None,
-            "user_context": user_context_val if user_context_val is not None else "",
-            "found_priority": None if found_pri_val is None else str(found_pri_val),
-        })
+        clean_data.append(
+            {
+                "evidence_id": str(row[0]),
+                "incident_id": str(row[1]),
+                "image_url": None if image_val is None else str(image_val),
+                "submitted_at": submitted_val
+                if isinstance(submitted_val, str)
+                else submitted_val.isoformat()
+                if submitted_val
+                else None,
+                "user_context": user_context_val
+                if user_context_val is not None
+                else "",
+                "found_priority": None if found_pri_val is None else str(found_pri_val),
+            }
+        )
     # Bypass FastAPI's automatic encoder completely
     return JSONResponse(content=clean_data)
+
+
+@app.delete("/api/incidents/{incident_id}")
+async def delete_incident(incident_id: str, db: Session = Depends(get_db)):
+    row = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).delete()
+    db.delete(row)
+    db.commit()
+
+    return {"deleted_incident_id": incident_id}
+
 
 @app.get("/api/images/{evidence_id}")
 def get_image(evidence_id: str):

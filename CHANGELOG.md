@@ -2,6 +2,164 @@
 
 <!-- version list -->
 
+## v0.12.0 (2026-04-09)
+
+### Features
+
+- Delete button in incident panel
+  ([`f2b3158`](https://github.com/cse120-ucm/S26-CSE-312/commit/f2b3158a39860325d1ef796e09bdbe13e262ff06))
+
+
+## v0.11.1 (2026-04-09)
+
+### Bug Fixes
+
+- Merge conflict lint errors
+  ([`8246a78`](https://github.com/cse120-ucm/S26-CSE-312/commit/8246a7856aedee4ecb1fb323f602d11f9e53e89c))
+
+
+## v0.11.0 (2026-04-09)
+
+### Bug Fixes
+
+- Lint + mypy build errors
+  ([`0e8e3d8`](https://github.com/cse120-ucm/S26-CSE-312/commit/0e8e3d89889f0296d208cdc309c8f95d609196cf))
+
+### Chores
+
+- Update ignore files
+  ([`d84f851`](https://github.com/cse120-ucm/S26-CSE-312/commit/d84f851a24c0e991af558ccd821e27c4c7767085))
+
+### Features
+
+- Adding issue editing e2e + status column
+  ([`c987dd5`](https://github.com/cse120-ucm/S26-CSE-312/commit/c987dd55d1610174ecfb2f4d9d7fff475205b030))
+
+
+## v0.10.2 (2026-04-09)
+
+### Bug Fixes
+
+- Prompt now handles wrong scanner priority, and wrong GROUNDS classifications
+  ([`ce51f08`](https://github.com/cse120-ucm/S26-CSE-312/commit/ce51f08a5beae8fe405a67c19e6948980d92da7e))
+
+
+## v0.10.1 (2026-04-08)
+
+### Bug Fixes
+
+- Added photo_report_discipline to photo_reports
+  ([`e967bf3`](https://github.com/cse120-ucm/S26-CSE-312/commit/e967bf3d61a1b2144306341cfdea9253f4d9e66b))
+
+- Changed locking from incident table's status attribute to photo_report table's status attribute.
+  Added confidence score column to photo_reports
+  ([`10e921e`](https://github.com/cse120-ucm/S26-CSE-312/commit/10e921ea0e6d78dbbdaca37f184d543440bb6704))
+
+- Connected processor to Gemini Embedding 2, successful vector db storage
+  ([`9ede336`](https://github.com/cse120-ucm/S26-CSE-312/commit/9ede33634e6c0734795bad79936a19747fc29622))
+
+- Included user_context in VLM inference call
+  ([`2776962`](https://github.com/cse120-ucm/S26-CSE-312/commit/277696243ec86d32e67c633ae210da4942f8384d))
+
+- Integrated processor.py with grouping logic, end to end connection complete
+  ([`aa9ac5f`](https://github.com/cse120-ucm/S26-CSE-312/commit/aa9ac5fec4efe537fc0431cbfd3806d811e20d36))
+
+- Minor inference prompt typo
+  ([`426e9f4`](https://github.com/cse120-ucm/S26-CSE-312/commit/426e9f4e87392374c993dd9f092abb4f6566ed2b))
+
+- Passing lint test
+  ([`d4b9345`](https://github.com/cse120-ucm/S26-CSE-312/commit/d4b9345dfe069a4d59457da9e209ead44c476986))
+
+- Passing test cases
+  ([`b506263`](https://github.com/cse120-ucm/S26-CSE-312/commit/b5062631b203cd75db9ffac0771d2d0e174104c3))
+
+- Prevented incident status (field status) from being set to "Completed" on creation
+  ([`71c7517`](https://github.com/cse120-ucm/S26-CSE-312/commit/71c75170fa32320b73363c2a51136f744879e3ac))
+
+- Removed linting errors
+  ([`076d45e`](https://github.com/cse120-ucm/S26-CSE-312/commit/076d45e42f29b67b2d374f98f163319b6c47aec8))
+
+- Test case changes
+  ([`ad4fffc`](https://github.com/cse120-ucm/S26-CSE-312/commit/ad4fffc8d3cc824a707e81b848d546e54ce6bf77))
+
+- Test typos
+  ([`7d27b02`](https://github.com/cse120-ucm/S26-CSE-312/commit/7d27b02c6e2930908f1309f504ca2180e3da4f0b))
+
+- Test update
+  ([`e0f9fb8`](https://github.com/cse120-ucm/S26-CSE-312/commit/e0f9fb85fd0f8314c8548a3b6648610c29542ad4))
+
+- Test update
+  ([`c866166`](https://github.com/cse120-ucm/S26-CSE-312/commit/c86616665e21335c5c75fb7f48230f80e67bdb35))
+
+- Test updates
+  ([`343ac2c`](https://github.com/cse120-ucm/S26-CSE-312/commit/343ac2c3b3d00ec4070f885bf97b5aa114269090))
+
+
+## v0.10.0 (2026-04-08)
+
+### Bug Fixes
+
+- Type lint errors in face blurring
+  ([`7523444`](https://github.com/cse120-ucm/S26-CSE-312/commit/7523444e5da396a78e54df23499a07b544834917))
+
+### Features
+
+- **frontend**: Replace blazeface with mediapipe full_range and optimize blur bounds for backend VLM
+  visibility
+  ([`238037e`](https://github.com/cse120-ucm/S26-CSE-312/commit/238037e28f05cf71d15178d6d808b4f4a7ede269))
+
+
+## v0.9.2 (2026-04-08)
+
+### Bug Fixes
+
+- Corrected typo
+  ([`e176bbd`](https://github.com/cse120-ucm/S26-CSE-312/commit/e176bbd71746e6a95e30c6ea871c25e5be70cc81))
+
+- Typo in test_persistance.py
+  ([`d0de5bc`](https://github.com/cse120-ucm/S26-CSE-312/commit/d0de5bc5913b37138edb1d793e87d96272b93428))
+
+
+## v0.9.1 (2026-04-07)
+
+### Bug Fixes
+
+- Multiple library call to JSON
+  ([`98748a4`](https://github.com/cse120-ucm/S26-CSE-312/commit/98748a475adce9fb4e4ca2d085ae48af12159012))
+
+- Update submission_id to test cases
+  ([`01611b9`](https://github.com/cse120-ucm/S26-CSE-312/commit/01611b96b0acf61c4c862631c46386de6601c8f5))
+
+
+## v0.9.0 (2026-04-07)
+
+### Bug Fixes
+
+- Verifying google creds + container db url
+  ([`aac5ff1`](https://github.com/cse120-ucm/S26-CSE-312/commit/aac5ff1d66a3d33992822f763b40a1327f3e725f))
+
+### Chores
+
+- Organize image directories
+  ([`52dc2d7`](https://github.com/cse120-ucm/S26-CSE-312/commit/52dc2d7f460b22c967b8c8d40ff4ddc808d3efb9))
+
+- Removing old frontend + updating change logs
+  ([`768b321`](https://github.com/cse120-ucm/S26-CSE-312/commit/768b3219e98aa42cf9f01ecba7c591e441f2b025))
+
+### Refactoring
+
+- Removing all instances of chat_with_media func
+  ([`ffeb275`](https://github.com/cse120-ucm/S26-CSE-312/commit/ffeb275d364d162a0f5dc5759fdec4d766522fd8))
+
+
+## v0.8.0 (2026-04-06)
+
+### Refactoring
+
+- Main rebase changes
+  ([`c2eeec0`](https://github.com/cse120-ucm/S26-CSE-312/commit/c2eeec0b67497e33e9acc661d7d62973b2850550))
+
+
 ## v0.7.0 (2026-04-06)
 
 ### Bug Fixes
@@ -124,9 +282,6 @@
 ## v0.1.1 (2026-03-24)
 
 ### Bug Fixes
-
-- Adding submission_id to json dict to be returned
-  ([`770b18f`](https://github.com/cse120-ucm/S26-CSE-312/commit/770b18fdd7bd1775445fa9b7a506e6abede6a209))
 
 - Clean restructure: setup employee dashboard and backend integration
   ([`0b32c3f`](https://github.com/cse120-ucm/S26-CSE-312/commit/0b32c3fa92c16ca04d1afbca6baee18dd33d9241))

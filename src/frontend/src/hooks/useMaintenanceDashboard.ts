@@ -85,6 +85,24 @@ export function useMaintenanceDashboard() {
     setSelectedIncident(null);
   }, []);
 
+  const updateSelectedIncident = useCallback((updated: Incident) => {
+    setData((prev) =>
+      prev.map((inc) => (inc.incident_id === updated.incident_id ? updated : inc)),
+    );
+    setSelectedIncident((prev) =>
+      prev && prev.incident_id === updated.incident_id ? updated : prev,
+    );
+  }, []);
+
+  const removeIncident = useCallback((incidentId: string) => {
+    setData((prev) => prev.filter((inc) => inc.incident_id !== incidentId));
+    setSelectedIncident((prev) =>
+      prev && prev.incident_id === incidentId ? null : prev,
+    );
+    setEvidence([]);
+    setIncidentIdExpanded(false);
+  }, []);
+
   return {
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
@@ -96,5 +114,7 @@ export function useMaintenanceDashboard() {
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    updateSelectedIncident,
+    removeIncident,
   };
 }

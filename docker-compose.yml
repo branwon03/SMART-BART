@@ -35,11 +35,33 @@ services:
       db:
         condition: service_healthy
 
+  processor:
+    build: .
+    restart: unless-stopped
+    command: python -m src.backend.processor
+    env_file: .env
+    # Same as backend: .env often uses localhost; inside Compose Postgres is the `db` service.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+      UPLOAD_DIR: /app/uploads
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+      GOOGLE_GENAI_USE_VERTEXAI: "true"
+      GOOGLE_CLOUD_PROJECT: "project-51a9be3f-d2d4-42cc-b2d"
+    volumes:
+      - uploads:/app/uploads
+      - ./credentials.json:/app/credentials.json
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: src/frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+    environment:
+      # Used by Next rewrites when the app calls same-origin /api/* (BACKEND_PROXY_URL for server-side proxy).
+      BACKEND_PROXY_URL: "http://backend:8000"
     restart: unless-stopped
     ports:
       - "3000:3000"

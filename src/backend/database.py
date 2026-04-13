@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
     DateTime,
+    Float,
     ForeignKey,
     JSON,
     String,
@@ -46,13 +47,17 @@ class PhotoReport(Base):
     __tablename__ = "photo_reports"
 
     evidence_id = Column(String, primary_key=True)
-    submission_id = Column(String)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     image_url = Column(String)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
     user_context = Column(String)
     found_priority = Column(String)
+    vlm_summary = Column(String)
+    photo_report_status = Column(String)
+    photo_report_confidence = Column(Float, nullable=True)
+    photo_report_discipline = Column(String, nullable=True)
+    photo_location_id = Column(String)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────

@@ -17,6 +17,8 @@ export default function MaintenanceDashboard() {
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    updateSelectedIncident,
+    removeIncident,
   } = useMaintenanceDashboard();
 
   return (
@@ -64,7 +66,12 @@ export default function MaintenanceDashboard() {
             now={now}
             incidentIdExpanded={incidentIdExpanded}
             onToggleIncidentIdExpanded={() => setIncidentIdExpanded((e) => !e)}
-            onClose={() => setSelectedIncident(null)}
+            onClose={() => {
+              setIncidentIdExpanded(false);
+              setSelectedIncident(null);
+            }}
+            onIncidentUpdated={updateSelectedIncident}
+            onIncidentDeleted={removeIncident}
           />
         )}
       </div>
