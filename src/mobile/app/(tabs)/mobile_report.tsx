@@ -43,7 +43,10 @@ export default function TabTwoScreen() {
         ))}
       </View>
       <View style={styles.navContainer}>
-        <TouchableOpacity onPress={() => router.push('/mobile_context')} style={styles.navButton}>
+        <TouchableOpacity onPress={() => router.push({
+          pathname: '/mobile_context',
+          params: { imageUris: JSON.stringify(images.map(img => img.uri)) }
+        })} style={styles.navButton}>
           <Ionicons name="arrow-forward" size={24} color="black" />
         </TouchableOpacity>
       </View>
