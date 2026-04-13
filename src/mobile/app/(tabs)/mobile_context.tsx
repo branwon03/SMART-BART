@@ -18,6 +18,7 @@ export default function TabTwoScreen() {
   const [contact, setContact] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  //These are only displayed in the dashboard visually, and does not get included in the backend logic
   const priorityOptions = [
     { label: 'Low', value: 'low' },
     { label: 'Medium', value: 'medium' },
@@ -40,8 +41,8 @@ export default function TabTwoScreen() {
     // Note: We combine name/contact combined into description for now
     await submitMobileReport({
       images: imageUris,
-      description: `Report by: ${name}\nContact: ${contact}\n\nNotes: ${description}`,
-      location: "MOBILE_UPLOAD_PLACEHOLDER", 
+      description: `Notes: ${description}`,
+      location: "Assign-Me-Via-Geolocation", 
     });
 
     // 3. Success! Move to confirmation
