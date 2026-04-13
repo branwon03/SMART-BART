@@ -13,6 +13,8 @@ export default function TabTwoScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
   
   const priorityOptions = [
     { label: 'Low', value: 'low' },
@@ -60,6 +62,25 @@ export default function TabTwoScreen() {
             </Text>
             <Ionicons name="chevron-down" size={20} color="black" />
           </TouchableOpacity>
+
+          <View style={styles.contactSection}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter your name..."
+            value={name}
+            onChangeText={setName}
+          />
+          
+          <Text style={styles.label}>Email or Phone Number</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter email or phone..."
+            value={contact}
+            onChangeText={setContact}
+            keyboardType="email-address"
+          />
+        </View>
           
           <Modal
             visible={showPriorityDropdown}
@@ -100,6 +121,12 @@ export default function TabTwoScreen() {
             </TouchableWithoutFeedback>
           </Modal>
         </View>
+        
+        <Text style={styles.emergencyText}>In case of emergency, call 911</Text>
+        
+        <TouchableOpacity style={styles.submitButton} onPress={() => {/* Handle submit */}}>
+          <Text style={styles.submitButtonText}>Submit</Text>
+        </TouchableOpacity>
         
         <View style={styles.navContainer}>
           <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
@@ -148,6 +175,9 @@ const styles = StyleSheet.create({
   descriptionSection: {
     marginTop: 20,
   },
+  contactSection: {
+    marginTop: 20,
+  },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -159,7 +189,8 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     fontSize: 14,
-    minHeight: 100,
+    minHeight: 40,
+    marginBottom: 15,
   },
   prioritySection: {
     marginTop: 20,
@@ -208,7 +239,28 @@ const styles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: 'white',
   },
-  navContainer: {
+  emergencyText: {
+    fontSize: 17,
+    color: '#ff4444',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  submitButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },  navContainer: {
     position: 'absolute',
     bottom: 20,
     left: 0,
