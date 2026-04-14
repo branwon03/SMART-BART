@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from PIL import Image
 from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
@@ -112,6 +113,9 @@ async def submissions(
             ext = tmp_path.suffix
             dest = UPLOAD_DIR / f"{evidence_id}{ext}"
             shutil.copy2(str(tmp_path), str(dest))
+            
+            test_img = Image.open(str(dest))
+            print(f"DEBUG: EXIF keys found in uploaded file: {test_img._getexif().keys() if test_img._getexif() else 'NONE'}")
             saved_image_url = f"/api/images/{evidence_id}"
 
 
