@@ -307,6 +307,16 @@ def process_single_photo(photo: PhotoReport, db: Session):
         else:
             print(f"  [-] No match. Best score was {match_score}")
 
+        
+        # Check if geolocation is needed
+        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
+            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
+            found_location = get_nearest_station_local(file_path)
+        else:
+            # Keep the manually provided ID (e.g., from a dropdown or user selection)
+            found_location = photo.photo_location_id
+            print(f"[*] Using provided location ID: {found_location}")
+
         # 5. Update the PhotoReport specific fields
         found_location = get_nearest_station_local(file_path)
         photo.vlm_summary = parsed["vlm_summary"]
