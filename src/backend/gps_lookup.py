@@ -71,8 +71,8 @@ def get_nearest_station_local(file_path):
 
 if __name__ == "__main__":
     #Test with local image
-    test_file = "src/backend/test_outlet.jpg"
+    test_file = "2-trashA.jpg"
 
-    result = get_nearest_station_local(test_file)
+    #result = get_nearest_station_local(test_file)
     
-    print(f"Result for {test_file}: {result}")
+    #print(f"Result for {test_file}: {result}")
