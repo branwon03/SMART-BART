@@ -63,7 +63,7 @@ def get_nearest_station_local(file_path):
         }
 
         nearest = min(distances, key=distances.get)
-        return f"{nearest} ({distances[nearest]:.2f} miles away)"
+        return f"{nearest}"# ({distances[nearest]:.2f} miles away)"
 
     except Exception as e:
         return f"Error: {str(e)}"
