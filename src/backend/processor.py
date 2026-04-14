@@ -318,7 +318,6 @@ def process_single_photo(photo: PhotoReport, db: Session):
             print(f"[*] Using provided location ID: {found_location}")
 
         # 5. Update the PhotoReport specific fields
-        found_location = get_nearest_station_local(file_path)
         photo.vlm_summary = parsed["vlm_summary"]
         photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
