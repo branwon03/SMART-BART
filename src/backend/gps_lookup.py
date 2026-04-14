@@ -10,6 +10,8 @@ BART_STATIONS = {
     "12th St. Oakland": (37.8037, -122.2714),
     "Downtown Berkeley": (37.8701, -122.2681),
     "Walnut Creek": (37.9055, -122.0675),
+    "Dublin/Pleasanton": (37.7016, -121.8992),
+    "West Oakland": (37.8049, -122.2951),
     "Fremont": (37.5574, -121.9766)
 }
 
