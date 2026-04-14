@@ -199,7 +199,6 @@ def process_single_photo(photo: PhotoReport, db: Session):
             f"Focus on spatial surroundings and object geometry. "
             f"Ignore lighting, blur, or camera quality."
         )
-
         print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
         vector = generate_embedding(
             text=embedding_instruction, image_paths=[Path(file_path)]
@@ -217,6 +216,18 @@ def process_single_photo(photo: PhotoReport, db: Session):
         print(
             f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})"
         )
+
+        # Check if geolocation is needed
+        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
+            print(
+                f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF..."
+            )
+            found_location = get_nearest_station_local(file_path)
+        else:
+            # Keep the manually provided ID (e.g., from a dropdown or user selection)
+            found_location = photo.photo_location_id
+            print(f"[*] Using provided location ID: {found_location}")
+        photo.photo_location_id = found_location
 
         # 4. GROUPING LOGIC
         # Try to match this photo to an existing incident using:
@@ -264,16 +275,6 @@ def process_single_photo(photo: PhotoReport, db: Session):
         else:
             print(f"  [-] No match. Best score was {match_score}")
 
-        
-        # Check if geolocation is needed
-        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
-            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
-            found_location = get_nearest_station_local(file_path)
-        else:
-            # Keep the manually provided ID (e.g., from a dropdown or user selection)
-            found_location = photo.photo_location_id
-            print(f"[*] Using provided location ID: {found_location}")
-
         # 5. Update the PhotoReport specific fields
         photo.vlm_summary = parsed["vlm_summary"]
         photo.photo_report_discipline = parsed["discipline"]
@@ -281,7 +282,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
         photo.found_priority = parsed["issue_priority"]
         photo.photo_report_status = "Completed"  # type: ignore[assignment]
         photo.photo_report_confidence = confidence  # type: ignore[assignment]
-        photo.photo_location_id = found_location
+        # photo.photo_location_id is updated before grouping
 
         db.commit()
         print(
@@ -297,6 +298,14 @@ def process_single_photo(photo: PhotoReport, db: Session):
         )
 
         if incident:
+            current_inc_loc = getattr(incident, "location_id", None)
+            if (
+                current_inc_loc == "Assign-Me-Via-Geolocation"
+                or current_inc_loc is None
+            ):
+                incident.location_id = found_location
+                print(f"  [✓] Incident location promoted to: {found_location}")
+
             # 6.1 If this photo is the first result for the incident, or it has
             # higher confidence than the current incident summary, promote it.
 
