@@ -13,7 +13,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        tabBarStyle: { display: 'flex' },
+        tabBarStyle: { display: 'none' },
         headerStyle: { backgroundColor: 'black', height: 110 },
         headerTitle: () => (
           <View style={styles.headerContainer}>
