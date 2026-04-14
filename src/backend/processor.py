@@ -15,6 +15,7 @@ from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
+from src.backend.gps_lookup import get_nearest_station_local
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -268,6 +269,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
         # Try to match this photo to an existing incident using:
         # - embedding similarity
         # - same discipline bucket
+        # - same location
         # - threshold-based reuse
         incident_match_id, match_score = find_matching_incident(
             db,
@@ -306,15 +308,17 @@ def process_single_photo(photo: PhotoReport, db: Session):
             print(f"  [-] No match. Best score was {match_score}")
 
         # 5. Update the PhotoReport specific fields
+        found_location = get_nearest_station_local(file_path)
         photo.vlm_summary = parsed["vlm_summary"]
         photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
         photo.found_priority = parsed["issue_priority"]
         photo.photo_report_status = "Completed"     # type: ignore[assignment]
         photo.photo_report_confidence = confidence  # type: ignore[assignment]
+        photo.photo_location_id = found_location
 
         db.commit()
-        print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
+        print(f"  [+] Photo Result: {parsed['discipline']} at {found_location} (confidence: {confidence:.2f})")
 
         # 6. Aggregate to the Incident level
         # Use the photo's current incident_id because grouping may have
