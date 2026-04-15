@@ -82,7 +82,7 @@ Include: what constitutes passing (e.g., all tests green, coverage threshold).
 
 ## MOBILE APP DEVELOPMENT SETUP
 
-The system now makes use of a native mobile app that communicates with the FastAPI backend using your local network. 
+The system now makes use of a native mobile app that communicates with the FastAPI backend using LAN. 
 Note on Geolocation: We transitioned to a native app to solve the metadata stripping issue found in mobile browsers. This allows our backend to extract exact coordinates directly from the image files even if the user submits the report after leaving the incident site.
 
 1. Prerequisite: Local Environment Setup
@@ -114,5 +114,7 @@ Since the mobile app runs on a physical device or emulator, it cannot use localh
 
 4. Backend Connection & Troubleshooting
       - Ensure the correct IP address is in your src/mobile/.env file. If you switched WIFI networks, you will need to update it.
-      - FastAPI: Ensure that docker is running before attempting to submit reports.
+      - FastAPI: Ensure that docker is running before attempting to submit reports, or the submit button will hang and fail.
+      - If you are still running into issues connecting, you may need to add python and node.js to the list of allowed apps on your computer. 
+      - If all else fails, turn on mobile hotspot on your phone and connect your PC to it and try again.
 
