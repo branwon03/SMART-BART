@@ -1,6 +1,4 @@
 import math
-import requests
-from io import BytesIO
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import os
