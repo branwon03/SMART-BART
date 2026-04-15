@@ -1,3 +1,4 @@
+import pytest
 from src.backend.gps_lookup import calculate_distance, BART_STATIONS
 
 # --- UNIT TESTS FOR MATH ---
@@ -42,7 +43,7 @@ def test_nearest_station_offset():
     assert get_nearest_name_only(lat, lon) == "Downtown Berkeley"
 
 def test_far_away_point():
-    """A point in Merced should snap to the closest station (Berryessa / North San Jose)."""
+    """A point in Merced should snap to the closest station (Berryessa/North San José)."""
     # UC Merced Coords
     merced_lat, merced_lon = 37.3647, -120.4244
-    assert get_nearest_name_only(merced_lat, merced_lon) == "Berryessa / North San Jose"
+    assert get_nearest_name_only(merced_lat, merced_lon) == "Berryessa/North San José"
