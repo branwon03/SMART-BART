@@ -29,8 +29,8 @@ export default function TabTwoScreen() {
 
   //Completion validation
   const handleSubmit = async () => {
-  if (!description.trim() || !name.trim() || !contact.trim()) {
-    alert("Please fill out all fields before submitting.");
+  if (!description.trim()) {
+    alert("Please provide a description of the issue.");
     return;
   }
 
