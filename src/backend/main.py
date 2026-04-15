@@ -2,7 +2,6 @@ import os
 import shutil
 import tempfile
 import uuid
-from PIL import Image
 from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
