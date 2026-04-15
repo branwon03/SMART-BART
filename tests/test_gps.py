@@ -1,4 +1,3 @@
-import pytest
 from src.backend.gps_lookup import calculate_distance, BART_STATIONS
 
 # --- UNIT TESTS FOR MATH ---
