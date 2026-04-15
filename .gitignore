@@ -39,3 +39,4 @@ src/mobile/.expo/
 src/mobile/dist/
 src/mobile/npm-debug.log*
 src/mobile/env.
+src/mobile/expo-env.d.ts
