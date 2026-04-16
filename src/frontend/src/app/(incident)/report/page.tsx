@@ -12,99 +12,129 @@ export default function ImageUpload() {
   const [isProcessing, setIsProcessing] = useState(false); 
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  try {
     const fileList = e.target.files;
-    if (!fileList || fileList.length === 0) return;
+    if (!fileList || fileList.length === 0) {
+      alert("FAIL: No files detected by the browser.");
+      return;
+    }
 
+    const filesArray = Array.from(fileList);
+    e.target.value = '';
+    
     setIsProcessing(true);
     setImageError(null);
 
-    try {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-      );
-      const faceDetector = await FaceDetector.createFromOptions(vision, {
-        baseOptions: {
-          // Use full range model for side profiles and long distances
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite",
-          delegate: "GPU"
-        },
-        runningMode: "IMAGE",
-        // NEW: Lower the threshold. 
-        // Default is 0.5. Lowering to 0.3 makes it "paranoid" and more likely to catch half-covered faces.
-        minDetectionConfidence: 0.3,
-        minSuppressionThreshold: 0.3
+    // Stage 1: Network / WASM Test
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+
+
+    // Stage 2: AI Model Test
+    const faceDetector = await FaceDetector.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite",
+        delegate: "GPU"
+      },
+      runningMode: "IMAGE",
+      minDetectionConfidence: 0.3,
+      minSuppressionThreshold: 0.3
+    });
+   
+
+    const newImages: string[] = [];
+
+    // Stage 3: The Processing Loop
+    for (let i = 0; i < filesArray.length; i++) {
+      const file = filesArray[i];
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error("Image failed to load onto Canvas"));
+        setTimeout(() => reject(new Error("Image load timed out")), 10000);
       });
 
-      const newImages: string[] = [];
+      const MAX_WIDTH = 800;
+      let width = img.width;
+      let height = img.height;
 
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      if (width > MAX_WIDTH) {
+        height = (MAX_WIDTH / width) * height;
+        width = MAX_WIDTH;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) continue;
+
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl); 
+
+      // Stage 4: Detection
+      const detections = faceDetector.detect(canvas).detections;
       
-        if (file.size < 100 * 1024) continue; 
 
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-        img.src = objectUrl;
-
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = () => reject(new Error("Image failed to load"));
-          setTimeout(() => reject(new Error("Image load timed out")), 10000);
-        });
-
-        const MAX_WIDTH = 800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height = (MAX_WIDTH / width) * height;
-          width = MAX_WIDTH;
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) continue;
-
-        ctx.drawImage(img, 0, 0, width, height);
-      
-        // Free up mobile RAM immediately
-        URL.revokeObjectURL(objectUrl); 
-
-        // MediaPipe Detection
-        const detections = faceDetector.detect(canvas).detections;
-
-        if (detections.length > 0) {
-          detections.forEach((detection) => {
-            if (!detection.boundingBox) return;
-            const { originX, originY, width: bboxWidth, height: bboxHeight } = detection.boundingBox;
+      if (detections.length > 0) {
+        detections.forEach((detection) => {
+          if (!detection.boundingBox) return;
+          const { originX, originY, width: bboxWidth, height: bboxHeight } = detection.boundingBox;
           
-            const centerX = originX + (bboxWidth / 2);
-            const centerY = originY + (bboxHeight / 2);
+          // 1. Create a tiny canvas to destroy the pixel data
+          const mosaicCanvas = document.createElement("canvas");
+          mosaicCanvas.width = 10; 
+          mosaicCanvas.height = 10;
+          const mosaicCtx = mosaicCanvas.getContext("2d");
+          if (!mosaicCtx) return;
 
-            const radiusX = bboxWidth / 2;
-            const radiusY = (bboxHeight / 2) * 1.1;
+          // 2. Draw ONLY the face onto the tiny canvas (compresses the data)
+          mosaicCtx.drawImage(
+            img, 
+            originX, originY, bboxWidth, bboxHeight, // Grab the face
+            0, 0, 10, 10                             // Shove it into the 10x10 box
+          );
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-            ctx.clip();
+          // Calculate the oval mask coordinates
+          const centerX = originX + (bboxWidth / 2);
+          const centerY = originY + (bboxHeight / 2);
+          const radiusX = bboxWidth / 2;
+          const radiusY = (bboxHeight / 2) * 1.1;
 
-            ctx.filter = "blur(15px)";
-            ctx.drawImage(canvas, 0, 0); 
-
-            ctx.restore();
-          });
-        }
-
+          ctx.save();
+          
+          // 3. Cut the oval hole
+          ctx.beginPath();
+          ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+          ctx.clip();
+          
+          // 4. THE MAGIC: Turn off smoothing to get sharp, chunky pixels
+          ctx.imageSmoothingEnabled = false;
+          
+          // 5. Stretch the tiny 10x10 image back over the original face size
+          ctx.drawImage(
+            mosaicCanvas, 
+            0, 0, 10, 10,                            // Source (the tiny compressed image)
+            originX, originY, bboxWidth, bboxHeight  // Destination (stretch it big)
+          ); 
+          
+          ctx.restore();
+        });
+      }
       newImages.push(canvas.toDataURL("image/jpeg", 0.7));
     }
-
+    
     setImages((prev) => [...prev, ...newImages]);
 
+
   } catch (error: unknown) {
+    // Stage 5: The Silent Killer catcher
     const message = error instanceof Error ? error.message : String(error);
+    alert(`CRITICAL ERROR: ${message}`);
     console.error("Processing error:", message);
     setImageError("Something went wrong while applying the privacy blur.");
   } finally {
@@ -165,17 +195,21 @@ export default function ImageUpload() {
             )}
           </div>
 
-          <label className={`cursor-pointer bg-[#0099D8] text-white py-2 px-6 text-[15px] font-bold shadow-md transition-colors mb-6 ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8]'}`}>
-            {isProcessing ? 'Processing...' : 'Upload Images'}
+          {/* The Invisible Overlay Upload Button */}
+          {/*DO NOT CHANGE -- VERY IMPORTANT*/}
+          <div className="relative inline-block mb-6">
+            <div className={`flex items-center justify-center bg-[#0099D8] text-white py-2 px-6 text-[15px] font-bold shadow-md transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#007AB8]'}`}>
+              {isProcessing ? 'Processing...' : 'Upload Images'}
+            </div>
             <input 
               type="file" 
               multiple 
               accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden" 
               disabled={isProcessing}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+              onChange={handleImageUpload}
             />
-          </label>
+          </div>
 
           {imageError && (
             <div className="flex items-start gap-2 text-red-600 bg-red-50 p-3 border border-red-200 rounded-md w-[85%] mb-6 shadow-sm">
