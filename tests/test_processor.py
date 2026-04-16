@@ -7,7 +7,7 @@ FAKE_RESPONSE = (
     "discipline: MECHANICAL\n"
     "issue_priority: HIGH\n"
     "vlm_summary: Broken pipe."
-) 
+)
 
 processor.identify_objects = lambda *args, **kwargs: (FAKE_RESPONSE, 0.95)
 processor.generate_embedding = lambda *args, **kwargs: [0.1] * 3072
