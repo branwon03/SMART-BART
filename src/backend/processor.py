@@ -15,6 +15,7 @@ from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
+from src.backend.gps_lookup import get_nearest_station_local
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -172,12 +173,6 @@ def process_single_photo(photo: PhotoReport, db: Session):
         parsed = parse_classification(raw_response)
         discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
 
-        # Build a richer text representation for grouping.
-        # This lets the embedding capture:
-        # - the predicted discipline
-        # - the short model summary
-        # - the commuter's text description
-        
         embedding_instruction = (
             f"Task: Grouping maintenance photos from different angles. "
             f"Physical Asset: {parsed['vlm_summary']}. "
@@ -186,14 +181,23 @@ def process_single_photo(photo: PhotoReport, db: Session):
             f"Focus on spatial surroundings and object geometry. "
             f"Ignore lighting, blur, or camera quality."
         )
-
         print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
         vector = generate_embedding(
             text=embedding_instruction,
             image_paths=[Path(file_path)]
         )
 
+        # Check if geolocation is needed
+        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
+            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
+            found_location = get_nearest_station_local(file_path)
+        else:
+            # Keep the manually provided ID (e.g., from a dropdown or user selection)
+            found_location = photo.photo_location_id
+            print(f"[*] Using provided location ID: {found_location}")
+            
         # Update the PhotoReport with the results
+        photo.photo_location_id = found_location
         photo.vlm_summary = parsed["vlm_summary"]
         photo.photo_report_discipline = parsed["discipline"]
         photo.embedding = vector
@@ -208,6 +212,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
         # Try to match this photo to an existing incident using:
         # - embedding similarity
         # - same discipline bucket
+        # - same location
         # - threshold-based reuse
         incident_match_id, match_score = find_matching_incident(
             db,
@@ -256,6 +261,12 @@ def process_single_photo(photo: PhotoReport, db: Session):
         incident = db.query(Incident).filter(Incident.incident_id == final_incident_id).first()
 
         if incident:
+            current_inc_loc = getattr(incident, "location_id", None)
+            if current_inc_loc == "Assign-Me-Via-Geolocation" or current_inc_loc is None:
+                incident.location_id = found_location
+                print(f"  [✓] Found location: {found_location}")
+
+
             # 6.1 If this photo is the first result for the incident, or it has
             # higher confidence than the current incident summary, promote it.
 
