@@ -301,7 +301,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
                 {"old_id": original_incident_id}
             )
             db.commit()
-
+ 
         else:
             print(f"  [-] No match. Best score was {match_score}")
 
