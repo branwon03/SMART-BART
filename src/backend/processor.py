@@ -3,7 +3,7 @@ import time
 import math
 import mimetypes
 from pathlib import Path
-from sqlalchemy import text
+from sqlalchemy import func, text
 from src.backend.database import Base, engine, SessionLocal, PhotoReport
 from dotenv import load_dotenv
 from google import genai
@@ -145,77 +145,6 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
 
     return raw_response, confidence
 
-"""
-def process_incident(incident: Incident, db: Session):
-    #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save
-
-    incident_id = incident.incident_id
-
-    incident.status = "In-Progress"  # type: ignore[assignment]
-    db.commit()
-    print(f"[*] Incident {incident_id} locked as In-Progress")
-
-    photos = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
-
-    #if no photos exit early
-    if not photos:
-        print(f"[!] No photos found for incident {incident_id}")
-        incident.status = "Error: No Photos"  # type: ignore[assignment]
-        db.commit()
-        return
-
-    best_category = None
-    best_summary = None
-    best_priority = None
-    best_confidence = -1.0
-    missing_files = []
-
-    for photo in photos:
-        file_path = resolve_local_image_path(photo)
-        description = getattr(photo, "user_context", "")
-
-        if not file_path or not os.path.exists(file_path):
-            print(f"[!] File not found: {file_path}")
-            missing_files.append(file_path)
-            continue
-
-        raw_response, confidence = identify_objects(
-            file_path, 
-            DISCIPLINES, 
-            user_description=description
-        )
-        parsed = parse_classification(raw_response)
-
-        photo.vlm_summary = parsed["vlm_summary"]
-        db.commit()
-        
-        if confidence > best_confidence:
-            best_confidence = confidence
-            best_category = parsed["discipline"]
-            best_summary = parsed["vlm_summary"]
-            best_priority = parsed["issue_priority"]
-            print(f"  [+] New best result: {best_category} (confidence: {confidence:.2f})")
-
-    all_missing = len(missing_files) == len(photos)
-
-    if all_missing:
-        incident.status = "Error: All Files Missing"  # type: ignore[assignment]
-        print(f"[!] All files missing for incident {incident_id}")
-
-    elif best_category is None:
-        incident.status = "Error: Model Returned No Results"  # type: ignore[assignment]
-        print(f"[!] Model returned no results for incident {incident_id}")
-
-    else:
-        incident.discipline = best_category  # type: ignore[assignment]
-        incident.vlm_summary = best_summary  # type: ignore[assignment]
-        incident.issue_priority = best_priority  # type: ignore[assignment]
-        incident.status = "Completed"  # type: ignore[assignment]
-        print(f"  [✓] Incident {incident_id} -> {best_category} | {best_priority} (confidence: {best_confidence:.2f})")
-
-    db.commit()
-"""
-
 def process_single_photo(photo: PhotoReport, db: Session):
     """Processes a single photo and updates both the Photo and the Parent Incident."""
     file_path = resolve_local_image_path(photo)
@@ -266,7 +195,18 @@ def process_single_photo(photo: PhotoReport, db: Session):
             # Keep the manually provided ID (e.g., from a dropdown or user selection)
             found_location = photo.photo_location_id
             print(f"[*] Using provided location ID: {found_location}")
+            
+        # Update the PhotoReport with the results
         photo.photo_location_id = found_location
+        photo.vlm_summary = parsed["vlm_summary"]
+        photo.photo_report_discipline = parsed["discipline"]
+        photo.embedding = vector
+        photo.found_priority = parsed["issue_priority"]
+        photo.photo_report_status = "Completed"     # type: ignore[assignment]
+        photo.photo_report_confidence = confidence  # type: ignore[assignment]
+
+        db.commit()
+        print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
 
         # 4. GROUPING LOGIC
         # Try to match this photo to an existing incident using:
@@ -295,33 +235,24 @@ def process_single_photo(photo: PhotoReport, db: Session):
 
             # 4.3 CLEANUP: Delete the original incident if it is now empty
             # This prevents placeholder / ghost incidents from showing up.
-            db.execute(
-                text("""
-                    DELETE FROM incidents
-                    WHERE incident_id = :old_id
-                    AND NOT EXISTS (
-                        SELECT 1 FROM photo_reports WHERE incident_id = :old_id
-                    )
-                """),
-                {"old_id": original_incident_id}
-            )
-            db.commit()
-
+            try:
+                db.execute(
+                    text("""
+                        DELETE FROM incidents
+                        WHERE incident_id = :old_id
+                        AND NOT EXISTS (
+                            SELECT 1 FROM photo_reports WHERE incident_id = :old_id
+                        )
+                    """),
+                    {"old_id": original_incident_id}
+                )
+                db.commit()
+            except Exception as delete_error:
+                print(f" [!] Failed to delete original incident {original_incident_id}: {delete_error}")
+                db.rollback()
+ 
         else:
             print(f"  [-] No match. Best score was {match_score}")
-
-
-        # 5. Update the PhotoReport specific fields
-        photo.vlm_summary = parsed["vlm_summary"]
-        photo.photo_report_discipline = parsed["discipline"]
-        photo.embedding = vector
-        photo.found_priority = parsed["issue_priority"]
-        photo.photo_report_status = "Completed"     # type: ignore[assignment]
-        photo.photo_report_confidence = confidence  # type: ignore[assignment]
-        # photo.photo_location_id is updated before grouping
-
-        db.commit()
-        print(f"  [+] Photo Result: {parsed['discipline']} at {found_location} (confidence: {confidence:.2f})")
 
         # 6. Aggregate to the Incident level
         # Use the photo's current incident_id because grouping may have
@@ -338,20 +269,28 @@ def process_single_photo(photo: PhotoReport, db: Session):
 
             # 6.1 If this photo is the first result for the incident, or it has
             # higher confidence than the current incident summary, promote it.
-            if incident.discipline is None or confidence > getattr(incident, "best_confidence", -1.0):
+
+            # Query the database for the highest confidence among all photos in THIS incident
+            # We exclude the current photo's new confidence for the comparison
+            current_max_confidence = db.query(func.max(PhotoReport.photo_report_confidence))\
+                .filter(PhotoReport.incident_id == final_incident_id)\
+                .filter(PhotoReport.evidence_id != photo.evidence_id)\
+                .scalar() or -1.0
+    
+            # If this photo is the most confident one we've seen for this incident, 
+            # promote its metadata to the incident level.
+            if confidence > current_max_confidence:
                 incident.discipline = parsed["discipline"]
                 incident.vlm_summary = parsed["vlm_summary"]
                 incident.issue_priority = parsed["issue_priority"]
-
-                # Store a temporary confidence marker for choosing the best
-                # incident-level summary during processing.
-                setattr(incident, "best_confidence", confidence)
 
                 db.commit()
                 print(
                     f"  [✓] Updated Incident {final_incident_id} -> "
                     f"{parsed['discipline']} | {parsed['issue_priority']}"
                 )
+            else:
+                print(f"  [-] Incident {final_incident_id} already has a higher-confidence classification. Skipping update.")
 
         return parsed | {"confidence": confidence}
 
@@ -403,7 +342,6 @@ def run_processor():
         finally:
             db.close()
         time.sleep(10)
-
 
 
 if __name__ == "__main__":
