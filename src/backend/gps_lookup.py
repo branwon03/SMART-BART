@@ -112,11 +112,3 @@ def get_nearest_station_local(file_path):
     except Exception as e:
         return f"Error: {str(e)}"
     
-
-if __name__ == "__main__":
-    #Test with local image
-    test_file = "2-trashA.jpg"
-
-    #result = get_nearest_station_local(test_file)
-    
-    #print(f"Result for {test_file}: {result}")
