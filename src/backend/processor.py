@@ -304,7 +304,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
                 or current_inc_loc is None
             ):
                 incident.location_id = found_location
-                print(f"  [✓] Incident location promoted to: {found_location}")
+                print(f"  [✓] Found location: {found_location}")
 
             # 6.1 If this photo is the first result for the incident, or it has
             # higher confidence than the current incident summary, promote it.
