@@ -3,11 +3,10 @@ import time
 import math
 import mimetypes
 from pathlib import Path
-from sqlalchemy import func, text
+from sqlalchemy import text
 from src.backend.database import Base, engine, SessionLocal, PhotoReport
 from dotenv import load_dotenv
 from google import genai
-from typing import cast
 from google.genai import types
 from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
@@ -16,7 +15,6 @@ from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
-from src.backend.gps_lookup import get_nearest_station_local
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -146,182 +144,210 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
 
     return raw_response, confidence
 
-def process_submission(submission_id: str, db: Session):
-    """
-    Processes all photos belonging to a single submission together.
-    All photos in a submission are guaranteed to end up in the same incident.
-    """
-    photos = db.query(PhotoReport)\
-        .filter(PhotoReport.submission_id == submission_id)\
-        .filter(PhotoReport.photo_report_status == "New")\
-        .with_for_update(skip_locked=True)\
-        .all()
-    
+"""
+def process_incident(incident: Incident, db: Session):
+    #runs the full pipeline for a single incident: selection -> lock -> model loop -> parse -> map -> save
+
+    incident_id = incident.incident_id
+
+    incident.status = "In-Progress"  # type: ignore[assignment]
+    db.commit()
+    print(f"[*] Incident {incident_id} locked as In-Progress")
+
+    photos = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
+
+    #if no photos exit early
     if not photos:
-        print(f"[!] No new photos found for submission {submission_id}")
+        print(f"[!] No photos found for incident {incident_id}")
+        incident.status = "Error: No Photos"  # type: ignore[assignment]
+        db.commit()
         return
 
-    print(f"[*] Processing submission {submission_id} ({len(photos)} photo(s))")
-
-    # --- Phase 1: Classify and embed every photo in the submission ---
-    # We need embeddings before we can do any similarity matching.
-
-    results = []
+    best_category = None
+    best_summary = None
+    best_priority = None
+    best_confidence = -1.0
+    missing_files = []
 
     for photo in photos:
         file_path = resolve_local_image_path(photo)
-        description = getattr(photo, "user_description", "Not provided")
+        description = getattr(photo, "user_context", "")
 
         if not file_path or not os.path.exists(file_path):
-            print(f"[!] File not found for photo {photo.evidence_id}: {file_path}")
-            photo.photo_report_status = "Error: File Missing"  # type: ignore[assignment]
-            db.commit()
+            print(f"[!] File not found: {file_path}")
+            missing_files.append(file_path)
             continue
 
-        # Check if geolocation is needed
-        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
-            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
-            found_location = get_nearest_station_local(file_path)
-        else:
-            # Keep the manually provided ID (e.g., from a dropdown or user selection)
-            found_location = photo.photo_location_id
-            print(f"[*] Using provided location ID: {found_location}")
- 
-        photo.photo_location_id = found_location  # type: ignore[assignment]
-        photo.photo_report_status = "In-Progress"  # type: ignore[assignment]
-        db.commit()
-
-        try:
-            # call identify_object for this photo_report
-            raw_response, confidence = identify_objects(
-                file_path, 
-                DISCIPLINES, 
-                user_description=description
-            )
-            parsed = parse_classification(raw_response)
-        
-            embedding_instruction = (
-                f"Task: Grouping maintenance photos from different angles. "
-                f"Physical Asset: {parsed['vlm_summary']}. "
-                f"Location Context: {parsed['discipline']} area. "
-                f"Instruction: Identify the specific physical asset and scene. "
-                f"Focus on spatial surroundings and object geometry. "
-                f"Ignore lighting, blur, or camera quality."
-            )
-
-            print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
-            vector = generate_embedding(
-                text=embedding_instruction,
-                image_paths=[Path(file_path)]
-            )
-
-            # Update the PhotoReport with the results
-            photo.vlm_summary = parsed["vlm_summary"]
-            photo.photo_report_discipline = parsed["discipline"]
-            photo.embedding = vector
-            photo.found_priority = parsed["issue_priority"]
-            photo.photo_report_status = "Completed"     # type: ignore[assignment]
-            photo.photo_report_confidence = confidence  # type: ignore[assignment]
-
-            db.commit()
-            results.append((photo, parsed, confidence, vector, found_location))
-            print(f"  [+] Classified {photo.evidence_id}: {parsed['discipline']} (conf: {confidence:.2f})")
-
-        except Exception as e:
-            print(f"[!] Error classifying photo {photo.evidence_id}: {e}")
-            photo.photo_report_status = "Error: Inference Failed"  # type: ignore[assignment]
-            db.commit()
-    
-    if not results:
-        print(f"[!] No photos were successfully classified for submission {submission_id}")
-        return
-    
-    # --- Phase 2: Find the best incident match for the WHOLE submission ---
-    # Use the highest-confidence photo's embedding as the submission's
-    # "representative" signal for similarity search. This means one strong
-    # photo can anchor the whole submission to an existing incident.
-
-    best_photo, best_parsed, best_confidence, best_vector, best_location = max(results, key=lambda x: x[2])
-
-    target_incident_id, match_score = find_matching_incident(
-        db,
-        new_embedding=best_vector,
-        discipline=best_parsed["discipline"],
-        location_id=cast(str | None, best_photo.photo_location_id),
-        submitted_at=best_photo.submitted_at,
-        exclude_evidence_id=cast(str | None, best_photo.evidence_id),
-    )
-
-    if target_incident_id:
-        print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}")
-    else:
-        target_incident_id = photos[0].incident_id
-        print(f"  [-] No match (best score={match_score:.3f}). Using new Incident {target_incident_id}.")
-
-    # --- Phase 3: Assign every photo to the target incident ---
-
-    for photo, parsed, confidence, vector, found_location in results:
-        original_incident_id = photo.incident_id
-
-        if photo.incident_id != target_incident_id:
-            photo.incident_id = target_incident_id
-            db.commit()
-
-            # Clean up the now-empty placeholder incident
-            try:
-                db.execute(
-                    text("""
-                        DELETE FROM incidents
-                        WHERE incident_id = :old_id
-                        AND NOT EXISTS (
-                            SELECT 1 FROM photo_reports WHERE incident_id = :old_id
-                        )
-                    """),
-                    {"old_id": original_incident_id}
-                )
-                db.commit()
-            except Exception as delete_error:
-                print(f" [!] Failed to delete original incident {original_incident_id}: {delete_error}")
-                db.rollback()
-
-        photo.photo_report_status = "Completed"  # type: ignore[assignment]
-        db.commit()
-
-    # --- Phase 4: Promote the best photo's metadata to the incident ---
-    incident = db.query(Incident).filter(Incident.incident_id == target_incident_id).first()
-       
-    if incident:
-        current_max_confidence = (
-            db.query(func.max(PhotoReport.photo_report_confidence))
-            .filter(PhotoReport.incident_id == target_incident_id)
-            .filter(PhotoReport.evidence_id != best_photo.evidence_id)
-            .scalar() or -1.0
+        raw_response, confidence = identify_objects(
+            file_path, 
+            DISCIPLINES, 
+            user_description=description
         )
-    
-        # If this photo is the most confident one we've seen for this incident, 
-        # promote its metadata to the incident level.
-        if best_confidence > current_max_confidence:
-            incident.discipline = best_parsed["discipline"]
-            incident.vlm_summary = best_parsed["vlm_summary"]
-            incident.issue_priority = best_parsed["issue_priority"]
+        parsed = parse_classification(raw_response)
 
-            db.commit()
+        photo.vlm_summary = parsed["vlm_summary"]
+        db.commit()
+        
+        if confidence > best_confidence:
+            best_confidence = confidence
+            best_category = parsed["discipline"]
+            best_summary = parsed["vlm_summary"]
+            best_priority = parsed["issue_priority"]
+            print(f"  [+] New best result: {best_category} (confidence: {confidence:.2f})")
+
+    all_missing = len(missing_files) == len(photos)
+
+    if all_missing:
+        incident.status = "Error: All Files Missing"  # type: ignore[assignment]
+        print(f"[!] All files missing for incident {incident_id}")
+
+    elif best_category is None:
+        incident.status = "Error: Model Returned No Results"  # type: ignore[assignment]
+        print(f"[!] Model returned no results for incident {incident_id}")
+
+    else:
+        incident.discipline = best_category  # type: ignore[assignment]
+        incident.vlm_summary = best_summary  # type: ignore[assignment]
+        incident.issue_priority = best_priority  # type: ignore[assignment]
+        incident.status = "Completed"  # type: ignore[assignment]
+        print(f"  [✓] Incident {incident_id} -> {best_category} | {best_priority} (confidence: {best_confidence:.2f})")
+
+    db.commit()
+"""
+
+def process_single_photo(photo: PhotoReport, db: Session):
+    """Processes a single photo and updates both the Photo and the Parent Incident."""
+    file_path = resolve_local_image_path(photo)
+    description = getattr(photo, "user_context", "Not provided")
+    incident_id = photo.incident_id
+
+    #if no photos exit early
+    if not file_path or not os.path.exists(file_path):
+        print(f"[!] File not found for photo {photo.evidence_id}: {file_path}")
+        photo.photo_report_status = "Error: File Missing"   # type: ignore[assignment]
+        db.commit()
+        return None
+
+    #Lock the photo_report
+    photo.photo_report_status = "In-Progress"       # type: ignore[assignment]
+    db.commit()
+    print(f"[*] Photo {photo.evidence_id} (Incident {incident_id}) locked as In-Progress")
+
+    try:
+        # call identify_object for this photo_report
+        raw_response, confidence = identify_objects(
+            file_path, 
+            DISCIPLINES, 
+            user_description=description
+        )
+        parsed = parse_classification(raw_response)
+        discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
+
+        # Build a richer text representation for grouping.
+        # This lets the embedding capture:
+        # - the predicted discipline
+        # - the short model summary
+        # - the commuter's text description
+        
+        embedding_instruction = (
+            f"Task: Grouping maintenance photos from different angles. "
+            f"Physical Asset: {parsed['vlm_summary']}. "
+            f"Location Context: {parsed['discipline']} area. "
+            f"Instruction: Identify the specific physical asset and scene. "
+            f"Focus on spatial surroundings and object geometry. "
+            f"Ignore lighting, blur, or camera quality."
+        )
+
+        print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
+        vector = generate_embedding(
+            text=embedding_instruction,
+            image_paths=[Path(file_path)]
+        )
+
+        # 4. GROUPING LOGIC
+        # Try to match this photo to an existing incident using:
+        # - embedding similarity
+        # - same discipline bucket
+        # - threshold-based reuse
+        incident_match_id, match_score = find_matching_incident(
+            db,
+            new_embedding=vector,
+            discipline=discipline
+        )
+
+        if incident_match_id:
+            # 4.1 Store the original incident ID created at upload time
+            original_incident_id = photo.incident_id
+
             print(
-                f"  [✓] Updated Incident {target_incident_id} -> "
-                f"{best_parsed['discipline']} | {best_parsed['issue_priority']}"
+                f"  [+] Match found! Moving photo to Incident "
+                f"{incident_match_id} (score={match_score:.3f})"
             )
 
-        else:
-            print(f"  [-] Incident {target_incident_id} already has a higher-confidence classification. Skipping update.")
+            # 4.2 Re-assign the photo to the matched existing incident
+            photo.incident_id = incident_match_id
+            db.commit()  # Commit the move first
 
-        # Propagate resolved location to incident if it hasn't been set yet
-        current_inc_loc = getattr(incident, "location_id", None)
-        if current_inc_loc == "Assign-Me-Via-Geolocation" or current_inc_loc is None:
-            incident.location_id = best_location
+            # 4.3 CLEANUP: Delete the original incident if it is now empty
+            # This prevents placeholder / ghost incidents from showing up.
+            db.execute(
+                text("""
+                    DELETE FROM incidents
+                    WHERE incident_id = :old_id
+                    AND NOT EXISTS (
+                        SELECT 1 FROM photo_reports WHERE incident_id = :old_id
+                    )
+                """),
+                {"old_id": original_incident_id}
+            )
             db.commit()
-            print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
+ 
+        else:
+            print(f"  [-] No match. Best score was {match_score}")
+
+        # 5. Update the PhotoReport specific fields
+        photo.vlm_summary = parsed["vlm_summary"]
+        photo.photo_report_discipline = parsed["discipline"]
+        photo.embedding = vector
+        photo.found_priority = parsed["issue_priority"]
+        photo.photo_report_status = "Completed"     # type: ignore[assignment]
+        photo.photo_report_confidence = confidence  # type: ignore[assignment]
+
+        db.commit()
+        print(f"  [+] Photo Result: {parsed['discipline']} (confidence: {confidence:.2f})")
+
+        # 6. Aggregate to the Incident level
+        # Use the photo's current incident_id because grouping may have
+        # reassigned the photo to a different incident above.
+        final_incident_id = photo.incident_id
+        incident = db.query(Incident).filter(Incident.incident_id == final_incident_id).first()
+
+        if incident:
+            # 6.1 If this photo is the first result for the incident, or it has
+            # higher confidence than the current incident summary, promote it.
+            if incident.discipline is None or confidence > getattr(incident, "best_confidence", -1.0):
+                incident.discipline = parsed["discipline"]
+                incident.vlm_summary = parsed["vlm_summary"]
+                incident.issue_priority = parsed["issue_priority"]
+
+                # Store a temporary confidence marker for choosing the best
+                # incident-level summary during processing.
+                setattr(incident, "best_confidence", confidence)
+
+                db.commit()
+                print(
+                    f"  [✓] Updated Incident {final_incident_id} -> "
+                    f"{parsed['discipline']} | {parsed['issue_priority']}"
+                )
+
+        return parsed | {"confidence": confidence}
+
+    except Exception as e:
+        print(f"[!] Error processing photo {photo.evidence_id}: {e}")
+        photo.photo_report_status = "Error: Inference Failed"       # type: ignore[assignment]
+        db.commit()
+        return None
     
-BATCH_SIZE = 10 
 
 def run_processor():
     print("[*] Initializing database foundation...")
@@ -346,28 +372,25 @@ def run_processor():
         db = SessionLocal()
         try:
             # Look for the next photo that hasn't been processed yet
-            pending = db.query(PhotoReport.submission_id)\
-                .filter(PhotoReport.photo_report_status == "New")\
-                .distinct()\
-                .limit(BATCH_SIZE)\
-                .all()
+            photo = db.query(PhotoReport).filter(PhotoReport.photo_report_status == "New").first()
 
-            if pending:
-                for (submission_id,) in pending:
-                    try:
-                        process_submission(submission_id, db)
-                    except Exception as e:
-                        print(f"[!] Error processing submission {submission_id}: {e}")
+            if photo:
+                print(f"[*] Processing Photo: {photo.evidence_id}")
+                process_single_photo(photo, db)
+                print(f"[*] Processed Photo: {photo.evidence_id}")
+                
+                #if result:
+                    # Optional: Update the parent Incident based on this new info
+                    #update_parent_incident(photo.incident_id, db)
                 
             else:
-                print("[~] No new submissions. Waiting...")
-                time.sleep(10)
-        except Exception as e:
-            print(f"[!] Processor error: {e}")
-            time.sleep(5)
+                print("[~] No new photos. Waiting...")
 
+        # ... error handling ...
         finally:
             db.close()
+        time.sleep(10)
+
 
 
 if __name__ == "__main__":
