@@ -1,12 +1,15 @@
+from datetime import timedelta
 from math import sqrt
 from sqlalchemy.orm import Session
-from src.backend.database import PhotoReport, _USE_SQLITE
+from src.backend.database import PhotoReport, Incident, _USE_SQLITE
 
 # Minimum cosine similarity required to attach a new report to an existing incident
 # instead of leaving it separate.
 # Higher threshold = stricter grouping, fewer accidental merges.
 GROUPING_THRESHOLD = 0.94
 
+# Time-Window Constant
+GROUPING_TIME_WINDOW_HOURS = 24
 
 def _cosine_similarity_fallback(vec_a, vec_b) -> float:
     """
@@ -46,15 +49,25 @@ def _cosine_similarity_fallback(vec_a, vec_b) -> float:
     return dot / (norm_a * norm_b)
 
 
-def _get_best_match_postgres(db: Session, new_embedding, discipline: str):
+def _get_best_match_postgres(
+    db: Session,
+    new_embedding,
+    discipline: str,
+    location_id: str,
+    submitted_at,
+    time_window_hours: int,
+):
     """
     Postgres/pgvector path: ask the database for the nearest candidate
-    by cosine distance.
+    by cosine distance, but only within the same discipline, location,
+    and recent time window.
 
     Returns:
     - (incident_id, cosine_distance) for the best candidate
     - None if no candidates exist
     """
+    window_start = submitted_at - timedelta(hours=time_window_hours)
+
     distance_expr = PhotoReport.embedding.cosine_distance(new_embedding).label("distance")
 
     return (
@@ -62,12 +75,22 @@ def _get_best_match_postgres(db: Session, new_embedding, discipline: str):
         .filter(PhotoReport.photo_report_discipline == discipline)
         .filter(PhotoReport.embedding.isnot(None))
         .filter(PhotoReport.photo_report_status == "Completed")
+        .filter(PhotoReport.photo_location_id == location_id)
+        .filter(PhotoReport.submitted_at >= window_start)
+        .filter(PhotoReport.submitted_at <= submitted_at)
         .order_by(distance_expr.asc())
         .first()
     )
 
 
-def _get_best_match_sqlite(db: Session, new_embedding, discipline: str):
+def _get_best_match_sqlite(
+    db: Session,
+    new_embedding,
+    discipline: str,
+    location_id: str,
+    submitted_at,
+    time_window_hours: int,
+):
     """
     SQLite/test path: compute the best similarity in Python because the embedding
     column is JSON in SQLite and does not support pgvector operators.
@@ -76,18 +99,22 @@ def _get_best_match_sqlite(db: Session, new_embedding, discipline: str):
     - (incident_id, cosine_similarity) for the best candidate
     - None if no candidates exist
     """
+    window_start = submitted_at - timedelta(hours=time_window_hours)
+
     candidates = (
         db.query(PhotoReport)
         .filter(PhotoReport.photo_report_discipline == discipline)
         .filter(PhotoReport.embedding.isnot(None))
         .filter(PhotoReport.photo_report_status == "Completed")
+        .filter(PhotoReport.photo_location_id == location_id)
+        .filter(PhotoReport.submitted_at >= window_start)
+        .filter(PhotoReport.submitted_at <= submitted_at)
         .all()
     )
 
     best_incident_id = None
     best_score = -1.0
 
-    # Compare the new embedding against each stored embedding
     for candidate in candidates:
         score = _cosine_similarity_fallback(new_embedding, candidate.embedding)
 
@@ -105,10 +132,13 @@ def find_matching_incident(
     db: Session,
     new_embedding,
     discipline: str,
-    user_context: str | None = None,    # user_context is kept in the signature for future grouping filters
-                                        # such as text/location/time-aware matching refinements
+    user_context: str | None = None,
+    location_id: str | None = None,
+    submitted_at=None,
     threshold: float = GROUPING_THRESHOLD,
+    time_window_hours: int = GROUPING_TIME_WINDOW_HOURS,
 ):
+    
     """
     Try to group a newly processed photo into an existing incident.
 
@@ -124,6 +154,10 @@ def find_matching_incident(
     - (None, score) if candidates were checked but none passed threshold
     - (None, None) if grouping could not be attempted
     """
+
+    # We need both location and time to apply the narrower historical query
+    if not location_id or submitted_at is None:
+        return None, None
     # If we have no embedding, we cannot do similarity-based grouping
     if new_embedding is None:
         return None, None
@@ -134,7 +168,14 @@ def find_matching_incident(
 
     # SQLite/test path: compute similarity in Python because SQLite stores embeddings as JSON
     if _USE_SQLITE:
-        best_match = _get_best_match_sqlite(db, new_embedding, discipline)
+        best_match = _get_best_match_sqlite(
+            db,
+            new_embedding,
+            discipline,
+            location_id,
+            submitted_at,
+            time_window_hours,
+        )
 
         # If no candidates exist at all, create a new incident
         if best_match is None:
@@ -150,7 +191,14 @@ def find_matching_incident(
         return None, best_score
 
     # Postgres path: let the database find the nearest candidate by cosine distance
-    best_match = _get_best_match_postgres(db, new_embedding, discipline)
+    best_match = _get_best_match_postgres(
+        db,
+        new_embedding,
+        discipline,
+        location_id,
+        submitted_at,
+        time_window_hours,
+    )
 
     # If no candidates exist at all, return "no match"
     if best_match is None:
