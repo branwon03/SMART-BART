@@ -11,7 +11,6 @@ from google.genai import types
 from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
-from typing import cast
 from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
@@ -239,19 +238,13 @@ def process_single_photo(photo: PhotoReport, db: Session):
         #
         # Exclude the current photo report so it cannot self-match after being
         # marked Completed and committed above.
-
-        # Mypy sees some SQLAlchemy model fields as Column[str] instead of plain
-        # Python values, so cast them here before passing into grouping helpers.
-        photo_location_id = cast(str | None, photo.photo_location_id)
-        photo_evidence_id = cast(str | None, photo.evidence_id)
-
         incident_match_id, match_score = find_matching_incident(
             db,
             new_embedding=vector,
             discipline=discipline,
-            location_id=photo_location_id,
+            location_id=photo.photo_location_id,
             submitted_at=photo.submitted_at,
-            exclude_evidence_id=photo_evidence_id,
+            exclude_evidence_id=photo.evidence_id,
         )
 
         if incident_match_id:
@@ -360,9 +353,6 @@ def process_single_photo(photo: PhotoReport, db: Session):
         return None
 
 
-BATCH_SIZE = 10
-
-
 def run_processor():
     print("[*] Initializing database foundation...")
     try:
@@ -401,32 +391,13 @@ def run_processor():
                 # Optional: Update the parent Incident based on this new info
                 # update_parent_incident(photo.incident_id, db)
 
-            photos = (
-                db.query(PhotoReport)
-                .filter(PhotoReport.photo_report_status == "New")
-                .with_for_update(skip_locked=True)
-                .limit(BATCH_SIZE)
-                .all()
-            )
-
-            if photos:
-                for photo in photos:
-                    try:
-                        print(f"[*] Processing Photo: {photo.evidence_id}")
-                        process_single_photo(photo, db)
-                        print(f"[*] Processed Photo: {photo.evidence_id}")
-                    except Exception as e:
-                        print(f"[!] Error processing photo {photo.evidence_id}: {e}")
-
             else:
                 print("[~] No new photos. Waiting...")
-                time.sleep(10)
-        except Exception as e:
-            print(f"[!] Processor error: {e}")
-            time.sleep(5)
 
+        # ... error handling ...
         finally:
             db.close()
+        time.sleep(10)
 
 
 if __name__ == "__main__":
