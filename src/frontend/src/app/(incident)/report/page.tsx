@@ -170,7 +170,7 @@ export default function ImageUpload() {
         <div className="flex flex-col items-center w-full pt-4 flex-1">
           
           <div className="bg-[#D1D5DB] text-black text-sm py-5 px-8 text-center w-[85%] mb-8">
-            Please upload one or more images of the identified incident. You will be prompted to enter your name, contact information, and additional incident context on the next page.
+            Please upload one or more images of the identified incident. You will be prompted to enter your name, contact information, and additional incident context on the next page. All faces featured in uploaded images will be blurred.
           </div>
 
           <div className={`w-[85%] aspect-[3/4] border-[4px] ${imageError ? 'border-red-500 bg-red-50' : 'border-[#0099D8] bg-[#D1D5DB]'} relative flex items-center justify-center mb-6 transition-colors`}>
