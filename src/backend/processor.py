@@ -235,12 +235,16 @@ def process_single_photo(photo: PhotoReport, db: Session):
         # - same discipline bucket
         # - same location
         # - threshold-based reuse
+        #
+        # Exclude the current photo report so it cannot self-match after being
+        # marked Completed and committed above.
         incident_match_id, match_score = find_matching_incident(
             db,
             new_embedding=vector,
             discipline=discipline,
             location_id=photo.photo_location_id,
             submitted_at=photo.submitted_at,
+            exclude_evidence_id=photo.evidence_id,
         )
 
         if incident_match_id:
