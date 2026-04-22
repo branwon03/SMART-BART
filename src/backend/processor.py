@@ -11,6 +11,7 @@ from google.genai import types
 from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
+from typing import cast
 from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
@@ -238,13 +239,19 @@ def process_single_photo(photo: PhotoReport, db: Session):
         #
         # Exclude the current photo report so it cannot self-match after being
         # marked Completed and committed above.
+
+        # Mypy sees some SQLAlchemy model fields as Column[str] instead of plain
+        # Python values, so cast them here before passing into grouping helpers.
+        photo_location_id = cast(str | None, photo.photo_location_id)
+        photo_evidence_id = cast(str | None, photo.evidence_id)
+
         incident_match_id, match_score = find_matching_incident(
             db,
-            new_embedding=vector,
+            new_embedding=embedding_vector,
             discipline=discipline,
-            location_id=photo.photo_location_id,
+            location_id=photo_location_id,
             submitted_at=photo.submitted_at,
-            exclude_evidence_id=photo.evidence_id,
+            exclude_evidence_id=photo_evidence_id,
         )
 
         if incident_match_id:
