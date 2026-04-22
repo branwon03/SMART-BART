@@ -226,7 +226,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
 
         incident_match_id, match_score = find_matching_incident(
             db,
-            new_embedding=embedding_vector,
+            new_embedding=vector,
             discipline=discipline,
             location_id=photo_location_id,
             submitted_at=photo.submitted_at,
