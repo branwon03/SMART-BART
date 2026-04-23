@@ -1,6 +1,6 @@
 import src.backend.processor as processor
 from src.backend.processor import process_single_photo, run_processor
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch 
 from src.backend.database import Incident
 
 # 1. Setup global mocks
