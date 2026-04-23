@@ -1,6 +1,9 @@
 import type { Incident } from "../types/api";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
+import { DisciplineSummary } from "./DisciplineSummary";
+
+
 
 type IncidentsTableProps = {
   activeTab: string;
@@ -8,6 +11,13 @@ type IncidentsTableProps = {
   selectedIncidentId: string | null;
   now: Date;
   onSelectIncident: (incident: Incident) => void;
+};
+
+export type DisciplineStat = {
+  discipline: string;
+  first_report: string | null;
+  last_report: string | null;
+  total_count: number;
 };
 
 export function IncidentsTable({
@@ -26,7 +36,13 @@ export function IncidentsTable({
         >
           Actions <span>▼</span>
         </button>
+      <section>
+        
+        
+      </section>
+
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <DisciplineSummary activeTab={activeTab} />
           {filteredData.length} Total Records
         </div>
       </div>
