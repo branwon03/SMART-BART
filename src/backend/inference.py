@@ -60,9 +60,11 @@ def generate_embedding(text: str, image_paths: list[Path] | None = None):
 
     try:
         # Generate the embedding
+        content = types.Content(role="user", parts=parts)
+        
         result = _get_genai_client().models.embed_content(
             model=EMBEDDING_MODEL_ID,
-            contents=parts,
+            contents=content,
             config=types.EmbedContentConfig(task_type="CLASSIFICATION")
         )
 
