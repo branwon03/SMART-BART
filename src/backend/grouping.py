@@ -10,7 +10,7 @@ GROUPING_THRESHOLD = 0.94
 
 # Only compare against recent reports from the same location.
 # This helps reduce accidental matches to old historical incidents.
-GROUPING_TIME_WINDOW_HOURS = 24
+GROUPING_TIME_WINDOW_HOURS = 48
 
 # Only group into incidents that are still active.
 # This prevents a new report from being attached to an old closed/completed incident.
