@@ -289,6 +289,7 @@ def process_single_photo(photo: PhotoReport, db: Session):
         db.commit()
         return None
     
+BATCH_SIZE = 10 
 
 def run_processor():
     print("[*] Initializing database foundation...")
@@ -313,24 +314,30 @@ def run_processor():
         db = SessionLocal()
         try:
             # Look for the next photo that hasn't been processed yet
-            photo = db.query(PhotoReport).filter(PhotoReport.photo_report_status == "New").first()
+            photos = db.query(PhotoReport)\
+                .filter(PhotoReport.photo_report_status == "New")\
+                .with_for_update(skip_locked=True)\
+                .limit(BATCH_SIZE)\
+                .all()
 
-            if photo:
-                print(f"[*] Processing Photo: {photo.evidence_id}")
-                process_single_photo(photo, db)
-                print(f"[*] Processed Photo: {photo.evidence_id}")
-                
-                #if result:
-                    # Optional: Update the parent Incident based on this new info
-                    #update_parent_incident(photo.incident_id, db)
-                
+            if photos:
+                for photo in photos:
+                    try:
+                        print(f"[*] Processing Photo: {photo.evidence_id}")
+                        process_single_photo(photo, db)
+                        print(f"[*] Processed Photo: {photo.evidence_id}")
+                    except Exception as e:
+                        print(f"[!] Error processing photo {photo.evidence_id}: {e}")
+
             else:
                 print("[~] No new photos. Waiting...")
+                time.sleep(10)
+        except Exception as e:
+            print(f"[!] Processor error: {e}")
+            time.sleep(5)
 
-        # ... error handling ...
         finally:
             db.close()
-        time.sleep(10)
 
 
 if __name__ == "__main__":
