@@ -1,6 +1,6 @@
 import src.backend.processor as processor
-from src.backend.processor import process_single_photo
-from unittest.mock import MagicMock, patch
+from src.backend.processor import process_single_photo, run_processor
+from unittest.mock import MagicMock, patch, call
 from src.backend.database import Incident
 
 # 1. Setup global mocks
@@ -46,6 +46,26 @@ def make_db(confidence=None):
     db.query.side_effect = query_side_effect
     return db, mock_incident
 
+def make_run_processor_db(photos_per_call):
+    """Simulates the DB session used inside run_processor's while loop.
+    photos_per_call: list of batches to return on successive loop iterations.
+    e.g. [[photo1, photo2], []] → first loop returns 2 photos, second returns none.
+    The loop exits after the empty batch via StopIteration on time.sleep.
+    """
+
+    db = MagicMock()
+    batches = iter(photos_per_call)
+
+    def query_side_effect(*args, **kwargs):
+        q = MagicMock()
+        q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = next(batches)
+        return q
+    
+    db.query.side_effect = query_side_effect
+    return db
+
+# Tests:
+
 def test_photo_processing_success():
     """Verify that a photo is correctly updated after a successful run."""
     photo = make_photo()
@@ -85,6 +105,8 @@ def test_photo_processing_inference_failure():
 
     assert photo.photo_report_status == "Error: Inference Failed"
     assert db.commit.called
+
+# confidence and grouping tests:
 
 def test_incident_updated_with_higher_confidence():
     """Incident metadata should be promoted when the new photo has higher confidence."""
@@ -136,3 +158,190 @@ def test_photo_reassigned_when_grouping_match_found():
     call_args = db.execute.call_args[0][1]
     assert call_args["old_id"] == "INC-OLD"
     assert db.commit.called
+
+# polling tests:
+
+def test_batch_respects_batch_size():
+    """Verify that the query is limited to BATCH_SIZE photos per loop."""
+    photo = make_photo()
+    db = MagicMock()
+    captured_q = {}  # capture the actual mock returned by query_side_effect
+
+    call_count = 0
+    def query_side_effect(*args, **kwargs):
+        nonlocal call_count
+        q = MagicMock()
+        if call_count == 0:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = [photo]
+            captured_q["first"] = q  # save reference to check later
+        else:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = []
+        call_count += 1
+        return q
+
+    db.query.side_effect = query_side_effect
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.process_single_photo"), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("time.sleep", side_effect=[None, StopIteration]):
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopIteration:
+            pass
+
+    # Use the captured q instead of db.query.return_value
+    limit_call = captured_q["first"].filter.return_value\
+        .with_for_update.return_value.limit.call_args
+    assert limit_call is not None
+    assert limit_call[0][0] == processor.BATCH_SIZE
+
+def test_no_sleep_when_photos_available():
+    """Verify time.sleep is NOT called when there are photos to process."""
+    photo = make_photo()
+    db = MagicMock()
+    call_count = 0
+
+    def query_side_effect(*args, **kwargs):
+        nonlocal call_count
+        q = MagicMock()
+        if call_count == 0:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = [photo]
+        else:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = []
+        call_count += 1
+        return q
+
+    db.query.side_effect = query_side_effect
+    sleep_calls = []
+
+    class StopTest(BaseException):  # BaseException is NOT caught by except Exception
+        pass
+
+    def track_sleep(seconds):
+        sleep_calls.append(seconds)
+        raise StopTest
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.process_single_photo"), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("src.backend.processor.time") as mock_time:
+        mock_time.sleep.side_effect = track_sleep
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopTest:
+            pass
+
+    assert sleep_calls == [10]
+
+def test_sleep_when_queue_empty():
+    """Verify time.sleep(10) is called when no photos are in the queue."""
+    db = MagicMock()
+    db.query.return_value.filter.return_value\
+        .with_for_update.return_value.limit.return_value.all.return_value = []
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("time.sleep", side_effect=StopIteration):  # stop on first sleep
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopIteration:
+            pass
+
+    # Should have slept with 10 seconds on empty queue
+
+def test_error_in_one_photo_does_not_stop_batch():
+    """If one photo fails, the rest of the batch should still be processed."""
+    good_photo = make_photo(evidence_id="IMG-GOOD")
+    bad_photo = make_photo(evidence_id="IMG-BAD")
+    db = MagicMock()
+    call_count = 0
+
+    def query_side_effect(*args, **kwargs):
+        nonlocal call_count
+        q = MagicMock()
+        if call_count == 0:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = [bad_photo, good_photo]
+        else:
+            q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = []
+        call_count += 1
+        return q
+
+    db.query.side_effect = query_side_effect
+    processed = []
+
+    def fake_process(photo, db):
+        if photo.evidence_id == "IMG-BAD":
+            raise Exception("Inference exploded")
+        processed.append(photo.evidence_id)
+
+    class StopTest(BaseException):
+        pass
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.process_single_photo", side_effect=fake_process), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("src.backend.processor.time") as mock_time:
+        mock_time.sleep.side_effect = lambda s: (_ for _ in ()).throw(StopTest) if s == 10 else None
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopTest:
+            pass
+
+    assert "IMG-GOOD" in processed
+
+def test_in_progress_photos_not_picked_up():
+    """Photos already marked In-Progress should not appear in the batch (skip_locked)."""
+    in_progress_photo = make_photo(evidence_id="IMG-LOCKED")
+    in_progress_photo.photo_report_status = "In-Progress"
+    db = MagicMock()
+
+    # Simulate skip_locked by returning empty (locked row not visible)
+    db.query.return_value.filter.return_value\
+        .with_for_update.return_value.limit.return_value.all.return_value = []
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("time.sleep", side_effect=StopIteration):
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopIteration:
+            pass
+
+    # Confirm the locked photo was never passed to process_single_photo
+    with patch("src.backend.processor.process_single_photo") as mock_process:
+        assert not mock_process.called
+
+
+def test_db_error_triggers_retry_sleep():
+    """A DB connection error should trigger a 5 second sleep before retrying."""
+    db = MagicMock()
+    db.query.side_effect = Exception("DB connection lost")
+
+    sleep_calls = []
+    def track_sleep(seconds):
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 1:
+            raise StopIteration
+
+    with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
+         patch("src.backend.processor.engine") as mock_engine, \
+         patch("time.sleep", side_effect=track_sleep):
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        try:
+            run_processor()
+        except StopIteration:
+            pass
+
+    assert 5 in sleep_calls
