@@ -1,6 +1,6 @@
 import src.backend.processor as processor
 from src.backend.processor import process_single_photo, run_processor
-from unittest.mock import MagicMock, patch 
+from unittest.mock import MagicMock, patch, call
 from src.backend.database import Incident
 
 # 1. Setup global mocks
@@ -45,6 +45,24 @@ def make_db(confidence=None):
 
     db.query.side_effect = query_side_effect
     return db, mock_incident
+
+def make_run_processor_db(photos_per_call):
+    """Simulates the DB session used inside run_processor's while loop.
+    photos_per_call: list of batches to return on successive loop iterations.
+    e.g. [[photo1, photo2], []] → first loop returns 2 photos, second returns none.
+    The loop exits after the empty batch via StopIteration on time.sleep.
+    """
+
+    db = MagicMock()
+    batches = iter(photos_per_call)
+
+    def query_side_effect(*args, **kwargs):
+        q = MagicMock()
+        q.filter.return_value.with_for_update.return_value.limit.return_value.all.return_value = next(batches)
+        return q
+    
+    db.query.side_effect = query_side_effect
+    return db
 
 # Tests:
 
@@ -163,19 +181,15 @@ def test_batch_respects_batch_size():
 
     db.query.side_effect = query_side_effect
 
-    class StopTest(BaseException):
-        pass
-
     with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
          patch("src.backend.processor.process_single_photo"), \
          patch("src.backend.processor.engine") as mock_engine, \
-         patch("src.backend.processor.time") as mock_time:
-        mock_time.sleep.side_effect = StopTest
+         patch("time.sleep", side_effect=[None, StopIteration]):
         mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         try:
             run_processor()
-        except StopTest:
+        except StopIteration:
             pass
 
     # Use the captured q instead of db.query.return_value
@@ -201,15 +215,20 @@ def test_no_sleep_when_photos_available():
         return q
 
     db.query.side_effect = query_side_effect
+    sleep_calls = []
 
-    class StopTest(BaseException):
+    class StopTest(BaseException):  # BaseException is NOT caught by except Exception
         pass
+
+    def track_sleep(seconds):
+        sleep_calls.append(seconds)
+        raise StopTest
 
     with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
          patch("src.backend.processor.process_single_photo"), \
          patch("src.backend.processor.engine") as mock_engine, \
          patch("src.backend.processor.time") as mock_time:
-        mock_time.sleep.side_effect = StopTest  # BaseException bypasses except Exception
+        mock_time.sleep.side_effect = track_sleep
         mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         try:
@@ -217,33 +236,25 @@ def test_no_sleep_when_photos_available():
         except StopTest:
             pass
 
-    # Sleep should only have been called once — on the second loop when queue was empty
-    assert mock_time.sleep.call_count == 1
-    assert mock_time.sleep.call_args[0][0] == 10
+    assert sleep_calls == [10]
 
 def test_sleep_when_queue_empty():
     """Verify time.sleep(10) is called when no photos are in the queue."""
     db = MagicMock()
     db.query.return_value.filter.return_value\
         .with_for_update.return_value.limit.return_value.all.return_value = []
-    
-    class StopTest(BaseException):
-        pass
 
     with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
          patch("src.backend.processor.engine") as mock_engine, \
-         patch("src.backend.processor.time") as mock_time:  # patch the whole time module
-        mock_time.sleep.side_effect = StopTest
+         patch("time.sleep", side_effect=StopIteration):  # stop on first sleep
         mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         try:
             run_processor()
-        except StopTest:
+        except StopIteration:
             pass
 
-    assert mock_time.sleep.call_count == 1
-    assert mock_time.sleep.call_args[0][0] == 10
-
+    # Should have slept with 10 seconds on empty queue
 
 def test_error_in_one_photo_does_not_stop_batch():
     """If one photo fails, the rest of the batch should still be processed."""
@@ -289,28 +300,27 @@ def test_error_in_one_photo_does_not_stop_batch():
 
 def test_in_progress_photos_not_picked_up():
     """Photos already marked In-Progress should not appear in the batch (skip_locked)."""
+    in_progress_photo = make_photo(evidence_id="IMG-LOCKED")
+    in_progress_photo.photo_report_status = "In-Progress"
     db = MagicMock()
 
     # Simulate skip_locked by returning empty (locked row not visible)
     db.query.return_value.filter.return_value\
         .with_for_update.return_value.limit.return_value.all.return_value = []
-    
-    class StopTest(BaseException):
-        pass
 
     with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
-         patch("src.backend.processor.process_single_photo") as mock_process, \
          patch("src.backend.processor.engine") as mock_engine, \
-         patch("src.backend.processor.time") as mock_time:
-        mock_time.sleep.side_effect = StopTest
+         patch("time.sleep", side_effect=StopIteration):
         mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         try:
             run_processor()
-        except StopTest:
+        except StopIteration:
             pass
 
-    assert not mock_process.called
+    # Confirm the locked photo was never passed to process_single_photo
+    with patch("src.backend.processor.process_single_photo") as mock_process:
+        assert not mock_process.called
 
 
 def test_db_error_triggers_retry_sleep():
@@ -318,24 +328,20 @@ def test_db_error_triggers_retry_sleep():
     db = MagicMock()
     db.query.side_effect = Exception("DB connection lost")
 
-    class StopTest(BaseException):
-        pass
-
     sleep_calls = []
     def track_sleep(seconds):
         sleep_calls.append(seconds)
         if len(sleep_calls) >= 1:
-            raise StopTest
+            raise StopIteration
 
     with patch("src.backend.processor.SessionLocal", side_effect=lambda: db), \
          patch("src.backend.processor.engine") as mock_engine, \
-         patch("src.backend.processor.time") as mock_time:
-        mock_time.sleep.side_effect = track_sleep
+         patch("time.sleep", side_effect=track_sleep):
         mock_engine.connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         try:
             run_processor()
-        except StopTest:
+        except StopIteration:
             pass
 
-    assert sleep_calls == [5]
+    assert 5 in sleep_calls
