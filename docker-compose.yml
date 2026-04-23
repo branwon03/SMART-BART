@@ -36,7 +36,9 @@ services:
         condition: service_healthy
 
   processor:
-    build: . 
+    build: .
+    deploy:
+      replicas: 2
     restart: unless-stopped
     command: python -m src.backend.processor
     env_file: .env
