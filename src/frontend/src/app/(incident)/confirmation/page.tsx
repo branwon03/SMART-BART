@@ -36,7 +36,7 @@ export default function Confirmation() {
             </button>
           </Link>
 
-          <Link href="/" className="mb-12">
+          <Link href="/report" className="mb-12">
             <button className="bg-[#0099D8] text-white font-bold py-2.5 px-10 text-[16px] border-[2px] border-gray-300 shadow-[2px_2px_0_0_#9CA3AF] hover:bg-[#007AB8] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#9CA3AF] transition-all">
               Close
             </button>

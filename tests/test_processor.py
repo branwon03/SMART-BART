@@ -25,7 +25,7 @@ def make_photo(evidence_id="IMG-001", image_url=None, incident_id="INC-123", sub
     # Ensure these start as None so we can track updates
     photo.photo_report_discipline = None
     photo.found_priority = None
-    photo.photo_report_confidence = None
+    photo.photo_report_confidence = None 
     return photo
 
 def make_db(photos=None, confidence=None):

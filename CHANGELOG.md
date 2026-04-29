@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.13.0 (2026-04-16)
+
+### Features
+
+- Update processor and added unit tests
+  ([`8910b6f`](https://github.com/cse120-ucm/S26-CSE-312/commit/8910b6f68f85d3939e331dc64386e8d6777c559a))
+
+- Updated Processor and Test File
+  ([`edad84d`](https://github.com/cse120-ucm/S26-CSE-312/commit/edad84d0e10ace5119137af0c9669061e6a92756))
+
+- Updated processor and test file
+  ([`ec750ec`](https://github.com/cse120-ucm/S26-CSE-312/commit/ec750ecb6abc2811f2a2460c9044c13db14e6286))
+
+
 ## v0.12.0 (2026-04-09)
 
 ### Features
