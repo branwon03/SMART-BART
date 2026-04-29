@@ -35,6 +35,14 @@ services:
       db:
         condition: service_healthy
 
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bart-mobile-tunnel
+    command: tunnel --url http://host.docker.internal:3001
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   processor:
     build: . 
     restart: unless-stopped
