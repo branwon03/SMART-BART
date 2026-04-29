@@ -16,6 +16,7 @@ from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
+from src.backend.gps_lookup import get_nearest_station_local
  
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -177,7 +178,17 @@ def process_submission(submission_id: str, db: Session):
             db.commit()
             continue
 
-        photo.photo_report_status = "In-Progress"       # type: ignore[assignment]
+        # Check if geolocation is needed
+        if photo.photo_location_id == "Assign-Me-Via-Geolocation":
+            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
+            found_location = get_nearest_station_local(file_path)
+        else:
+            # Keep the manually provided ID (e.g., from a dropdown or user selection)
+            found_location = photo.photo_location_id
+            print(f"[*] Using provided location ID: {found_location}")
+ 
+        photo.photo_location_id = found_location  # type: ignore[assignment]
+        photo.photo_report_status = "In-Progress"  # type: ignore[assignment]
         db.commit()
 
         try:
@@ -188,7 +199,7 @@ def process_submission(submission_id: str, db: Session):
                 user_description=description
             )
             parsed = parse_classification(raw_response)
-            #discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
+            discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
         
             embedding_instruction = (
                 f"Task: Grouping maintenance photos from different angles. "
@@ -214,7 +225,7 @@ def process_submission(submission_id: str, db: Session):
             photo.photo_report_confidence = confidence  # type: ignore[assignment]
 
             db.commit()
-            results.append((photo, parsed, confidence, vector))
+            results.append((photo, parsed, confidence, vector, found_location))
             print(f"  [+] Classified {photo.evidence_id}: {parsed['discipline']} (conf: {confidence:.2f})")
 
         except Exception as e:
@@ -231,7 +242,7 @@ def process_submission(submission_id: str, db: Session):
     # "representative" signal for similarity search. This means one strong
     # photo can anchor the whole submission to an existing incident.
 
-    best_photo, best_parsed, best_confidence, best_vector = max(results, key=lambda x: x[2])
+    best_photo, best_parsed, best_confidence, best_vector, best_location = max(results, key=lambda x: x[2])
 
     target_incident_id, match_score = find_matching_incident(
         db,
@@ -250,7 +261,7 @@ def process_submission(submission_id: str, db: Session):
 
     # --- Phase 3: Assign every photo to the target incident ---
 
-    for photo, parsed, confidence, vector in results:
+    for photo, parsed, confidence, vector, found_location in results:
         original_incident_id = photo.incident_id
 
         if photo.incident_id != target_incident_id:
@@ -303,6 +314,13 @@ def process_submission(submission_id: str, db: Session):
 
         else:
             print(f"  [-] Incident {target_incident_id} already has a higher-confidence classification. Skipping update.")
+
+        # Propagate resolved location to incident if it hasn't been set yet
+        current_inc_loc = getattr(incident, "location_id", None)
+        if current_inc_loc == "Assign-Me-Via-Geolocation" or current_inc_loc is None:
+            incident.location_id = best_location
+            db.commit()
+            print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
     
 BATCH_SIZE = 10 
 
