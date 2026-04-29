@@ -7,6 +7,7 @@ from sqlalchemy import func, text
 from src.backend.database import Base, engine, SessionLocal, PhotoReport
 from dotenv import load_dotenv
 from google import genai
+from typing import cast
 from google.genai import types
 from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
@@ -236,9 +237,9 @@ def process_submission(submission_id: str, db: Session):
         db,
         new_embedding=best_vector,
         discipline=best_parsed["discipline"],
-        location_id=best_photo.photo_location_id,
+        location_id=cast(str | None, best_photo.photo_location_id),
         submitted_at=best_photo.submitted_at,
-        exclude_evidence_id=best_photo.evidence_id,
+        exclude_evidence_id=cast(str | None, best_photo.evidence_id),
     )
 
     if target_incident_id:
