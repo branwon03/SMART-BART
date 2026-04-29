@@ -234,7 +234,14 @@ def process_submission(submission_id: str, db: Session):
 
     best_photo, best_parsed, best_confidence, best_vector = max(results, key=lambda x: x[2])
 
-    target_incident_id, match_score = find_matching_incident(db, new_embedding=best_vector, discipline=best_parsed["discipline"])
+    target_incident_id, match_score = find_matching_incident(
+        db,
+        new_embedding=best_vector,
+        discipline=best_parsed["discipline"],
+        location_id=cast(str | None, best_photo.photo_location_id),
+        submitted_at=best_photo.submitted_at,
+        exclude_evidence_id=cast(str | None, best_photo.evidence_id),
+    )
 
     if target_incident_id:
         print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}")
