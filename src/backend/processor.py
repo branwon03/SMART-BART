@@ -199,7 +199,6 @@ def process_submission(submission_id: str, db: Session):
                 user_description=description
             )
             parsed = parse_classification(raw_response)
-            discipline = parsed["discipline"] #need to extract this so we can sort by discpline for grouping
         
             embedding_instruction = (
                 f"Task: Grouping maintenance photos from different angles. "
