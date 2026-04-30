@@ -208,7 +208,7 @@ export default function UserContext() {
             )}
           </button>
 
-          <Link href="/report" className="pb-8 shrink-0">
+          <Link href="/" className="pb-8 shrink-0">
             <div className="bg-[#D1D5DB] border-2 border-gray-300 w-16 h-10 flex items-center justify-center cursor-pointer shadow-[2px_2px_0_0_#9CA3AF] hover:bg-gray-400 hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#9CA3AF] transition-all">
               <ArrowLeft size={24} className="text-black" strokeWidth={2.5} />
             </div>
