@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 class IncidentUpdate(BaseModel):
     issue_priority: str | None = None
     status: str | None = None
+    discipline: str | None = None
 
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -174,6 +175,8 @@ async def update_incident(
         setattr(row, "issue_priority", body.issue_priority)
     if body.status is not None:
         setattr(row, "status", body.status)
+    if body.discipline is not None:
+        setattr(row, "discipline", body.discipline)
 
     db.commit()
     db.refresh(row)

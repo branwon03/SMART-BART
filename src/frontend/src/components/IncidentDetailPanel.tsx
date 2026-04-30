@@ -7,6 +7,7 @@ import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
+import { RedirectIssueModal } from "./RedirectIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
 
 type IncidentDetailPanelProps = {
@@ -40,6 +41,7 @@ export function IncidentDetailPanel({
     setCurrentIndex((prev) => (prev === evidence.length - 1 ? 0 : prev + 1));
   };
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [redirectModalOpen, setRedirectModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   return (
@@ -114,6 +116,7 @@ export function IncidentDetailPanel({
             </button>
             <button
               type="button"
+              onClick={() => setRedirectModalOpen(true)}
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
             >
               Redirect
@@ -205,6 +208,17 @@ export function IncidentDetailPanel({
             onIncidentUpdated(updated);
           }}
           onCancel={() => setEditModalOpen(false)}
+        />
+      )}
+
+      {redirectModalOpen && (
+        <RedirectIssueModal
+          incident={incident}
+          onSave={(updated) => {
+            setRedirectModalOpen(false);
+            onIncidentUpdated(updated);
+          }}
+          onCancel={() => setRedirectModalOpen(false)}
         />
       )}
 
