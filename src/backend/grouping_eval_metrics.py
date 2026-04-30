@@ -21,7 +21,7 @@ High-level flow:
 import argparse
 import json
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 from itertools import combinations
 from pathlib import Path
 
@@ -40,6 +40,14 @@ EMBEDDING_CACHE_PATH = Path(".cache/grouping_eval_embeddings.jsonl")
 # These are useful artifacts for comparing threshold behavior.
 PREDICTIONS_OUT = Path("datasets/grouping_eval/grouping_eval_predictions.csv")
 METRICS_OUT = Path("datasets/grouping_eval/grouping_eval_metrics.csv")
+
+# Added location output paths
+PREDICTIONS_LOCATION_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_predictions_location_filtered.csv"
+)
+METRICS_LOCATION_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_metrics_location_filtered.csv"
+)
 
 
 def auto_set_google_credentials() -> None:
@@ -72,6 +80,10 @@ def load_eval_csv(path: Path) -> pd.DataFrame:
     df["line_number"] = pd.to_numeric(df["line_number"], errors="raise").astype(int)
     df["final_discipline"] = df["final_discipline"].astype(str).str.strip()
     df["true_group_id"] = df["true_group_id"].astype(str).str.strip()
+
+    # Clean photo_location_id when loading CSV
+    if "photo_location_id" in df.columns:
+        df["photo_location_id"] = df["photo_location_id"].fillna("").astype(str).str.strip()
 
     return df.sort_values("line_number").reset_index(drop=True)
 
@@ -252,8 +264,12 @@ def cosine_similarity(vec_a, vec_b) -> float:
 
     return float(_cosine_similarity_fallback(vec_a, vec_b))
 
-
-def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], threshold: float) -> pd.DataFrame:
+def predict_groups(
+    df: pd.DataFrame,
+    embeddings: dict[int, list[float]],
+    threshold: float,
+    location_filter: bool = False,
+) -> pd.DataFrame:
     """
     Offline version of the MVP grouping rule, means we are testing the grouping algorithm 
     on a saved labeled dataset instead of through the live frontend/backend.
@@ -278,6 +294,7 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
     for _, row in output.iterrows():
         line_number = int(row["line_number"])
         discipline = str(row["final_discipline"]).strip()
+        location_id = str(row.get("photo_location_id", "")).strip()
         embedding = embeddings.get(line_number)
 
         best_score = -1.0
@@ -288,6 +305,11 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
         # This avoids obvious false merges across unrelated maintenance teams.
         for candidate in previous_reports:
             if candidate["discipline"] != discipline:
+                continue
+            # Production-like location rule:
+            # if location metadata exists, require the same location.
+            # if the new row has no location, fall back to discipline-only comparison.
+            if location_filter and location_id and candidate.get("location_id") != location_id:
                 continue
 
             score = cosine_similarity(embedding, candidate["embedding"])
@@ -313,6 +335,7 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
             {
                 "line_number": line_number,
                 "discipline": discipline,
+                "location_id": location_id,
                 "embedding": embedding,
                 "pred_group_id": pred_group_id,
             }
@@ -408,7 +431,7 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
     }
 
 
-def evaluate(df: pd.DataFrame, threshold: float) -> dict:
+def evaluate(df: pd.DataFrame, threshold: float, location_filter: bool = False) -> dict:
     """
     Combine all evaluation metrics for one threshold value.
 
@@ -427,6 +450,13 @@ def evaluate(df: pd.DataFrame, threshold: float) -> dict:
         "true_groups_with_2_plus_images": int((true_sizes >= 2).sum()),
         "predicted_groups_with_2_plus_images": int((pred_sizes >= 2).sum()),
         "cluster_purity": cluster_purity(df),
+        "location_filter": location_filter,
+        "rows_with_location": int(df["photo_location_id"].astype(bool).sum())
+        if "photo_location_id" in df.columns
+        else 0,
+        "rows_missing_location": int((~df["photo_location_id"].astype(bool)).sum())
+        if "photo_location_id" in df.columns
+        else len(df),
     }
 
     metrics.update(pairwise_metrics(df))
@@ -510,9 +540,20 @@ def main() -> None:
     parser.add_argument("--sweep", action="store_true")
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--max-rows", type=int, default=None)
+    parser.add_argument("--location-filter", action="store_true")
     args = parser.parse_args()
 
     df = load_eval_csv(EVAL_CSV_PATH)
+    if args.location_filter and "photo_location_id" not in df.columns:
+        raise ValueError(
+            "--location-filter requires a real photo_location_id column in the eval CSV."
+        )
+
+    metrics_out = METRICS_LOCATION_OUT if args.location_filter else METRICS_OUT
+    predictions_out = (
+        PREDICTIONS_LOCATION_OUT if args.location_filter else PREDICTIONS_OUT
+    )
+    
 
     if args.max_rows:
         df = df.head(args.max_rows).copy()
@@ -529,32 +570,50 @@ def main() -> None:
         rows = []
 
         for threshold in parse_thresholds(args.thresholds):
-            predicted = predict_groups(df, embeddings, threshold)
-            metrics = evaluate(predicted, threshold)
+            predicted = predict_groups(
+                df,
+                embeddings,
+                threshold,
+                location_filter=args.location_filter,
+            )
+            metrics = evaluate(
+                predicted,
+                threshold,
+                location_filter=args.location_filter,
+            )
             rows.append(metrics)
 
         sweep_df = pd.DataFrame(rows)
-        METRICS_OUT.parent.mkdir(parents=True, exist_ok=True)
-        sweep_df.to_csv(METRICS_OUT, index=False)
+        metrics_out.parent.mkdir(parents=True, exist_ok=True)
+        sweep_df.to_csv(metrics_out, index=False)
 
         print("\n=== Threshold Sweep ===")
         print(sweep_df.to_string(index=False))
-        print(f"\nSaved metrics to: {METRICS_OUT}")
+        print(f"\nSaved metrics to: {metrics_out}")
 
         best = sweep_df.sort_values("pairwise_f1", ascending=False).iloc[0]
         print("\n=== Best Threshold by Pairwise F1 ===")
         print(best.to_string())
 
-    predicted = predict_groups(df, embeddings, args.threshold)
-    metrics = evaluate(predicted, args.threshold)
+    predicted = predict_groups(
+        df,
+        embeddings,
+        args.threshold,
+        location_filter=args.location_filter,
+    )
+    metrics = evaluate(
+        predicted,
+        args.threshold,
+        location_filter=args.location_filter,
+    )
 
     print_metrics(metrics)
     show_error_examples(predicted)
 
-    PREDICTIONS_OUT.parent.mkdir(parents=True, exist_ok=True)
-    predicted.to_csv(PREDICTIONS_OUT, index=False)
-
-    print(f"\nSaved predictions to: {PREDICTIONS_OUT}")
+    predictions_out.parent.mkdir(parents=True, exist_ok=True)
+    predicted.to_csv(predictions_out, index=False)
+    
+    print(f"\nSaved predictions to: {predictions_out}")
 
 
 if __name__ == "__main__":
