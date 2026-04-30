@@ -1,4 +1,22 @@
 from __future__ import annotations
+"""
+Offline grouping evaluation script for the BART incident grouping.
+
+This script does not change production grouping behavior. Instead, it uses a
+hand-labeled CSV with true_group_id labels to simulate how the grouping pipeline
+would assign incident groups at different cosine similarity thresholds.
+
+High-level flow:
+1. Load the labeled grouping evaluation CSV.
+2. Download/cache images from GCS if needed.
+3. Generate/cache real Gemini embeddings.
+4. Simulate grouping in report order using the MVP rule:
+   - only compare reports within the same discipline
+   - reuse the best matching group if similarity >= threshold
+   - otherwise create a new predicted group
+5. Evaluate predicted groups against true_group_id labels using pairwise metrics,
+   cluster purity, and optional sklearn metrics.
+"""
 
 import argparse
 import json
@@ -10,9 +28,16 @@ from pathlib import Path
 import pandas as pd
 
 
+# Input dataset and local cache/output paths
+# The .cache files should stay local because they can contain downloaded images
+# and generated embeddings that are expensive/noisy to recreate and test with. 
+# The output CSVs are useful artifacts to keep for comparing different runs and thresholds.
 EVAL_CSV_PATH = Path("datasets/grouping_eval/grouping_eval_subset.csv")
 IMAGE_CACHE_DIR = Path(".cache/grouping_eval_images")
 EMBEDDING_CACHE_PATH = Path(".cache/grouping_eval_embeddings.jsonl")
+
+# Output files from the evaluation run.
+# These are useful artifacts for comparing threshold behavior.
 PREDICTIONS_OUT = Path("datasets/grouping_eval/grouping_eval_predictions.csv")
 METRICS_OUT = Path("datasets/grouping_eval/grouping_eval_metrics.csv")
 
@@ -27,6 +52,14 @@ def auto_set_google_credentials() -> None:
 
 
 def load_eval_csv(path: Path) -> pd.DataFrame:
+    """
+    Load and validate the hand-labeled grouping evaluation dataset.
+
+    The important ground-truth column is true_group_id:
+    - rows with the same true_group_id should be grouped together
+    - rows with different true_group_id values should stay separate
+    """
+    
     df = pd.read_csv(path)
     df.columns = [str(c).strip() for c in df.columns]
 
@@ -44,6 +77,13 @@ def load_eval_csv(path: Path) -> pd.DataFrame:
 
 
 def summarize_ground_truth(df: pd.DataFrame) -> None:
+    """
+    Print a quick summary of the labeled dataset before running evaluation.
+
+    This helps us confirm that the dataset has enough multi-image groups to make
+    grouping recall meaningful.
+    """
+
     group_sizes = df["true_group_id"].value_counts()
     multi_groups = group_sizes[group_sizes >= 2]
 
@@ -59,6 +99,12 @@ def summarize_ground_truth(df: pd.DataFrame) -> None:
 
 
 def load_embedding_cache(path: Path) -> dict[int, list[float]]:
+    """
+    Load previously generated embeddings from a local JSONL cache.
+
+    This prevents rerunning Gemini embeddings every time we sweep thresholds.
+    """
+
     if not path.exists():
         return {}
 
@@ -74,6 +120,12 @@ def load_embedding_cache(path: Path) -> dict[int, list[float]]:
 
 
 def save_embedding_to_cache(path: Path, line_number: int, embedding: list[float]) -> None:
+    """
+    Append one generated embedding to the local cache.
+
+    The line_number is used as the stable key back to the eval CSV row.
+    """
+
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("a", encoding="utf-8") as f:
@@ -96,6 +148,13 @@ def image_extension_from_uri(uri: str) -> str:
 
 
 def download_gcs_image(gs_uri: str, line_number: int) -> Path:
+    """
+    Download one eval image from GCS into the local cache if needed.
+
+    The eval CSV stores image_uri as gs:// paths, while the embedding function
+    expects a local image path.
+    """
+
     if not isinstance(gs_uri, str) or not gs_uri.startswith("gs://"):
         raise ValueError(f"Expected gs:// image_uri for line {line_number}, got: {gs_uri}")
 
@@ -122,6 +181,15 @@ def download_gcs_image(gs_uri: str, line_number: int) -> Path:
 
 
 def text_for_embedding(row: pd.Series) -> str:
+    """
+    Choose the best available text description to include with the image embedding.
+
+    Preference order:
+    1. final_description_optional: our corrected/manual description if available
+    2. DESCRIPTION: legacy/original description column if present
+    3. auto_description: model-generated description
+    """
+
     for col in ["final_description_optional", "DESCRIPTION", "auto_description"]:
         if col in row and pd.notna(row[col]) and str(row[col]).strip():
             return str(row[col]).strip()
@@ -130,6 +198,13 @@ def text_for_embedding(row: pd.Series) -> str:
 
 
 def generate_embeddings(df: pd.DataFrame) -> dict[int, list[float]]:
+    """
+    Generate or load embeddings for every row in the eval dataset.
+
+    This intentionally calls the same backend embedding helper used by the project
+    so the offline evaluation is closer to the real grouping pipeline.
+    """
+
     from src.backend.inference import generate_embedding
 
     cache = load_embedding_cache(EMBEDDING_CACHE_PATH)
@@ -166,6 +241,13 @@ def generate_embeddings(df: pd.DataFrame) -> dict[int, list[float]]:
 
 
 def cosine_similarity(vec_a, vec_b) -> float:
+    """
+    Use the backend grouping cosine similarity helper.
+
+    This keeps the eval script aligned with production grouping behavior instead
+    of duplicating similarity logic here.
+    """
+
     from src.backend.grouping import _cosine_similarity_fallback
 
     return float(_cosine_similarity_fallback(vec_a, vec_b))
@@ -173,7 +255,8 @@ def cosine_similarity(vec_a, vec_b) -> float:
 
 def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], threshold: float) -> pd.DataFrame:
     """
-    Offline version of the MVP grouping rule.
+    Offline version of the MVP grouping rule, means we are testing the grouping algorithm 
+    on a saved labeled dataset instead of through the live frontend/backend.
 
     It processes reports in order and compares each new report against previous
     reports in the same discipline bucket. If the best score passes the threshold,
@@ -182,6 +265,9 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
 
     output = df.copy()
 
+    # Store reports that have already been processed so each new row is compared
+    # only against earlier reports, similar to how a live processor sees incidents over time. 
+    # This also simulates the grouping rule where we only compare against previous reports, not future ones.
     previous_reports = []
     pred_group_ids = []
     best_scores = []
@@ -198,6 +284,8 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
         best_pred_group = None
         best_match_line = None
 
+        # Gouping rule: only compare reports within the same discipline.
+        # This avoids obvious false merges across unrelated maintenance teams.
         for candidate in previous_reports:
             if candidate["discipline"] != discipline:
                 continue
@@ -209,6 +297,8 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
                 best_pred_group = candidate["pred_group_id"]
                 best_match_line = candidate["line_number"]
 
+         # If the best candidate passes the threshold, reuse its predicted group.
+        # Otherwise, this report starts a new predicted incident group.
         if best_pred_group is not None and best_score >= threshold:
             pred_group_id = best_pred_group
         else:
@@ -236,6 +326,18 @@ def predict_groups(df: pd.DataFrame, embeddings: dict[int, list[float]], thresho
 
 
 def pairwise_metrics(df: pd.DataFrame) -> dict:
+    """
+    Evaluate grouping as pair decisions.
+
+    For every pair of reports:
+    - true positive: same true group and same predicted group
+    - false positive: different true groups but same predicted group
+    - false negative: same true group but different predicted groups
+    - true negative: different true groups and different predicted groups
+
+    This is useful because grouping errors are pair-level merge/split errors.
+    """
+
     tp = 0
     fp = 0
     fn = 0
@@ -270,6 +372,13 @@ def pairwise_metrics(df: pd.DataFrame) -> dict:
 
 
 def cluster_purity(df: pd.DataFrame) -> float:
+    """
+    Measure how clean the predicted groups are.
+
+    For each predicted group, count the most common true_group_id inside it.
+    High purity means predicted groups usually avoid mixing unrelated issues.
+    """
+
     correct = 0
 
     for _, group in df.groupby("pred_group_id"):
@@ -279,6 +388,11 @@ def cluster_purity(df: pd.DataFrame) -> float:
 
 
 def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
+    """
+    Add standard clustering metrics when scikit-learn is installed.
+
+    The script still works without sklearn because these metrics are optional.
+    """
     try:
         from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
     except ImportError:
@@ -295,6 +409,13 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
 
 
 def evaluate(df: pd.DataFrame, threshold: float) -> dict:
+    """
+    Combine all evaluation metrics for one threshold value.
+
+    This lets us compare strict thresholds, which reduce false merges, against
+    lower thresholds, which improve recall but may group unrelated issues.
+    """
+
     true_sizes = df["true_group_id"].value_counts()
     pred_sizes = df["pred_group_id"].value_counts()
 
@@ -324,6 +445,12 @@ def print_metrics(metrics: dict) -> None:
 
 
 def show_error_examples(df: pd.DataFrame, limit: int = 10) -> None:
+    """
+    Print concrete false merge and false split examples.
+
+    These examples make the metrics easier to explain because we can point to
+    exact line_number pairs where grouping made the wrong decision.
+    """
     false_merges = []
     false_splits = []
 
@@ -373,6 +500,10 @@ def parse_thresholds(raw: str) -> list[float]:
 
 
 def main() -> None:
+    """
+    Command-line entry point to run one threshold or a full threshold sweep.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--threshold", type=float, default=0.94)
     parser.add_argument("--thresholds", default="0.70,0.75,0.80,0.85,0.90,0.94,0.95,0.97")
