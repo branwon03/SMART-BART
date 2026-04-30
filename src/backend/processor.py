@@ -170,7 +170,7 @@ def process_submission(submission_id: str, db: Session):
 
     for photo in photos:
         file_path = resolve_local_image_path(photo)
-        description = getattr(photo, "user_description", "Not provided")
+        description = getattr(photo, "user_context", "Not provided")
 
         if not file_path or not os.path.exists(file_path):
             print(f"[!] File not found for photo {photo.evidence_id}: {file_path}")
