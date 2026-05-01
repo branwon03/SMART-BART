@@ -16,6 +16,7 @@ from src.backend.inference import (
     kSupportedList,
 )
 from contextlib import asynccontextmanager
+from typing import cast
 
 
 class IncidentUpdate(BaseModel):
@@ -293,12 +294,13 @@ async def merge_photos_into_incident(
         )
         if not row:
             continue
-        if row.incident_id == target_incident_id:
+        source_incident_id = cast(str, row.incident_id)
+        if source_incident_id == target_incident_id:
             continue
-        touched_sources.add(row.incident_id)
-        row.incident_id = target_incident_id
+        touched_sources.add(source_incident_id)
+        setattr(row, "incident_id", target_incident_id)
         if discipline_value is not None:
-            row.photo_report_discipline = discipline_value
+            setattr(row, "photo_report_discipline", discipline_value)
         merged_count += 1
 
     db.flush()
