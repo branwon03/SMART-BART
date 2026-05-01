@@ -8,27 +8,32 @@ import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
+import { MergeIncidentModal } from "./MergeIncidentModal";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
   evidence: PhotoReport[];
+  allIncidents: Incident[];
   now: Date;
   incidentIdExpanded: boolean;
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
   onIncidentUpdated: (updated: Incident) => void;
   onIncidentDeleted: (incidentId: string) => void;
+  onRefreshAfterMerge: (incidentId: string) => Promise<void>;
 };
 
 export function IncidentDetailPanel({
   incident,
   evidence,
+  allIncidents,
   now,
   incidentIdExpanded,
   onToggleIncidentIdExpanded,
   onClose,
   onIncidentUpdated,
   onIncidentDeleted,
+  onRefreshAfterMerge,
 }: IncidentDetailPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -41,6 +46,7 @@ export function IncidentDetailPanel({
   };
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   return (
     <>
@@ -120,6 +126,7 @@ export function IncidentDetailPanel({
             </button>
             <button
               type="button"
+              onClick={() => setMergeModalOpen(true)}
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
             >
               Merge/Split
@@ -216,6 +223,20 @@ export function IncidentDetailPanel({
             onIncidentDeleted(incident.incident_id);
           }}
           onCancel={() => setDeleteModalOpen(false)}
+        />
+      )}
+
+      {mergeModalOpen && (
+        <MergeIncidentModal
+          targetIncident={incident}
+          allIncidents={allIncidents}
+          onCancel={() => setMergeModalOpen(false)}
+          onMerged={() => {
+            void (async () => {
+              await onRefreshAfterMerge(incident.incident_id);
+              setMergeModalOpen(false);
+            })();
+          }}
         />
       )}
     </>

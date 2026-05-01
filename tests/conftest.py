@@ -37,6 +37,15 @@ def _override_get_db():
 app.dependency_overrides[get_db] = _override_get_db
 
 
+@pytest.fixture
+def db_session(_reset_tables_and_uploads):
+    db = TestSession()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 @pytest.fixture(autouse=True)
 def _reset_tables_and_uploads(tmp_path):
     """Create tables + temp upload dir before each test, tear down after."""

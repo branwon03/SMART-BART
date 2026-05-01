@@ -10,6 +10,7 @@ export default function MaintenanceDashboard() {
     disciplines,
     activeTab,
     filteredData,
+    allIncidents,
     selectedIncident,
     setSelectedIncident,
     evidence,
@@ -19,6 +20,7 @@ export default function MaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    refreshAfterMerge,
   } = useMaintenanceDashboard();
 
   return (
@@ -63,6 +65,7 @@ export default function MaintenanceDashboard() {
           <IncidentDetailPanel
             incident={selectedIncident}
             evidence={evidence}
+            allIncidents={allIncidents}
             now={now}
             incidentIdExpanded={incidentIdExpanded}
             onToggleIncidentIdExpanded={() => setIncidentIdExpanded((e) => !e)}
@@ -72,6 +75,7 @@ export default function MaintenanceDashboard() {
             }}
             onIncidentUpdated={updateSelectedIncident}
             onIncidentDeleted={removeIncident}
+            onRefreshAfterMerge={refreshAfterMerge}
           />
         )}
       </div>
