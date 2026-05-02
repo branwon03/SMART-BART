@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
@@ -8,6 +8,7 @@ import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { isHighPriority } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
+import { SplitIncidentModal } from "./SplitIncidentModal";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -18,6 +19,7 @@ type IncidentDetailPanelProps = {
   onClose: () => void;
   onIncidentUpdated: (updated: Incident) => void;
   onIncidentDeleted: (incidentId: string) => void;
+  onIncidentSplit: (parentIncidentId: string) => void;
 };
 
 export function IncidentDetailPanel({
@@ -29,6 +31,7 @@ export function IncidentDetailPanel({
   onClose,
   onIncidentUpdated,
   onIncidentDeleted,
+  onIncidentSplit,
 }: IncidentDetailPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -41,6 +44,13 @@ export function IncidentDetailPanel({
   };
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [splitModalOpen, setSplitModalOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentIndex((i) =>
+      evidence.length === 0 ? 0 : Math.min(i, evidence.length - 1),
+    );
+  }, [evidence]);
 
   return (
     <>
@@ -120,7 +130,10 @@ export function IncidentDetailPanel({
             </button>
             <button
               type="button"
-              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
+              disabled={evidence.length < 2}
+              title={evidence.length < 2 ? "Need at least two photos to split" : undefined}
+              onClick={() => setSplitModalOpen(true)}
+              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
             >
               Merge/Split
             </button>
@@ -216,6 +229,18 @@ export function IncidentDetailPanel({
             onIncidentDeleted(incident.incident_id);
           }}
           onCancel={() => setDeleteModalOpen(false)}
+        />
+      )}
+
+      {splitModalOpen && (
+        <SplitIncidentModal
+          incident={incident}
+          evidence={evidence}
+          onSplit={(parentId) => {
+            setSplitModalOpen(false);
+            onIncidentSplit(parentId);
+          }}
+          onCancel={() => setSplitModalOpen(false)}
         />
       )}
     </>

@@ -19,6 +19,7 @@ export default function MaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    notifyIncidentSplitForParent,
   } = useMaintenanceDashboard();
 
   return (
@@ -72,6 +73,7 @@ export default function MaintenanceDashboard() {
             }}
             onIncidentUpdated={updateSelectedIncident}
             onIncidentDeleted={removeIncident}
+            onIncidentSplit={notifyIncidentSplitForParent}
           />
         )}
       </div>

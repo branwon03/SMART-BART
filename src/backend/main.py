@@ -23,6 +23,13 @@ class IncidentUpdate(BaseModel):
     status: str | None = None
 
 
+class SplitRequest(BaseModel):
+    evidence_ids: list[str]
+    title: str
+    description: str | None = None
+    discipline: str | None = None
+
+
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -160,6 +167,96 @@ async def get_incidents(db: Session = Depends(get_db)):
         }
         for r in rows
     ]
+
+
+@app.post("/api/incidents/{incident_id}/split")
+async def split_incident(
+    incident_id: str,
+    body: SplitRequest,
+    db: Session = Depends(get_db),
+):
+    parent = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="title is required and cannot be blank")
+
+    order_preserve: list[str] = []
+    seen: set[str] = set()
+    for eid in body.evidence_ids:
+        if eid not in seen:
+            seen.add(eid)
+            order_preserve.append(eid)
+
+    if not order_preserve:
+        raise HTTPException(status_code=422, detail="evidence_ids must not be empty")
+
+    reports = (
+        db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
+    )
+    by_evidence = {r.evidence_id: r for r in reports}
+
+    unknown = [eid for eid in order_preserve if eid not in by_evidence]
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"evidence_ids not on this incident: {unknown}",
+        )
+
+    remaining = len(reports) - len(order_preserve)
+    if remaining < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="cannot move all evidence; leave at least one photo on parent incident",
+        )
+
+    now = datetime.now(timezone.utc)
+    new_incident_id = uuid.uuid4().hex
+    new_submission_id = uuid.uuid4().hex
+
+    child_discipline = parent.discipline
+    if body.discipline is not None:
+        trimmed_d = body.discipline.strip()
+        if trimmed_d:
+            child_discipline = trimmed_d
+
+    child = Incident(
+        incident_id=new_incident_id,
+        status=parent.status,
+        issue_priority=parent.issue_priority,
+        discipline=child_discipline,
+        vlm_summary=title,
+        location_id=parent.location_id,
+        created_at=now,
+    )
+    db.add(child)
+
+    desc_provided = body.description is not None
+    desc_value = (
+        None if body.description is None else (body.description.strip() or None)
+    )
+
+    for eid in order_preserve:
+        pr = by_evidence[eid]
+        pr.incident_id = new_incident_id
+        pr.submission_id = new_submission_id
+        if desc_provided:
+            pr.user_context = desc_value
+
+    db.commit()
+    db.refresh(child)
+
+    return {
+        "incident_id": child.incident_id,
+        "status": child.status,
+        "issue_priority": child.issue_priority,
+        "discipline": child.discipline,
+        "vlm_summary": child.vlm_summary,
+        "location_id": child.location_id,
+        "created_at": child.created_at.isoformat() if child.created_at else None,
+    }
 
 
 @app.put("/api/incidents/{incident_id}")
