@@ -26,7 +26,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
-import pandas as pd # type: ignore[import-untyped]
+import pandas as pd  # type: ignore[import-untyped]
 
 
 # Input dataset and local cache/output paths
@@ -306,7 +306,7 @@ def generate_embeddings(
         try:
             embedding = generate_embedding(text=text, image_paths=[image_path])
         except TypeError:
-            embedding = generate_embedding(text, [str(image_path)])
+            embedding = generate_embedding(text, [image_path])
 
         if embedding is None:
             raise RuntimeError(f"Embedding failed for line {line_number}")
@@ -354,6 +354,7 @@ def predict_groups(
     # only against earlier reports, similar to how a live processor sees incidents over time.
     # This also simulates the grouping rule where we only compare against previous reports, not future ones.
     
+    previous_reports: list[dict[str, Any]] = []
     pred_group_ids = []
     best_scores = []
     best_match_lines = []
@@ -503,6 +504,7 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
             df["true_group_id"], df["pred_group_id"]
         ),
     }
+   
 
 def evaluate(
     df: pd.DataFrame,
