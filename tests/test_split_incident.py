@@ -3,10 +3,10 @@ import struct
 import zlib
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from src.backend.database import Incident, PhotoReport
 from src.backend.main import app
-from tests.conftest import TestSession
 
 client = TestClient(app)
 
@@ -40,7 +40,7 @@ def _submission_with_npics(n_photos: int) -> tuple[str, list[str]]:
     ]
     resp = client.post(
         "/api/submissions",
-        files=files if files else None,
+        files=files,
         data={"description": "Parent context line"},
     )
     assert resp.status_code == 200, resp.text
@@ -51,31 +51,29 @@ def _submission_with_npics(n_photos: int) -> tuple[str, list[str]]:
     return parent_id, eids
 
 
-def _set_parent_discipline(parent_id: str, discipline: str) -> None:
-    db = TestSession()
-    try:
-        row = db.query(Incident).filter(Incident.incident_id == parent_id).first()
-        assert row is not None
-        row.discipline = discipline
-        db.commit()
-    finally:
-        db.close()
+def _set_parent_discipline(db: Session, parent_id: str, discipline: str) -> None:
+    row = db.query(Incident).filter(Incident.incident_id == parent_id).first()
+    assert row is not None
+    row.discipline = discipline
+    db.commit()
+    db.expire_all()
 
 
-def _mapping_evidence_to_incident(evidence_ids: list[str]) -> dict[str, str]:
-    db = TestSession()
-    try:
-        rows = (
-            db.query(PhotoReport)
-            .filter(PhotoReport.evidence_id.in_(evidence_ids))
-            .all()
-        )
-        return {r.evidence_id: r.incident_id for r in rows}
-    finally:
-        db.close()
+def _mapping_evidence_to_incident(
+    db: Session, evidence_ids: list[str],
+) -> dict[str, str]:
+    db.expire_all()
+    rows = (
+        db.query(PhotoReport)
+        .filter(PhotoReport.evidence_id.in_(evidence_ids))
+        .all()
+    )
+    return {r.evidence_id: r.incident_id for r in rows}
 
 
-def test_split_moves_one_photo_creates_child_with_title_and_shared_submission_id():
+def test_split_moves_one_photo_creates_child_with_title_and_shared_submission_id(
+    db_session: Session,
+):
     parent_id, eids = _submission_with_npics(3)
     to_move = [eids[0]]
 
@@ -98,26 +96,25 @@ def test_split_moves_one_photo_creates_child_with_title_and_shared_submission_id
     assert len(parent_reports) == 2
     assert len(child_reports) == 1
 
-    inv = _mapping_evidence_to_incident(eids)
+    inv = _mapping_evidence_to_incident(db_session, eids)
     assert inv[eids[0]] == child["incident_id"]
     assert inv[eids[1]] == parent_id
     assert inv[eids[2]] == parent_id
 
-    db = TestSession()
-    try:
-        moved = (
-            db.query(PhotoReport)
-            .filter(PhotoReport.evidence_id.in_(to_move))
-            .all()
-        )
-        assert len(moved) == 1
-        sid = moved[0].submission_id
-        assert sid is not None and len(sid) == 32
-    finally:
-        db.close()
+    db_session.expire_all()
+    moved = (
+        db_session.query(PhotoReport)
+        .filter(PhotoReport.evidence_id.in_(to_move))
+        .all()
+    )
+    assert len(moved) == 1
+    sid = moved[0].submission_id
+    assert sid is not None and len(sid) == 32
 
 
-def test_split_moved_reports_share_same_submission_id_when_multiple_selected():
+def test_split_moved_reports_share_same_submission_id_when_multiple_selected(
+    db_session: Session,
+):
     parent_id, eids = _submission_with_npics(4)
     to_move = eids[:2]
 
@@ -128,19 +125,16 @@ def test_split_moved_reports_share_same_submission_id_when_multiple_selected():
     assert resp.status_code == 200
     child_id = resp.json()["incident_id"]
 
-    db = TestSession()
-    try:
-        rows = (
-            db.query(PhotoReport)
-            .filter(PhotoReport.incident_id == child_id)
-            .all()
-        )
-        assert len(rows) == 2
-        sids = {r.submission_id for r in rows}
-        assert len(sids) == 1
-        assert next(iter(sids)) is not None
-    finally:
-        db.close()
+    db_session.expire_all()
+    rows = (
+        db_session.query(PhotoReport)
+        .filter(PhotoReport.incident_id == child_id)
+        .all()
+    )
+    assert len(rows) == 2
+    sids = {r.submission_id for r in rows}
+    assert len(sids) == 1
+    assert next(iter(sids)) is not None
 
 
 def test_split_must_leave_parent_at_least_one_photo():
@@ -246,9 +240,11 @@ def test_split_explicit_empty_description_clears_user_context():
     assert child_ctx == ""
 
 
-def test_split_inherits_parent_discipline_when_discipline_field_omitted():
+def test_split_inherits_parent_discipline_when_discipline_field_omitted(
+    db_session: Session,
+):
     parent_id, eids = _submission_with_npics(2)
-    _set_parent_discipline(parent_id, "MECHANICAL")
+    _set_parent_discipline(db_session, parent_id, "MECHANICAL")
 
     resp = client.post(
         f"/api/incidents/{parent_id}/split",
@@ -258,17 +254,14 @@ def test_split_inherits_parent_discipline_when_discipline_field_omitted():
     assert resp.json()["discipline"] == "MECHANICAL"
 
 
-def test_split_child_priority_and_status_copied_from_parent():
+def test_split_child_priority_and_status_copied_from_parent(db_session: Session):
     """PUT only updates priority/status; set via DB then split copies onto child."""
     parent_id, eids = _submission_with_npics(2)
-    db = TestSession()
-    try:
-        row = db.query(Incident).filter(Incident.incident_id == parent_id).first()
-        row.issue_priority = "Emergency"
-        row.status = "In Progress"
-        db.commit()
-    finally:
-        db.close()
+    row = db_session.query(Incident).filter(Incident.incident_id == parent_id).first()
+    assert row is not None
+    row.issue_priority = "Emergency"
+    row.status = "In Progress"
+    db_session.commit()
 
     resp = client.post(
         f"/api/incidents/{parent_id}/split",
@@ -279,3 +272,12 @@ def test_split_child_priority_and_status_copied_from_parent():
     assert body["issue_priority"] == "Emergency"
     assert body["status"] == "In Progress"
 
+
+def test_split_empty_evidence_ids_returns_422():
+    parent_id, _ = _submission_with_npics(2)
+
+    resp = client.post(
+        f"/api/incidents/{parent_id}/split",
+        json={"evidence_ids": [], "title": "x"},
+    )
+    assert resp.status_code == 422
