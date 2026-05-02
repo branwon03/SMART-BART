@@ -2,10 +2,9 @@ services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    env_file: .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "CSE_312!"
-      POSTGRES_DB: bart_db
+      DATABASE_URL: ${DATABASE_URL}
     ports:
       - "5432:5432"
     volumes:
@@ -24,7 +23,7 @@ services:
     env_file: .env
     # Host .env often uses localhost/127.0.0.1; inside this container Postgres is the `db` service.
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+      DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./src:/app/src
       - uploads:/app/uploads
@@ -51,7 +50,7 @@ services:
     env_file: .env
     # Same as backend: .env often uses localhost; inside Compose Postgres is the `db` service.
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:CSE_312!@db:5432/bart_db
+      DATABASE_URL: ${DATABASE_URL}
       UPLOAD_DIR: /app/uploads
       GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
       GOOGLE_GENAI_USE_VERTEXAI: "true"

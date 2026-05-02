@@ -39,7 +39,6 @@ export default function ImageUpload() {
       },
       runningMode: "IMAGE",
       //possibly lower the min confidence to 0.2 - currently blurring small parts of objects
-      //Lower min suppression threshold?
       minDetectionConfidence: 0.3,
       minSuppressionThreshold: 0.3
     });
