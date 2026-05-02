@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from typing import cast
 from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
@@ -196,7 +197,9 @@ async def split_incident(
     reports = (
         db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
     )
-    by_evidence = {r.evidence_id: r for r in reports}
+    by_evidence: dict[str, PhotoReport] = {
+        cast(str, r.evidence_id): r for r in reports
+    }
 
     unknown = [eid for eid in order_preserve if eid not in by_evidence]
     if unknown:
@@ -216,7 +219,8 @@ async def split_incident(
     new_incident_id = uuid.uuid4().hex
     new_submission_id = uuid.uuid4().hex
 
-    child_discipline = parent.discipline
+    parent_discipline: str | None = cast(str | None, parent.discipline)
+    child_discipline: str | None = parent_discipline
     if body.discipline is not None:
         trimmed_d = body.discipline.strip()
         if trimmed_d:
@@ -240,10 +244,10 @@ async def split_incident(
 
     for eid in order_preserve:
         pr = by_evidence[eid]
-        pr.incident_id = new_incident_id
-        pr.submission_id = new_submission_id
+        setattr(pr, "incident_id", new_incident_id)
+        setattr(pr, "submission_id", new_submission_id)
         if desc_provided:
-            pr.user_context = desc_value
+            setattr(pr, "user_context", desc_value)
 
     db.commit()
     db.refresh(child)
