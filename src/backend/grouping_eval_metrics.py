@@ -24,8 +24,9 @@ import os
 from collections import Counter
 from itertools import combinations
 from pathlib import Path
+from typing import Any
 
-import pandas as pd
+import pandas as pd # type: ignore[import-untyped]
 
 
 # Input dataset and local cache/output paths
@@ -198,7 +199,7 @@ def download_gcs_image(gs_uri: str, line_number: int) -> Path:
 
     auto_set_google_credentials()
 
-    from google.cloud import storage
+    from google.cloud import storage # type: ignore[import-untyped]
 
     IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -303,7 +304,7 @@ def generate_embeddings(
         )
 
         try:
-            embedding = generate_embedding(text=text, image_paths=[str(image_path)])
+            embedding = generate_embedding(text=text, image_paths=[image_path])
         except TypeError:
             embedding = generate_embedding(text, [str(image_path)])
 
@@ -352,7 +353,7 @@ def predict_groups(
     # Store reports that have already been processed so each new row is compared
     # only against earlier reports, similar to how a live processor sees incidents over time.
     # This also simulates the grouping rule where we only compare against previous reports, not future ones.
-    previous_reports = []
+    
     pred_group_ids = []
     best_scores = []
     best_match_lines = []
@@ -487,7 +488,7 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
     """
 
     try:
-        from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
+        from sklearn.metrics import (  # type: ignore[import-untyped]     adjusted_rand_score,     normalized_mutual_info_score, )
     except ImportError:
         return {}
 
