@@ -1,4 +1,3 @@
-from __future__ import annotations
 """
 Offline grouping evaluation script for the BART incident grouping.
 
@@ -17,6 +16,7 @@ High-level flow:
 5. Evaluate predicted groups against true_group_id labels using pairwise metrics,
    cluster purity, and optional sklearn metrics.
 """
+from __future__ import annotations
 
 import argparse
 import json
