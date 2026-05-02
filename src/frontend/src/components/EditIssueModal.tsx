@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Incident } from "../types/api";
+import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { updateIncident } from "../lib/incidents";
 
 const PRIORITY_OPTIONS = ["Standard", "Emergency"] as const;
@@ -20,6 +21,13 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
   const [status, setStatus] = useState(
     () => normalizeStatus(incident.status),
   );
+  const options = useMemo(
+    () => disciplineSelectOptions(incident.discipline),
+    [incident.discipline],
+  );
+  const [discipline, setDiscipline] = useState(() =>
+    initialDiscipline(incident.discipline),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +38,7 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
       const updated = await updateIncident(incident.incident_id, {
         issue_priority: priority,
         status,
+        discipline,
       });
       console.log("Incident updated:", updated);
       onSave(updated);
@@ -65,7 +74,7 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             </select>
           </label>
 
-          <label className="block mb-6">
+          <label className="block mb-4">
             <span className="text-sm font-bold text-gray-700">Status</span>
             <select
               value={status}
@@ -74,6 +83,23 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block mb-6">
+            <span className="text-sm font-bold text-gray-700">
+              Discipline (redirect)
+            </span>
+            <select
+              value={discipline}
+              onChange={(e) => setDiscipline(e.target.value)}
+              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+            >
+              {options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </label>
@@ -121,4 +147,25 @@ function normalizeStatus(s: string | null | undefined): string {
     (opt) => opt.toLowerCase() === s.trim().toLowerCase(),
   );
   return match ?? "New";
+}
+
+function disciplineSelectOptions(current: string | null | undefined): string[] {
+  const list = [...MAINTENANCE_DISCIPLINES];
+  const d = current?.trim();
+  if (
+    d &&
+    !list.some((opt) => opt.toLowerCase() === d.toLowerCase())
+  ) {
+    return [d, ...list];
+  }
+  return list;
+}
+
+function initialDiscipline(current: string | null | undefined): string {
+  const d = current?.trim();
+  if (!d) return MAINTENANCE_DISCIPLINES[0];
+  const match = MAINTENANCE_DISCIPLINES.find(
+    (opt) => opt.toLowerCase() === d.toLowerCase(),
+  );
+  return match ?? d;
 }
