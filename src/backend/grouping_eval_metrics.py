@@ -30,23 +30,45 @@ import pandas as pd
 
 # Input dataset and local cache/output paths
 # The .cache files should stay local because they can contain downloaded images
-# and generated embeddings that are expensive/noisy to recreate and test with. 
+# and generated embeddings that are expensive/noisy to recreate and test with.
 # The output CSVs are useful artifacts to keep for comparing different runs and thresholds.
 EVAL_CSV_PATH = Path("datasets/grouping_eval/grouping_eval_subset.csv")
 IMAGE_CACHE_DIR = Path(".cache/grouping_eval_images")
 EMBEDDING_CACHE_PATH = Path(".cache/grouping_eval_embeddings.jsonl")
 
-# Output files from the evaluation run.
+# Separate cache for production-style embedding text.
+# This prevents overwriting the original description-based eval embeddings.
+PRODUCTION_EMBEDDING_CACHE_PATH = Path(
+    ".cache/grouping_eval_embeddings_production_style.jsonl"
+)
+
+# Output files from the baseline evaluation run.
 # These are useful artifacts for comparing threshold behavior.
 PREDICTIONS_OUT = Path("datasets/grouping_eval/grouping_eval_predictions.csv")
 METRICS_OUT = Path("datasets/grouping_eval/grouping_eval_metrics.csv")
 
-# Added location output paths
+# Added location output paths.
 PREDICTIONS_LOCATION_OUT = Path(
     "datasets/grouping_eval/grouping_eval_predictions_location_filtered.csv"
 )
 METRICS_LOCATION_OUT = Path(
     "datasets/grouping_eval/grouping_eval_metrics_location_filtered.csv"
+)
+
+# Added production-style embedding output paths.
+PREDICTIONS_PROD_EMBEDDINGS_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_predictions_production_embeddings.csv"
+)
+METRICS_PROD_EMBEDDINGS_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_metrics_production_embeddings.csv"
+)
+
+# Added production-style embedding + location-filtered output paths.
+PREDICTIONS_PROD_EMBEDDINGS_LOCATION_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_predictions_production_embeddings_location_filtered.csv"
+)
+METRICS_PROD_EMBEDDINGS_LOCATION_OUT = Path(
+    "datasets/grouping_eval/grouping_eval_metrics_production_embeddings_location_filtered.csv"
 )
 
 
@@ -67,7 +89,7 @@ def load_eval_csv(path: Path) -> pd.DataFrame:
     - rows with the same true_group_id should be grouped together
     - rows with different true_group_id values should stay separate
     """
-    
+
     df = pd.read_csv(path)
     df.columns = [str(c).strip() for c in df.columns]
 
@@ -81,9 +103,13 @@ def load_eval_csv(path: Path) -> pd.DataFrame:
     df["final_discipline"] = df["final_discipline"].astype(str).str.strip()
     df["true_group_id"] = df["true_group_id"].astype(str).str.strip()
 
-    # Clean photo_location_id when loading CSV
+    # Clean photo_location_id when loading CSV.
+    # Missing location is represented as an empty string so the eval can mirror
+    # the production fallback: location filters only apply when location exists.
     if "photo_location_id" in df.columns:
-        df["photo_location_id"] = df["photo_location_id"].fillna("").astype(str).str.strip()
+        df["photo_location_id"] = (
+            df["photo_location_id"].fillna("").astype(str).str.strip()
+        )
 
     return df.sort_values("line_number").reset_index(drop=True)
 
@@ -209,17 +235,51 @@ def text_for_embedding(row: pd.Series) -> str:
     return ""
 
 
-def generate_embeddings(df: pd.DataFrame) -> dict[int, list[float]]:
+def production_style_text_for_embedding(row: pd.Series) -> str:
+    """
+    Build embedding text that mirrors the production processor's grouping prompt.
+
+    Production uses parsed vlm_summary + discipline to make the embedding focus on
+    the physical asset, surrounding scene, and object geometry. In the eval set,
+    we use the best audited description available as the asset/scene text.
+    """
+
+    physical_asset = text_for_embedding(row) or "unknown maintenance issue"
+    discipline = str(row.get("final_discipline", "")).strip() or "unknown"
+
+    return (
+        f"Task: Grouping maintenance photos from different angles. "
+        f"Physical Asset: {physical_asset}. "
+        f"Location Context: {discipline} area. "
+        f"Instruction: Identify the specific physical asset and scene. "
+        f"Focus on spatial surroundings and object geometry. "
+        f"Ignore lighting, blur, or camera quality."
+    )
+
+
+def generate_embeddings(
+    df: pd.DataFrame,
+    production_style: bool = False,
+) -> dict[int, list[float]]:
     """
     Generate or load embeddings for every row in the eval dataset.
 
     This intentionally calls the same backend embedding helper used by the project
     so the offline evaluation is closer to the real grouping pipeline.
+
+    When production_style=True, this uses a separate cache and a grouping-specific
+    embedding prompt that more closely mirrors processor.py.
     """
 
     from src.backend.inference import generate_embedding
 
-    cache = load_embedding_cache(EMBEDDING_CACHE_PATH)
+    cache_path = (
+        PRODUCTION_EMBEDDING_CACHE_PATH
+        if production_style
+        else EMBEDDING_CACHE_PATH
+    )
+
+    cache = load_embedding_cache(cache_path)
 
     missing = [
         row for _, row in df.iterrows()
@@ -227,13 +287,20 @@ def generate_embeddings(df: pd.DataFrame) -> dict[int, list[float]]:
     ]
 
     print("\n=== Embedding Setup ===")
+    print(f"Embedding mode: {'production_style' if production_style else 'description_baseline'}")
+    print(f"Embedding cache: {cache_path}")
     print(f"Cached embeddings: {len(cache)}")
     print(f"Missing embeddings: {len(missing)}")
 
     for idx, row in enumerate(missing, start=1):
         line_number = int(row["line_number"])
         image_path = download_gcs_image(str(row["image_uri"]), line_number)
-        text = text_for_embedding(row)
+
+        text = (
+            production_style_text_for_embedding(row)
+            if production_style
+            else text_for_embedding(row)
+        )
 
         try:
             embedding = generate_embedding(text=text, image_paths=[str(image_path)])
@@ -245,7 +312,7 @@ def generate_embeddings(df: pd.DataFrame) -> dict[int, list[float]]:
 
         embedding = [float(x) for x in embedding]
         cache[line_number] = embedding
-        save_embedding_to_cache(EMBEDDING_CACHE_PATH, line_number, embedding)
+        save_embedding_to_cache(cache_path, line_number, embedding)
 
         print(f"[{idx}/{len(missing)}] Embedded line {line_number}")
 
@@ -264,6 +331,7 @@ def cosine_similarity(vec_a, vec_b) -> float:
 
     return float(_cosine_similarity_fallback(vec_a, vec_b))
 
+
 def predict_groups(
     df: pd.DataFrame,
     embeddings: dict[int, list[float]],
@@ -271,7 +339,7 @@ def predict_groups(
     location_filter: bool = False,
 ) -> pd.DataFrame:
     """
-    Offline version of the MVP grouping rule, means we are testing the grouping algorithm 
+    Offline version of the MVP grouping rule, means we are testing the grouping algorithm
     on a saved labeled dataset instead of through the live frontend/backend.
 
     It processes reports in order and compares each new report against previous
@@ -282,7 +350,7 @@ def predict_groups(
     output = df.copy()
 
     # Store reports that have already been processed so each new row is compared
-    # only against earlier reports, similar to how a live processor sees incidents over time. 
+    # only against earlier reports, similar to how a live processor sees incidents over time.
     # This also simulates the grouping rule where we only compare against previous reports, not future ones.
     previous_reports = []
     pred_group_ids = []
@@ -301,11 +369,12 @@ def predict_groups(
         best_pred_group = None
         best_match_line = None
 
-        # Gouping rule: only compare reports within the same discipline.
+        # Grouping rule: only compare reports within the same discipline.
         # This avoids obvious false merges across unrelated maintenance teams.
         for candidate in previous_reports:
             if candidate["discipline"] != discipline:
                 continue
+
             # Production-like location rule:
             # if location metadata exists, require the same location.
             # if the new row has no location, fall back to discipline-only comparison.
@@ -319,7 +388,7 @@ def predict_groups(
                 best_pred_group = candidate["pred_group_id"]
                 best_match_line = candidate["line_number"]
 
-         # If the best candidate passes the threshold, reuse its predicted group.
+        # If the best candidate passes the threshold, reuse its predicted group.
         # Otherwise, this report starts a new predicted incident group.
         if best_pred_group is not None and best_score >= threshold:
             pred_group_id = best_pred_group
@@ -358,7 +427,7 @@ def pairwise_metrics(df: pd.DataFrame) -> dict:
     - false negative: same true group but different predicted groups
     - true negative: different true groups and different predicted groups
 
-    This is useful because grouping errors are pair-level merge/split errors.
+    This is useful because grouping errors are really pair-level merge/split errors.
     """
 
     tp = 0
@@ -416,6 +485,7 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
 
     The script still works without sklearn because these metrics are optional.
     """
+
     try:
         from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
     except ImportError:
@@ -431,7 +501,12 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
     }
 
 
-def evaluate(df: pd.DataFrame, threshold: float, location_filter: bool = False) -> dict:
+def evaluate(
+    df: pd.DataFrame,
+    threshold: float,
+    location_filter: bool = False,
+    embedding_mode: str = "description_baseline",
+) -> dict:
     """
     Combine all evaluation metrics for one threshold value.
 
@@ -444,6 +519,7 @@ def evaluate(df: pd.DataFrame, threshold: float, location_filter: bool = False) 
 
     metrics = {
         "threshold": threshold,
+        "embedding_mode": embedding_mode,
         "rows": len(df),
         "true_groups": df["true_group_id"].nunique(),
         "predicted_groups": df["pred_group_id"].nunique(),
@@ -481,6 +557,7 @@ def show_error_examples(df: pd.DataFrame, limit: int = 10) -> None:
     These examples make the metrics easier to explain because we can point to
     exact line_number pairs where grouping made the wrong decision.
     """
+
     false_merges = []
     false_splits = []
 
@@ -529,6 +606,29 @@ def parse_thresholds(raw: str) -> list[float]:
     return [float(x.strip()) for x in raw.split(",") if x.strip()]
 
 
+def select_output_paths(production_embeddings: bool, location_filter: bool) -> tuple[Path, Path]:
+    """
+    Choose output files based on the eval mode.
+
+    This keeps baseline, location-filtered, production-style embedding, and
+    production-style embedding + location-filtered results separate.
+    """
+
+    if production_embeddings and location_filter:
+        return (
+            METRICS_PROD_EMBEDDINGS_LOCATION_OUT,
+            PREDICTIONS_PROD_EMBEDDINGS_LOCATION_OUT,
+        )
+
+    if production_embeddings:
+        return METRICS_PROD_EMBEDDINGS_OUT, PREDICTIONS_PROD_EMBEDDINGS_OUT
+
+    if location_filter:
+        return METRICS_LOCATION_OUT, PREDICTIONS_LOCATION_OUT
+
+    return METRICS_OUT, PREDICTIONS_OUT
+
+
 def main() -> None:
     """
     Command-line entry point to run one threshold or a full threshold sweep.
@@ -541,19 +641,26 @@ def main() -> None:
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--location-filter", action="store_true")
+    parser.add_argument("--production-embeddings", action="store_true")
     args = parser.parse_args()
 
     df = load_eval_csv(EVAL_CSV_PATH)
+
     if args.location_filter and "photo_location_id" not in df.columns:
         raise ValueError(
             "--location-filter requires a real photo_location_id column in the eval CSV."
         )
 
-    metrics_out = METRICS_LOCATION_OUT if args.location_filter else METRICS_OUT
-    predictions_out = (
-        PREDICTIONS_LOCATION_OUT if args.location_filter else PREDICTIONS_OUT
+    metrics_out, predictions_out = select_output_paths(
+        production_embeddings=args.production_embeddings,
+        location_filter=args.location_filter,
     )
-    
+
+    embedding_mode = (
+        "production_style"
+        if args.production_embeddings
+        else "description_baseline"
+    )
 
     if args.max_rows:
         df = df.head(args.max_rows).copy()
@@ -564,7 +671,10 @@ def main() -> None:
         print("\nCheck-only complete.")
         return
 
-    embeddings = generate_embeddings(df)
+    embeddings = generate_embeddings(
+        df,
+        production_style=args.production_embeddings,
+    )
 
     if args.sweep:
         rows = []
@@ -580,6 +690,7 @@ def main() -> None:
                 predicted,
                 threshold,
                 location_filter=args.location_filter,
+                embedding_mode=embedding_mode,
             )
             rows.append(metrics)
 
@@ -605,6 +716,7 @@ def main() -> None:
         predicted,
         args.threshold,
         location_filter=args.location_filter,
+        embedding_mode=embedding_mode,
     )
 
     print_metrics(metrics)
@@ -612,7 +724,7 @@ def main() -> None:
 
     predictions_out.parent.mkdir(parents=True, exist_ok=True)
     predicted.to_csv(predictions_out, index=False)
-    
+
     print(f"\nSaved predictions to: {predictions_out}")
 
 
