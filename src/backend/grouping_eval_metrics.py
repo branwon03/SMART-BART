@@ -488,7 +488,10 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
     """
 
     try:
-        from sklearn.metrics import (  # type: ignore[import-untyped]     adjusted_rand_score,     normalized_mutual_info_score, )
+        from sklearn.metrics import (  # type: ignore[import-untyped]
+            adjusted_rand_score,
+            normalized_mutual_info_score,
+        )
     except ImportError:
         return {}
 
@@ -500,7 +503,6 @@ def optional_sklearn_metrics(df: pd.DataFrame) -> dict:
             df["true_group_id"], df["pred_group_id"]
         ),
     }
-
 
 def evaluate(
     df: pd.DataFrame,
