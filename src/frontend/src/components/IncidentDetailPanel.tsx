@@ -53,10 +53,11 @@ export function IncidentDetailPanel({
       <div className="fixed inset-0 bg-black/20 z-20" onClick={onClose} />
 
       <aside className="fixed top-0 right-0 w-[450px] bg-white border-l-4 border-black h-screen p-6 shadow-2xl z-30 overflow-y-auto font-sans text-sm">
-        <div className="relative min-h-[14rem] border-b-2 border-gray-300 pb-4 pr-36 mb-8">
-          <h2 className="text-xl font-bold mb-4 leading-tight">{incident.vlm_summary}</h2>
+        <div className="flex items-start gap-4 mb-8">
+          <div className="flex-1 min-w-0 border-b-2 border-slate-300 pb-4">
+            <h2 className="text-xl font-bold mb-4 leading-tight">{incident.vlm_summary}</h2>
 
-          <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
+            <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
             <span className="font-bold text-gray-700">Incident ID:</span>
             <span
               role="button"
@@ -109,8 +110,9 @@ export function IncidentDetailPanel({
             <span className="font-bold text-gray-700">Age:</span>
             <span>{formatElapsedSince(incident.created_at, now)}</span>
           </div>
+          </div>
 
-          <div className="absolute top-10 right-0 flex flex-col gap-2 w-32">
+          <div className="w-[7.5rem] shrink-0 flex flex-col gap-2 border-l border-slate-300 pl-4 pt-10">
             <button
               type="button"
               onClick={() => setEditModalOpen(true)}
@@ -129,7 +131,13 @@ export function IncidentDetailPanel({
               onClick={() => setMergeModalOpen(true)}
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
             >
-              Merge/Split
+              Merge
+            </button>
+            <button
+              type="button"
+              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
+            >
+              Split
             </button>
             <button
               type="button"
