@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
@@ -35,22 +35,32 @@ export function IncidentDetailPanel({
 }: IncidentDetailPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? evidence.length - 1 : prev - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === evidence.length - 1 ? 0 : prev + 1));
-  };
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [splitModalOpen, setSplitModalOpen] = useState(false);
 
-  useEffect(() => {
-    setCurrentIndex((i) =>
-      evidence.length === 0 ? 0 : Math.min(i, evidence.length - 1),
-    );
-  }, [evidence]);
+  const displayIndex =
+    evidence.length === 0
+      ? 0
+      : Math.min(Math.max(currentIndex, 0), evidence.length - 1);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => {
+      const n = evidence.length;
+      if (n === 0) return 0;
+      const i = Math.min(Math.max(prev, 0), n - 1);
+      return i === 0 ? n - 1 : i - 1;
+    });
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => {
+      const n = evidence.length;
+      if (n === 0) return 0;
+      const i = Math.min(Math.max(prev, 0), n - 1);
+      return i === n - 1 ? 0 : i + 1;
+    });
+  };
 
   return (
     <>
@@ -173,9 +183,9 @@ export function IncidentDetailPanel({
 
         <div className="flex flex-col items-center">
           <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
-            {evidence.length > 0 && evidence[currentIndex]?.image_url ? (
+            {evidence.length > 0 && evidence[displayIndex]?.image_url ? (
               <img
-                src={`${API_BASE_URL}${evidence[currentIndex].image_url}`}
+                src={`${API_BASE_URL}${evidence[displayIndex].image_url}`}
                 className="w-full h-full object-cover"
                 alt="Main evidence"
               />

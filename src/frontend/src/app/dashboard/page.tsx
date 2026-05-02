@@ -62,6 +62,7 @@ export default function MaintenanceDashboard() {
 
         {selectedIncident && (
           <IncidentDetailPanel
+            key={selectedIncident.incident_id}
             incident={selectedIncident}
             evidence={evidence}
             now={now}
