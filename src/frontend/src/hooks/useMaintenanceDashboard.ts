@@ -93,6 +93,14 @@ export function useMaintenanceDashboard() {
     setIncidentIdExpanded(false);
   }, []);
 
+  const notifyIncidentSplitForParent = useCallback(
+    (parentIncidentId: string) => {
+      void fetchData();
+      void fetchEvidence(parentIncidentId);
+    },
+    [fetchData, fetchEvidence],
+  );
+
   return {
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
@@ -106,5 +114,6 @@ export function useMaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    notifyIncidentSplitForParent,
   };
 }
