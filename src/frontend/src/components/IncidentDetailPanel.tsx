@@ -43,6 +43,7 @@ export function IncidentDetailPanel({
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [splitModalOpen, setSplitModalOpen] = useState(false);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const displayIndex =
     evidence.length === 0
@@ -66,9 +67,6 @@ export function IncidentDetailPanel({
       return i === n - 1 ? 0 : i + 1;
     });
   };
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   return (
     <>
@@ -80,58 +78,58 @@ export function IncidentDetailPanel({
             <h2 className="text-xl font-bold mb-4 leading-tight">{incident.vlm_summary}</h2>
 
             <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
-            <span className="font-bold text-gray-700">Incident ID:</span>
-            <span
-              role="button"
-              tabIndex={0}
-              aria-expanded={incidentIdExpanded}
-              aria-label={
-                incidentIdExpanded
-                  ? "Full incident ID. Click to collapse."
-                  : "Incident ID. Click to expand."
-              }
-              onClick={onToggleIncidentIdExpanded}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onToggleIncidentIdExpanded();
+              <span className="font-bold text-gray-700">Incident ID:</span>
+              <span
+                role="button"
+                tabIndex={0}
+                aria-expanded={incidentIdExpanded}
+                aria-label={
+                  incidentIdExpanded
+                    ? "Full incident ID. Click to collapse."
+                    : "Incident ID. Click to expand."
                 }
-              }}
-              className={`inline-block max-w-full font-mono text-xs rounded-md border-2 border-black/15 bg-amber-50 px-2 py-0.5 text-slate-900 shadow-sm transition-colors hover:bg-amber-100 hover:border-black/30 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${incidentIdExpanded ? "break-all" : ""
-                }`}
-              title={
-                incidentIdExpanded
-                  ? "Click to show short ID"
-                  : `${incident.incident_id} — click to expand`
-              }
-            >
-              {incidentIdExpanded
-                ? incident.incident_id
-                : displayCompactIncidentId(incident.incident_id)}
-            </span>
+                onClick={onToggleIncidentIdExpanded}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onToggleIncidentIdExpanded();
+                  }
+                }}
+                className={`inline-block max-w-full font-mono text-xs rounded-md border-2 border-black/15 bg-amber-50 px-2 py-0.5 text-slate-900 shadow-sm transition-colors hover:bg-amber-100 hover:border-black/30 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${incidentIdExpanded ? "break-all" : ""
+                  }`}
+                title={
+                  incidentIdExpanded
+                    ? "Click to show short ID"
+                    : `${incident.incident_id} — click to expand`
+                }
+              >
+                {incidentIdExpanded
+                  ? incident.incident_id
+                  : displayCompactIncidentId(incident.incident_id)}
+              </span>
 
-            <span className="font-bold text-gray-700">Priority:</span>
-            <span
-              className={
-                isHighPriority(incident.issue_priority)
-                  ? "text-red-600 font-bold"
-                  : "text-yellow-600 font-bold"
-              }
-            >
-              {incident.issue_priority != null && incident.issue_priority !== ""
-                ? String(incident.issue_priority)
-                : "—"}
-            </span>
+              <span className="font-bold text-gray-700">Priority:</span>
+              <span
+                className={
+                  isHighPriority(incident.issue_priority)
+                    ? "text-red-600 font-bold"
+                    : "text-yellow-600 font-bold"
+                }
+              >
+                {incident.issue_priority != null && incident.issue_priority !== ""
+                  ? String(incident.issue_priority)
+                  : "—"}
+              </span>
 
-            <span className="font-bold text-gray-700">Status:</span>
-            <span className="text-700">{incident.status}</span>
+              <span className="font-bold text-gray-700">Status:</span>
+              <span className="text-700">{incident.status}</span>
 
-            <span className="font-bold text-gray-700">Location:</span>
-            <span>{incident.location_id}</span>
+              <span className="font-bold text-gray-700">Location:</span>
+              <span>{incident.location_id}</span>
 
-            <span className="font-bold text-gray-700">Age:</span>
-            <span>{formatElapsedSince(incident.created_at, now)}</span>
-          </div>
+              <span className="font-bold text-gray-700">Age:</span>
+              <span>{formatElapsedSince(incident.created_at, now)}</span>
+            </div>
           </div>
 
           <div className="w-[7.5rem] shrink-0 flex flex-col gap-2 border-l border-slate-300 pl-4 pt-10">
@@ -157,7 +155,6 @@ export function IncidentDetailPanel({
             </button>
             <button
               type="button"
-              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
               disabled={evidence.length < 2}
               title={evidence.length < 2 ? "Need at least two photos to split" : undefined}
               onClick={() => setSplitModalOpen(true)}
@@ -271,6 +268,8 @@ export function IncidentDetailPanel({
               setMergeModalOpen(false);
             })();
           }}
+        />
+      )}
       {splitModalOpen && (
         <SplitIncidentModal
           incident={incident}

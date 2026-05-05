@@ -17,7 +17,6 @@ from src.backend.inference import (
     kSupportedList,
 )
 from contextlib import asynccontextmanager
-from typing import cast
 
 
 class IncidentUpdate(BaseModel):

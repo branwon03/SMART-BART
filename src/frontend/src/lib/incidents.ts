@@ -42,6 +42,9 @@ export function mergePhotos(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ evidence_ids: evidenceIds }),
+    },
+  );
+}
 export function splitIncident(
   incidentId: string,
   params: {
