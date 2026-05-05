@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 class IncidentUpdate(BaseModel):
     issue_priority: str | None = None
     status: str | None = None
+    location_id: str | None = None
 
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -71,6 +72,7 @@ async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
     photo_location_id: str = Form(default=None),
+    gmail_thread_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -94,6 +96,7 @@ async def submissions(
         submission_id = uuid.uuid4().hex
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
+        
 
         incident = Incident(
             incident_id=incident_id,
@@ -103,6 +106,7 @@ async def submissions(
             vlm_summary=description or None,
             location_id=photo_location_id or None,
             created_at=now,
+            gmail_thread_id=gmail_thread_id,
         )
         db.add(incident)
 
@@ -126,7 +130,7 @@ async def submissions(
                 photo_report_status="New",
                 photo_report_confidence=None,
                 photo_report_discipline=None,
-                photo_location_id=photo_location_id,
+                photo_location_id=photo_location_id or "EMAIL-Unlocated",
             )
             db.add(photo_report)
 
@@ -156,6 +160,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
             "location_id": r.location_id, 
+            "gmail_thread_id": r.gmail_thread_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
@@ -174,6 +179,8 @@ async def update_incident(
         setattr(row, "issue_priority", body.issue_priority)
     if body.status is not None:
         setattr(row, "status", body.status)
+    if body.location_id is not None:  
+        row.location_id = body.location_id
 
     db.commit()
     db.refresh(row)
