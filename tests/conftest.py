@@ -39,6 +39,11 @@ app.dependency_overrides[get_db] = _override_get_db
 
 @pytest.fixture
 def db_session(_reset_tables_and_uploads):
+    """Same SQLite binding as overridden ``get_db``.
+
+    Avoid ``from tests.conftest import …`` — that re-loads ``conftest`` and creates an
+    empty second engine without tables while the app still overrides ``get_db`` to it.
+    """
     db = TestSession()
     try:
         yield db

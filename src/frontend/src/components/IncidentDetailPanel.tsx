@@ -9,6 +9,7 @@ import { isHighPriority } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
 import { MergeIncidentModal } from "./MergeIncidentModal";
+import { SplitIncidentModal } from "./SplitIncidentModal";
 
 type IncidentDetailPanelProps = {
   incident: Incident;
@@ -21,6 +22,7 @@ type IncidentDetailPanelProps = {
   onIncidentUpdated: (updated: Incident) => void;
   onIncidentDeleted: (incidentId: string) => void;
   onRefreshAfterMerge: (incidentId: string) => Promise<void>;
+  onIncidentSplit: (parentIncidentId: string) => void;
 };
 
 export function IncidentDetailPanel({
@@ -34,15 +36,35 @@ export function IncidentDetailPanel({
   onIncidentUpdated,
   onIncidentDeleted,
   onRefreshAfterMerge,
+  onIncidentSplit,
 }: IncidentDetailPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [splitModalOpen, setSplitModalOpen] = useState(false);
+
+  const displayIndex =
+    evidence.length === 0
+      ? 0
+      : Math.min(Math.max(currentIndex, 0), evidence.length - 1);
+
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? evidence.length - 1 : prev - 1));
+    setCurrentIndex((prev) => {
+      const n = evidence.length;
+      if (n === 0) return 0;
+      const i = Math.min(Math.max(prev, 0), n - 1);
+      return i === 0 ? n - 1 : i - 1;
+    });
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev === evidence.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => {
+      const n = evidence.length;
+      if (n === 0) return 0;
+      const i = Math.min(Math.max(prev, 0), n - 1);
+      return i === n - 1 ? 0 : i + 1;
+    });
   };
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -136,6 +158,10 @@ export function IncidentDetailPanel({
             <button
               type="button"
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
+              disabled={evidence.length < 2}
+              title={evidence.length < 2 ? "Need at least two photos to split" : undefined}
+              onClick={() => setSplitModalOpen(true)}
+              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
             >
               Split
             </button>
@@ -175,9 +201,9 @@ export function IncidentDetailPanel({
 
         <div className="flex flex-col items-center">
           <div className="relative w-full aspect-square bg-gray-200 mb-8 border-2 border-gray-300 overflow-hidden rounded-none">
-            {evidence.length > 0 && evidence[currentIndex]?.image_url ? (
+            {evidence.length > 0 && evidence[displayIndex]?.image_url ? (
               <img
-                src={`${API_BASE_URL}${evidence[currentIndex].image_url}`}
+                src={`${API_BASE_URL}${evidence[displayIndex].image_url}`}
                 className="w-full h-full object-cover"
                 alt="Main evidence"
               />
@@ -245,6 +271,15 @@ export function IncidentDetailPanel({
               setMergeModalOpen(false);
             })();
           }}
+      {splitModalOpen && (
+        <SplitIncidentModal
+          incident={incident}
+          evidence={evidence}
+          onSplit={(parentId) => {
+            setSplitModalOpen(false);
+            onIncidentSplit(parentId);
+          }}
+          onCancel={() => setSplitModalOpen(false)}
         />
       )}
     </>

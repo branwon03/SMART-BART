@@ -107,6 +107,10 @@ export function useMaintenanceDashboard() {
     async (openIncidentId: string) => {
       await fetchData();
       await fetchEvidence(openIncidentId);
+  const notifyIncidentSplitForParent = useCallback(
+    (parentIncidentId: string) => {
+      void fetchData();
+      void fetchEvidence(parentIncidentId);
     },
     [fetchData, fetchEvidence],
   );
@@ -126,5 +130,6 @@ export function useMaintenanceDashboard() {
     updateSelectedIncident,
     removeIncident,
     refreshAfterMerge,
+    notifyIncidentSplitForParent,
   };
 }

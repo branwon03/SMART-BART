@@ -34,6 +34,15 @@ services:
       db:
         condition: service_healthy
 
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bart-mobile-tunnel
+    # Same Compose network as frontend; port must match frontend (3000), not 3001.
+    command: tunnel --url http://frontend:3000
+    restart: unless-stopped
+    depends_on:
+      - frontend
+
   processor:
     build: . 
     restart: unless-stopped
@@ -57,9 +66,11 @@ services:
     build:
       context: src/frontend
       args:
-        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+        # Empty = browser uses same-origin /api/* (rewrites to backend). Required for Cloudflare tunnel / mobile.
+        NEXT_PUBLIC_API_BASE_URL: ""
+        # Baked into next.config rewrites at build time; runtime env alone is not enough in standalone image.
+        BACKEND_PROXY_URL: "http://backend:8000"
     environment:
-      # Used by Next rewrites when the app calls same-origin /api/* (BACKEND_PROXY_URL for server-side proxy).
       BACKEND_PROXY_URL: "http://backend:8000"
     restart: unless-stopped
     ports:

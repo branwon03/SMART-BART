@@ -21,6 +21,7 @@ export default function MaintenanceDashboard() {
     updateSelectedIncident,
     removeIncident,
     refreshAfterMerge,
+    notifyIncidentSplitForParent,
   } = useMaintenanceDashboard();
 
   return (
@@ -63,6 +64,7 @@ export default function MaintenanceDashboard() {
 
         {selectedIncident && (
           <IncidentDetailPanel
+            key={selectedIncident.incident_id}
             incident={selectedIncident}
             evidence={evidence}
             allIncidents={allIncidents}
@@ -76,6 +78,7 @@ export default function MaintenanceDashboard() {
             onIncidentUpdated={updateSelectedIncident}
             onIncidentDeleted={removeIncident}
             onRefreshAfterMerge={refreshAfterMerge}
+            onIncidentSplit={notifyIncidentSplitForParent}
           />
         )}
       </div>
