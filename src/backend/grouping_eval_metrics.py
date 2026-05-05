@@ -1,5 +1,4 @@
-"""
-Offline grouping evaluation script for the BART incident grouping.
+"""Offline grouping evaluation script for the BART incident grouping.
 
 This script does not change production grouping behavior. Instead, it uses a
 hand-labeled CSV with true_group_id labels to simulate how the grouping pipeline
@@ -16,6 +15,7 @@ High-level flow:
 5. Evaluate predicted groups against true_group_id labels using pairwise metrics,
    cluster purity, and optional sklearn metrics.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd  # type: ignore[import-untyped]
-
 
 # Input dataset and local cache/output paths
 # The .cache files should stay local because they can contain downloaded images
@@ -219,6 +218,41 @@ def download_gcs_image(gs_uri: str, line_number: int) -> Path:
     return local_path
 
 
+def resolve_image_path(image_uri: str, line_number: int, image_dir: Path | None = None) -> Path:
+    """
+    Resolve an eval image path.
+
+    Supports both:
+    - gs:// paths from the original BART eval dataset
+    - local filenames/paths from the campus eval dataset
+
+    If image_uri is local and image_dir is provided, the script looks inside
+    that directory first. This lets campus_grouping_eval_subset.csv store just
+    filenames like 20260226_155654539_iOS.jpg.
+    """
+
+    if isinstance(image_uri, str) and image_uri.startswith("gs://"):
+        return download_gcs_image(image_uri, line_number)
+
+    candidate = Path(str(image_uri))
+
+    if candidate.is_absolute() and candidate.exists():
+        return candidate
+
+    if image_dir is not None:
+        local_candidate = image_dir / candidate.name
+        if local_candidate.exists():
+            return local_candidate
+
+    if candidate.exists():
+        return candidate
+
+    raise FileNotFoundError(
+        f"Could not find image for line {line_number}: {image_uri}. "
+        f"Checked image_dir={image_dir}"
+    )
+
+
 def text_for_embedding(row: pd.Series) -> str:
     """
     Choose the best available text description to include with the image embedding.
@@ -261,6 +295,8 @@ def production_style_text_for_embedding(row: pd.Series) -> str:
 def generate_embeddings(
     df: pd.DataFrame,
     production_style: bool = False,
+    image_dir: Path | None = None,
+    embedding_cache_path: Path | None = None,
 ) -> dict[int, list[float]]:
     """
     Generate or load embeddings for every row in the eval dataset.
@@ -274,11 +310,14 @@ def generate_embeddings(
 
     from src.backend.inference import generate_embedding
 
-    cache_path = (
-        PRODUCTION_EMBEDDING_CACHE_PATH
-        if production_style
-        else EMBEDDING_CACHE_PATH
-    )
+    if embedding_cache_path is not None:
+        cache_path = embedding_cache_path
+    else:
+        cache_path = (
+            PRODUCTION_EMBEDDING_CACHE_PATH
+            if production_style
+            else EMBEDDING_CACHE_PATH
+        )
 
     cache = load_embedding_cache(cache_path)
 
@@ -295,7 +334,7 @@ def generate_embeddings(
 
     for idx, row in enumerate(missing, start=1):
         line_number = int(row["line_number"])
-        image_path = download_gcs_image(str(row["image_uri"]), line_number)
+        image_path = resolve_image_path(str(row["image_uri"]), line_number, image_dir)
 
         text = (
             production_style_text_for_embedding(row)
@@ -647,9 +686,15 @@ def main() -> None:
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--location-filter", action="store_true")
     parser.add_argument("--production-embeddings", action="store_true")
+    parser.add_argument("--input-csv", type=Path, default=EVAL_CSV_PATH)
+    parser.add_argument("--image-dir", type=Path, default=None)
+    parser.add_argument("--embedding-cache", type=Path, default=None)
+    parser.add_argument("--production-embedding-cache", type=Path, default=None)
+    parser.add_argument("--metrics-out", type=Path, default=None)
+    parser.add_argument("--predictions-out", type=Path, default=None)
     args = parser.parse_args()
 
-    df = load_eval_csv(EVAL_CSV_PATH)
+    df = load_eval_csv(args.input_csv)
 
     if args.location_filter and "photo_location_id" not in df.columns:
         raise ValueError(
@@ -660,6 +705,12 @@ def main() -> None:
         production_embeddings=args.production_embeddings,
         location_filter=args.location_filter,
     )
+
+    if args.metrics_out is not None:
+        metrics_out = args.metrics_out
+
+    if args.predictions_out is not None:
+        predictions_out = args.predictions_out
 
     embedding_mode = (
         "production_style"
@@ -676,9 +727,17 @@ def main() -> None:
         print("\nCheck-only complete.")
         return
 
+    embedding_cache_path = (
+        args.production_embedding_cache
+        if args.production_embeddings
+        else args.embedding_cache
+    )
+
     embeddings = generate_embeddings(
         df,
         production_style=args.production_embeddings,
+        image_dir=args.image_dir,
+        embedding_cache_path=embedding_cache_path,
     )
 
     if args.sweep:
