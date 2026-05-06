@@ -44,3 +44,9 @@ src/mobile/dist/
 src/mobile/npm-debug.log*
 src/mobile/env.
 src/mobile/expo-env.d.ts
+.cache/
+
+# Local grouping eval artifacts
+.tmp_grouping_review/
+.cache/
+datasets/grouping_eval/campus_images/

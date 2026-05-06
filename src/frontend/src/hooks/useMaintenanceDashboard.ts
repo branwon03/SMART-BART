@@ -37,7 +37,7 @@ export function useMaintenanceDashboard() {
         const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
         return updated ?? prevSelectedIncident;
       });
-      
+
     } catch (err) {
       console.error("Fetch incidents failed:", err);
     }
@@ -103,7 +103,24 @@ export function useMaintenanceDashboard() {
     setIncidentIdExpanded(false);
   }, []);
 
+  const refreshAfterMerge = useCallback(
+    async (openIncidentId: string) => {
+      await fetchData();
+      await fetchEvidence(openIncidentId);
+    },
+    [fetchData, fetchEvidence],
+  );
+
+  const notifyIncidentSplitForParent = useCallback(
+    (parentIncidentId: string) => {
+      void fetchData();
+      void fetchEvidence(parentIncidentId);
+    },
+    [fetchData, fetchEvidence],
+  );
+
   return {
+    allIncidents: data,
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
     filteredData,
@@ -116,5 +133,7 @@ export function useMaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    refreshAfterMerge,
+    notifyIncidentSplitForParent,
   };
 }

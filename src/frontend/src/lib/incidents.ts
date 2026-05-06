@@ -32,3 +32,55 @@ export function deleteIncident(
   );
 }
 
+export function mergePhotos(
+  targetIncidentId: string,
+  evidenceIds: string[],
+): Promise<{ merged_count: number }> {
+  return apiFetch<{ merged_count: number }>(
+    `/api/incidents/${encodeURIComponent(targetIncidentId)}/merge-photos`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evidence_ids: evidenceIds }),
+    },
+  );
+}
+export function splitIncident(
+  incidentId: string,
+  params: {
+    evidence_ids: string[];
+    title: string;
+    description?: string | null;
+    discipline?: string | null;
+  },
+): Promise<Incident> {
+  const body: {
+    evidence_ids: string[];
+    title: string;
+    description?: string;
+    discipline?: string;
+  } = {
+    evidence_ids: params.evidence_ids,
+    title: params.title,
+  };
+  if (params.description !== undefined && params.description !== null && params.description.trim() !== "") {
+    body.description = params.description;
+  }
+  if (
+    params.discipline !== undefined &&
+    params.discipline !== null &&
+    params.discipline.trim() !== ""
+  ) {
+    body.discipline = params.discipline.trim();
+  }
+
+  return apiFetch<Incident>(
+    `/api/incidents/${encodeURIComponent(incidentId)}/split`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+}
+
