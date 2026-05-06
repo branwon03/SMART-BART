@@ -29,8 +29,6 @@ services:
       - uploads:/app/uploads
       - ./.env:/app/.env
       - ./credentials.json:/app/credentials.json
-      - ./gmail_credentials.json:/app/gmail_credentials.json
-      - ./token.json:/app/token.json
     
     depends_on:
       db:
@@ -79,6 +77,19 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+
+  gmail-worker:
+    build: .
+    command: python -m src.backend.check_email
+    env_file: .env
+    environment:
+      - API_BASE_URL=http://backend:8000/api
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    
 
 volumes:
   pgdata:

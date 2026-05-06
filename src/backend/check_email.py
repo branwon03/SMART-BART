@@ -9,9 +9,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+
 # --- CONFIG ---
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-API_BASE_URL = "http://localhost:8000/api"
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000/api")
 POLL_INTERVAL = 5  # Increased slightly to be polite to the API
 STATIONS = [
     "12th St. Oakland City Center", "16th St. Mission", "19th St. Oakland", "24th St. Mission",
@@ -41,24 +42,33 @@ def create_reply(original_msg, body_text):
     return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode(), 'threadId': original_msg['threadId']}
 
 def get_service():
-    creds = None
-    # Look for token in /app (Docker) or current dir (Local)
-    token_path = 'token.json'
-    cred_path = 'gmail_credentials.json'
+    # Look inside the config folder
+    token_path = 'config/token.json'
     
-    if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-    if not creds or not creds.valid:
+    if not os.path.exists(token_path):
+        # We don't create an empty file anymore, we just wait for the real one
+        print(f"[!] '{token_path}' not found. Please run auth_me.py locally.")
+        return None
+
+    # This directory check is now a fallback safety
+    if os.path.isdir(token_path):
+        print(f"[!] CRITICAL: '{token_path}' is a directory. Please delete it.")
+        return None
+
+    try:
+        creds = Credentials.from_authorized_user_file(token_path)
+        
         if creds and creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
             creds.refresh(Request())
-        else:
-            if not os.path.exists(cred_path):
-                raise FileNotFoundError(f"Missing {cred_path}. Ensure it is mounted in Docker volumes.")
-            flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open(token_path, 'w') as token:
-            token.write(creds.to_json())
-    return build('gmail', 'v1', credentials=creds)
+            with open(token_path, 'w') as token:
+                token.write(creds.to_json())
+        
+        return build('gmail', 'v1', credentials=creds)
+
+    except Exception as e:
+        print(f"[!] Error loading credentials: {e}")
+        return None
 
 def check_and_process():
     service = get_service()
@@ -93,7 +103,7 @@ def check_and_process():
             data = {"description": snippet, "photo_location_id": "EMAIL-Unlocated", "gmail_thread_id": thread_id}
             r = requests.post(f"{API_BASE_URL}/submissions", files=image_files, data=data)
             if r.status_code == 200:
-                body = f"Thank you for your submission - it has succesfully processed. To help expedite our maintenance response, please reply with your station name (e.g., 'West Oakland'):\n\n" + "\n".join([f"- {s}" for s in STATIONS])
+                body = "Thank you for your submission - it has succesfully processed. To help expedite our maintenance response, please reply with your station name (e.g., 'West Oakland'):\n\n" + "\n".join([f"- {s}" for s in STATIONS])
                 service.users().messages().send(userId='me', body=create_reply(full_msg, body)).execute()
                 # Mark as read/remove from inbox
                 service.users().messages().modify(userId='me', id=msg_ref['id'], body={'removeLabelIds': ['INBOX', 'UNREAD']}).execute()
@@ -126,11 +136,22 @@ def check_and_process():
 
 def run_worker():
     print("[*] Gmail Worker Started. Polling...")
+    # Give the container network a moment to settle
+    time.sleep(10) 
+    counter = 0
+    
     while True:
         try:
+            if (counter % 2) == 0:  # Log every 2 iterations (every 10 seconds)
+                print("[*] Checking for new emails...")
             check_and_process()
         except Exception as e:
-            print(f"[!] Worker Error: {e}")
+            # Check if it's a DNS/Connection error to keep logs clean
+            if "gmail.googleapis.com" in str(e):
+                print("[!] Worker: Waiting for internet connection...")
+            else:
+                print(f"[!] Worker Error: {e}")
+        
         time.sleep(POLL_INTERVAL)
 
 if __name__ == '__main__':

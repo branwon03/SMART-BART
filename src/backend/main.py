@@ -57,9 +57,9 @@ async def lifespan(app: FastAPI):
         print("[startup] Database tables created successfully.")
 
         # 3. Start the email worker in the background
-        email_thread = threading.Thread(target=run_worker, daemon=True)
-        email_thread.start()
-        print("[startup] Gmail Email Worker started in background.")
+        #email_thread = threading.Thread(target=run_worker, daemon=True)
+        #email_thread.start()
+        #print("[startup] Gmail Email Worker started in background.")
 
     except Exception as exc:
         print(f"[startup] Initialization failed: {exc}")
