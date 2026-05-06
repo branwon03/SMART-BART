@@ -32,6 +32,19 @@ export function deleteIncident(
   );
 }
 
+export function mergePhotos(
+  targetIncidentId: string,
+  evidenceIds: string[],
+): Promise<{ merged_count: number }> {
+  return apiFetch<{ merged_count: number }>(
+    `/api/incidents/${encodeURIComponent(targetIncidentId)}/merge-photos`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evidence_ids: evidenceIds }),
+    },
+  );
+}
 export function splitIncident(
   incidentId: string,
   params: {

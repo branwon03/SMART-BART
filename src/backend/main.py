@@ -25,6 +25,8 @@ class IncidentUpdate(BaseModel):
     discipline: str | None = None
 
 
+class MergePhotosBody(BaseModel):
+    evidence_ids: list[str]
 class SplitRequest(BaseModel):
     evidence_ids: list[str]
     title: str
@@ -307,7 +309,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
 
     query = text("""
-        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id,
+               vlm_summary, photo_report_discipline
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -322,6 +325,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         submitted_val = row[3]
         user_context_val = row[4]
         found_pri_val = row[5]
+        vlm_summary_val = row[7]
+        photo_report_discipline_val = row[8]
 
         clean_data.append(
             {
@@ -337,6 +342,12 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
                 if user_context_val is not None
                 else "",
                 "found_priority": None if found_pri_val is None else str(found_pri_val),
+                "vlm_summary": None
+                if vlm_summary_val is None
+                else str(vlm_summary_val),
+                "photo_report_discipline": None
+                if photo_report_discipline_val is None
+                else str(photo_report_discipline_val),
             }
         )
     # Bypass FastAPI's automatic encoder completely
@@ -354,6 +365,67 @@ async def delete_incident(incident_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"deleted_incident_id": incident_id}
+
+
+@app.post("/api/incidents/{target_incident_id}/merge-photos")
+async def merge_photos_into_incident(
+    target_incident_id: str,
+    body: MergePhotosBody,
+    db: Session = Depends(get_db),
+):
+    target = (
+        db.query(Incident)
+        .filter(Incident.incident_id == target_incident_id)
+        .first()
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail="Target incident not found")
+
+    discipline_value = target.discipline
+
+    merged_count = 0
+    touched_sources: set[str] = set()
+    for eid in body.evidence_ids:
+        if not eid:
+            continue
+        row = (
+            db.query(PhotoReport)
+            .filter(PhotoReport.evidence_id == eid)
+            .first()
+        )
+        if not row:
+            continue
+        source_incident_id = cast(str, row.incident_id)
+        if source_incident_id == target_incident_id:
+            continue
+        touched_sources.add(source_incident_id)
+        setattr(row, "incident_id", target_incident_id)
+        if discipline_value is not None:
+            setattr(row, "photo_report_discipline", discipline_value)
+        merged_count += 1
+
+    db.flush()
+
+    for src_id in touched_sources:
+        if src_id == target_incident_id:
+            continue
+        remaining = (
+            db.query(PhotoReport)
+            .filter(PhotoReport.incident_id == src_id)
+            .count()
+        )
+        if remaining == 0:
+            orphan = (
+                db.query(Incident)
+                .filter(Incident.incident_id == src_id)
+                .first()
+            )
+            if orphan:
+                db.delete(orphan)
+
+    db.commit()
+
+    return {"merged_count": merged_count}
 
 
 @app.get("/api/images/{evidence_id}")

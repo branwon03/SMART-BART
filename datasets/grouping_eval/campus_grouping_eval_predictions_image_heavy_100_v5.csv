@@ -1,0 +1,101 @@
+line_number,image_uri,auto_discipline,auto_priority,auto_description,final_discipline,final_condition,final_priority,final_description_optional,decision,photo_location_id,true_group_id,pred_group_id,best_similarity_score,best_match_line_number
+1,20260226_155654539_iOS.jpg,,,,MECHANICAL,,,,include,campus_gas_meter_area,campus_gas_meters_01,pred_0001,-1.0,
+2,20260226_155709177_iOS.jpg,,,,MECHANICAL,,,,include,campus_gas_meter_area,campus_gas_meters_01,pred_0001,0.9844639912749328,1.0
+3,20260226_155712434_iOS.jpg,,,,MECHANICAL,,,,include,campus_gas_meter_area,campus_gas_meters_01,pred_0001,0.9791244783775545,2.0
+4,20260226_155714635_iOS.jpg,,,,MECHANICAL,,,,include,campus_gas_meter_area,campus_gas_meters_01,pred_0001,0.9693050825768665,3.0
+6,20260226_160656407_iOS.jpg,,,,BUILDINGS,,,,include,campus_cracked_path_area,campus_cracked_path_01,pred_0002,-1.0,
+7,20260226_160707148_iOS.jpg,,,,BUILDINGS,,,,include,campus_cracked_path_area,campus_cracked_path_01,pred_0002,0.9711450818691625,6.0
+8,20260226_160756420_iOS.jpg,,,,BUILDINGS,,,,include,campus_cracked_path_area,campus_cracked_path_01,pred_0002,0.9515921408849002,6.0
+9,20260226_160759528_iOS.jpg,,,,BUILDINGS,,,,include,campus_cracked_path_area,campus_cracked_path_01,pred_0002,0.9751472872451448,6.0
+10,20260226_162839375_iOS.jpg,,,,GROUNDS,,,,include,campus_irrigation_cap_area,campus_irrigation_cap_01,pred_0003,-1.0,
+11,20260226_162841419_iOS.jpg,,,,GROUNDS,,,,include,campus_irrigation_cap_area,campus_irrigation_cap_01,pred_0003,0.9774719676941562,10.0
+12,20260226_162843433_iOS.jpg,,,,GROUNDS,,,,include,campus_irrigation_cap_area,campus_irrigation_cap_01,pred_0003,0.9794274473852145,11.0
+13,20260226_162847065_iOS.jpg,,,,GROUNDS,,,,include,campus_irrigation_cap_area,campus_irrigation_cap_01,pred_0003,0.9644068677346334,10.0
+14,20260226_162849008_iOS.jpg,,,,GROUNDS,,,,include,campus_irrigation_cap_area,campus_irrigation_cap_01,pred_0003,0.9765144495912295,13.0
+37,20260226_165635550_iOS.jpg,,,,ELECTRICAL,,,,include,campus_bridge_light_area,campus_tall_light_post_01,pred_0004,-1.0,
+38,20260226_165636779_iOS.jpg,,,,ELECTRICAL,,,,include,campus_bridge_light_area,campus_tall_light_post_01,pred_0004,0.9777671798219382,37.0
+39,20260226_165637648_iOS.jpg,,,,ELECTRICAL,,,,include,campus_bridge_light_area,campus_tall_light_post_01,pred_0004,0.9790729209251967,37.0
+40,20260226_165638377_iOS.jpg,,,,ELECTRICAL,,,,include,campus_bridge_light_area,campus_tall_light_post_01,pred_0004,0.9803593503134909,39.0
+42,20260226_170503117_iOS.jpg,,,,ELEVATOR AND ESCALATOR,,,,include,campus_elevator_lobby,single_elevator_lobby_01,pred_0005,-1.0,
+46,20260226_171009782_iOS 1.jpg,,,,MECHANICAL,,,,include,campus_ceiling_area,campus_sprinkler_head_01,pred_0006,0.7943047029817445,1.0
+48,20260226_171056518_iOS.jpg,,,,ELECTRICAL,,,,include,campus_ceiling_area,campus_ceiling_light_01,pred_0007,0.8506196638064898,40.0
+52,20260313_184958530_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area,single_indoor_outlet_01,pred_0008,0.8101326955534845,48.0
+53,20260313_191308420_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_bell_area,single_outdoor_bell_01,pred_0009,0.8259992086501562,52.0
+54,20260313_191841659_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area,campus_outdoor_gfci_01,pred_0010,0.8793075026274816,53.0
+55,20260313_191847949_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area,campus_outdoor_gfci_01,pred_0010,0.9753767993645669,54.0
+56,20260313_191920862_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area,campus_outdoor_gfci_01,pred_0010,0.9566195285950834,55.0
+57,20260313_191921647_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area,campus_outdoor_gfci_01,pred_0010,0.9749551731265713,56.0
+58,20260313_191922600_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area,campus_outdoor_gfci_01,pred_0010,0.9763506399852129,57.0
+59,20260313_192308881_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area,single_cylinder_light_01,pred_0011,0.8523449358384559,48.0
+60,20260316_145152533_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area,single_trash_bin_01,pred_0012,-1.0,
+61,20260316_145621690_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area,single_trash_bin_02,pred_0013,0.9397706691095292,60.0
+62,20260226_160650403_iOS.jpg,,,,BUILDINGS,,,,include,campus_cracked_path_area,campus_cracked_path_01,pred_0002,0.964403630187478,8.0
+63,20260226_163221065_iOS.jpg,,,,GROUNDS,,,,include,campus_shrub_hedge_area,campus_shrub_hedge_01,pred_0014,0.8394061626379339,10.0
+64,20260226_163229611_iOS.jpg,,,,GROUNDS,,,,include,campus_shrub_hedge_area,campus_shrub_hedge_01,pred_0014,0.9579766862450674,63.0
+65,20260226_163242728_iOS.jpg,,,,GROUNDS,,,,include,campus_shrub_hedge_area,campus_shrub_hedge_01,pred_0014,0.9519533604319433,64.0
+66,20260226_163250162_iOS.jpg,,,,GROUNDS,,,,include,campus_shrub_hedge_area,campus_shrub_hedge_01,pred_0014,0.9434506559229433,65.0
+67,20260226_163437379_iOS.jpg,,,,GROUNDS,,,,include,campus_wall_shrub_area,campus_wall_shrub_01,pred_0015,0.9262455211380032,10.0
+68,20260226_163440484_iOS 1.jpg,,,,GROUNDS,,,,include,campus_wall_shrub_area,campus_wall_shrub_01,pred_0015,0.9715997834646407,67.0
+69,20260226_163445725_iOS.jpg,,,,GROUNDS,,,,include,campus_wall_shrub_area,campus_wall_shrub_01,pred_0015,0.9658779894103391,68.0
+70,20260226_163456411_iOS.jpg,,,,GROUNDS,,,,include,campus_wall_shrub_area,campus_wall_shrub_01,pred_0015,0.983814329490565,67.0
+71,20260226_164114125_iOS.jpg,,,,GROUNDS,,,,include,campus_grass_clump_area,campus_grass_clump_01,pred_0016,0.8831592334635164,70.0
+72,20260226_164117128_iOS.jpg,,,,GROUNDS,,,,include,campus_grass_clump_area,campus_grass_clump_01,pred_0016,0.9672750632106921,71.0
+73,20260226_164127940_iOS.jpg,,,,GROUNDS,,,,include,campus_grass_clump_area,campus_grass_clump_01,pred_0016,0.9479505009857994,71.0
+74,20260226_164135165_iOS.jpg,,,,GROUNDS,,,,include,campus_grass_clump_area,campus_grass_clump_01,pred_0016,0.9725719208348104,73.0
+75,20260226_164605398_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_01,campus_faded_road_marking_01,pred_0017,0.8600933997434861,62.0
+76,20260226_164608531_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_01,campus_faded_road_marking_01,pred_0018,0.9172969106297165,75.0
+77,20260226_164615058_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_01,campus_faded_road_marking_01,pred_0019,0.8991311748537278,75.0
+78,20260226_165040699_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_02,campus_faded_road_marking_02,pred_0020,0.8973865601741844,62.0
+79,20260226_165042928_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_02,campus_faded_road_marking_02,pred_0020,0.9783723718979334,78.0
+80,20260226_165044835_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_02,campus_faded_road_marking_02,pred_0020,0.9789406500743716,79.0
+81,20260226_165046066_iOS 1.jpg,,,,BUILDINGS,,,,include,campus_faded_road_marking_area_02,campus_faded_road_marking_02,pred_0020,0.9692085536682875,78.0
+82,20260226_170433842_iOS.jpg,,,,BUILDINGS,,,,include,campus_building_entry_area,single_card_reader_01,pred_0021,0.8159647663169076,81.0
+83,20260226_170509634_iOS.jpg,,,,ELEVATOR AND ESCALATOR,,,,include,campus_elevator_area,single_elevator_button_01,pred_0022,0.8783956731218056,42.0
+84,20260226_170606754_iOS 1.jpg,,,,ELEVATOR AND ESCALATOR,,,,include,campus_elevator_area,single_elevator_button_panel_01,pred_0023,0.8850624793164359,83.0
+85,20260226_170926161_iOS.jpg,,,,ELECTRICAL,,,,include,campus_ceiling_area,single_ceiling_light_02,pred_0024,0.9262514229947408,48.0
+86,20260226_171022550_iOS.jpg,,,,ELECTRICAL,,,,include,campus_ceiling_area,single_ceiling_fixture_01,pred_0025,0.8773628931076441,48.0
+87,20260226_171104492_iOS 1.jpg,,,,ELECTRICAL,,,,include,campus_ceiling_area,single_ceiling_light_03,pred_0007,0.9442583197657485,48.0
+88,20260226_171243448_iOS.jpg,,,,ELECTRICAL,,,,include,campus_exit_sign_area,single_exit_sign_01,pred_0026,0.860268639045618,85.0
+89,20260226_171327244_iOS.jpg,,,,BUILDINGS,,,,include,campus_door_area,single_door_01,pred_0027,0.8433482907288347,82.0
+90,20260228_233429390_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.8932358655004544,62.0
+91,20260228_233430202_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.966953860019337,90.0
+92,20260228_233433364_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.9554616105452536,90.0
+93,20260228_233434254_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.9755772128954917,92.0
+94,20260228_233436118_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.9693792926830088,93.0
+95,20260228_233436982_iOS.jpg,,,,BUILDINGS,,,,include,campus_sidewalk_crack_area_02,campus_sidewalk_crack_02,pred_0028,0.9744515253006943,94.0
+96,20260226_164431391_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_bus_stop_area_01,campus_faded_bus_stop_marking_01,pred_0020,0.9451994942891767,79.0
+97,20260226_164437908_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_bus_stop_area_01,campus_faded_bus_stop_marking_01,pred_0029,0.910565276707807,96.0
+98,20260226_164458511_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_b_marking_area_01,campus_faded_b_marking_01,pred_0030,0.9362070740392819,96.0
+99,20260226_164510702_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_b_marking_area_01,campus_faded_b_marking_01,pred_0031,0.9158447766842042,98.0
+100,20260226_164514845_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_b_marking_area_01,campus_faded_b_marking_01,pred_0031,0.9491900985677932,99.0
+101,20260226_164520015_iOS.jpg,,,,BUILDINGS,,,,include,campus_faded_b_marking_area_01,campus_faded_b_marking_01,pred_0031,0.951103345229795,100.0
+102,20260228_234159220_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9378387765325457,60.0
+103,20260228_234204315_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9469440202092069,102.0
+104,20260228_234206373_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.972118898428735,103.0
+105,20260228_234210120_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9632949498360782,104.0
+106,20260228_234212043_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9771131814669184,105.0
+107,20260228_234213831_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9757532784824918,106.0
+108,20260228_234215254_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9716695372783258,107.0
+109,20260228_234217387_iOS.jpg,,,,SYSTEM SERVICE,,,,include,campus_trash_bin_area_02,campus_trash_bins_02,pred_0032,0.9735216923677735,108.0
+110,20260310_233712494_iOS.jpg,,,,COMMS,,,,include,campus_blue_phone_area_01,campus_blue_phone_01,pred_0033,-1.0,
+111,20260310_233715377_iOS.jpg,,,,COMMS,,,,include,campus_blue_phone_area_01,campus_blue_phone_01,pred_0033,0.9724036044857004,110.0
+112,20260310_233717775_iOS.jpg,,,,COMMS,,,,include,campus_blue_phone_area_01,campus_blue_phone_01,pred_0033,0.9814009034882453,111.0
+113,20260313_184948045_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area_02,campus_indoor_outlet_02,pred_0008,0.954034876251628,52.0
+114,20260313_184949349_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area_02,campus_indoor_outlet_02,pred_0008,0.9630565453767211,52.0
+115,20260313_184953722_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area_02,campus_indoor_outlet_02,pred_0008,0.9782000859038532,52.0
+116,20260313_184954824_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area_02,campus_indoor_outlet_02,pred_0008,0.9675513314429536,115.0
+117,20260313_184957219_iOS.jpg,,,,ELECTRICAL,,,,include,campus_indoor_outlet_area_02,campus_indoor_outlet_02,pred_0008,0.9692673665567616,52.0
+118,20260313_191309879_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area_02,campus_outdoor_outlet_02,pred_0009,0.9498212979113942,53.0
+119,20260313_191311806_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area_02,campus_outdoor_outlet_02,pred_0009,0.9688039556252814,118.0
+120,20260313_191319570_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area_02,campus_outdoor_outlet_02,pred_0009,0.9775316774484468,119.0
+121,20260313_191322410_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area_02,campus_outdoor_outlet_02,pred_0009,0.9763582196992787,120.0
+122,20260313_191324205_iOS.jpg,,,,ELECTRICAL,,,,include,campus_outdoor_outlet_area_02,campus_outdoor_outlet_02,pred_0009,0.9869335368435791,121.0
+123,20260313_192252419_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area_02,campus_cylinder_light_02,pred_0011,0.9606625324543923,59.0
+124,20260313_192255423_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area_02,campus_cylinder_light_02,pred_0011,0.9791114512594784,123.0
+125,20260313_192258820_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area_02,campus_cylinder_light_02,pred_0011,0.9769614952105736,124.0
+126,20260313_192301771_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area_02,campus_cylinder_light_02,pred_0011,0.9815469921437888,125.0
+127,20260313_192304722_iOS.jpg,,,,ELECTRICAL,,,,include,campus_cylinder_light_area_02,campus_cylinder_light_02,pred_0011,0.982626282943373,126.0
+128,20260226_171225743_iOS.jpg,,,,ELECTRICAL,,,,include,campus_exit_sign_area_02,campus_exit_sign_02,pred_0026,0.9579443488654288,88.0
+129,20260226_171230067_iOS.jpg,,,,ELECTRICAL,,,,include,campus_exit_sign_area_02,campus_exit_sign_02,pred_0026,0.9616908978891715,128.0
+130,20260226_171236822_iOS.jpg,,,,ELECTRICAL,,,,include,campus_exit_sign_area_02,campus_exit_sign_02,pred_0026,0.9438890805395068,128.0
+131,20260226_171257347_iOS.jpg,,,,ELECTRICAL,,,,include,campus_exit_sign_area_02,campus_exit_sign_02,pred_0026,0.9664975681429584,88.0
