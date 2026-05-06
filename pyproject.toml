@@ -16,6 +16,9 @@ dependencies = [
     "google-auth>=2.49.1",
     "pgvector>=0.4.2",
     "pillow>=12.2.0",
+    "scikit-learn>=1.8.0",
+    "pandas>=3.0.2",
+    "google-cloud-storage>=3.10.1",
 ]
 
 [tool.uv]
