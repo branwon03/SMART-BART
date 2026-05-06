@@ -1,9 +1,9 @@
 """
 Gmail worker helpers + API: OAuth token lifecycle and gmail_thread_id on incidents.
 """
+
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.backend.main import app
@@ -59,7 +59,9 @@ def test_get_service_refreshes_expired_token_and_writes_file(
     creds = MagicMock()
     creds.expired = True
     creds.refresh_token = "dummy-refresh"
-    creds.to_json.return_value = '{"token": "new-refreshed", "refresh_token": "dummy-refresh"}'
+    creds.to_json.return_value = (
+        '{"token": "new-refreshed", "refresh_token": "dummy-refresh"}'
+    )
     mock_from_file.return_value = creds
     mock_build.return_value = MagicMock()
 
