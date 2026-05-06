@@ -132,7 +132,7 @@ export function IncidentDetailPanel({
             </div>
           </div>
 
-          <div className="w-[7.5rem] shrink-0 flex flex-col gap-2 border-l border-slate-300 pl-4 pt-10">
+          <div className="w-[7.5rem] shrink-0 flex flex-col gap-2 pl-4 pt-10">
             <button
               type="button"
               onClick={() => setEditModalOpen(true)}
