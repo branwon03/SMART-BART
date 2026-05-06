@@ -7,6 +7,9 @@ from email.mime.text import MIMEText
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
+RED = "\033[91m"
+BOLD = "\033[1m"
+ENDC = "\033[0m"
 
 # --- CONFIG ---
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
@@ -63,6 +66,8 @@ def get_service():
 
 def check_and_process():
     service = get_service()
+    if service is None:     # If credentials couldn't be loaded, skip processing to avoid errors
+        return 
     # Only get UNREAD messages in INBOX to avoid processing the same thing twice
     results = service.users().messages().list(userId='me', q='label:INBOX is:unread').execute()
     messages = results.get('messages', [])
@@ -125,23 +130,23 @@ def check_and_process():
                     service.users().messages().modify(userId='me', id=msg_ref['id'], body={'removeLabelIds': ['INBOX', 'UNREAD']}).execute()
 
 def run_worker():
-    time.sleep(10)
     print("[*] Gmail Worker Started. Polling...")
     counter = 0
     
     while True:
         try:
-            if (counter % 2) == 0:  # Log every 2 iterations (every 10 seconds) so it isn't spammed
+            if (counter % 4) == 0:  # Log every 4 iterations (every 10 seconds) so it isn't spammed
                 print("[*] Checking for new emails...")
             check_and_process()
         except Exception as e:
             # Check if it's a DNS/Connection error to keep logs clean
-            if "gmail.googleapis.com" in str(e):
+            if ("gmail.googleapis.com" in str(e) and counter % 2):
                 print("[!] Worker: Waiting for internet connection...")
-            else:
+            elif counter % 4 == 0:  # Log other errors every 4 iterations to avoid spamming
                 print(f"[!] Worker Error: {e}")
         
         time.sleep(POLL_INTERVAL)
+        counter += 1
 
 if __name__ == '__main__':
     run_worker()
