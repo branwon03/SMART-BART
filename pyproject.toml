@@ -58,3 +58,12 @@ dev = [
     "ruff>=0.15.5",
     "types-requests>=2.32.0",
 ]
+
+[[tool.mypy.overrides]]
+module = [
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "google.auth.*",
+    "google.oauth2.*"
+]
+ignore_missing_imports = true

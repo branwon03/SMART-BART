@@ -283,7 +283,7 @@ async def update_incident(
     if body.status is not None:
         setattr(row, "status", body.status)
     if body.location_id is not None:  
-        row.location_id = body.location_id
+        setattr(row, "location_id", body.location_id)
 
     db.commit()
     db.refresh(row)
