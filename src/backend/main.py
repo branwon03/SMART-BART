@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import threading
 import uuid
 from sqlalchemy import text
 from datetime import datetime, timezone
@@ -16,6 +17,7 @@ from src.backend.inference import (
     kSupportedList,
 )
 from contextlib import asynccontextmanager
+from src.backend.check_email import run_worker
 
 
 class IncidentUpdate(BaseModel):
@@ -43,6 +45,11 @@ async def lifespan(app: FastAPI):
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
         print("[startup] Database tables created successfully.")
+
+        # 3. Start the email worker in the background
+        email_thread = threading.Thread(target=run_worker, daemon=True)
+        email_thread.start()
+        print("[startup] Gmail Email Worker started in background.")
 
     except Exception as exc:
         print(f"[startup] Initialization failed: {exc}")

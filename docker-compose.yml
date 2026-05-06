@@ -29,6 +29,8 @@ services:
       - uploads:/app/uploads
       - ./.env:/app/.env
       - ./credentials.json:/app/credentials.json
+      - ./gmail_credentials.json:/app/gmail_credentials.json
+      - ./token.json:/app/token.json
     
     depends_on:
       db:
