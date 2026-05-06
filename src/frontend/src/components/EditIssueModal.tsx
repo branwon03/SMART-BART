@@ -6,7 +6,7 @@ import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { updateIncident } from "../lib/incidents";
 
 const PRIORITY_OPTIONS = ["Standard", "Emergency"] as const;
-const STATUS_OPTIONS = ["New", "In Progress", "Resolved", "Closed"] as const;
+const STATUS_OPTIONS = ["New", "In Progress", "Closed"] as const;
 
 type EditIssueModalProps = {
   incident: Incident;

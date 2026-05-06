@@ -142,12 +142,6 @@ export function IncidentDetailPanel({
             </button>
             <button
               type="button"
-              className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
-            >
-              Redirect
-            </button>
-            <button
-              type="button"
               onClick={() => setMergeModalOpen(true)}
               className="bg-white text-black font-bold py-1 rounded-lg border-2 border-black hover:bg-gray-100"
             >
