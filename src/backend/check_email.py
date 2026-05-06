@@ -4,16 +4,14 @@ import base64
 import requests
 import re
 from email.mime.text import MIMEText
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
 # --- CONFIG ---
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000/api")
-POLL_INTERVAL = 5  # Increased slightly to be polite to the API
+POLL_INTERVAL = 5 
 STATIONS = [
     "12th St. Oakland City Center", "16th St. Mission", "19th St. Oakland", "24th St. Mission",
     "Antioch", "Ashby", "Balboa Park", "Bay Fair", "Berryessa / North San Jose",
@@ -42,17 +40,10 @@ def create_reply(original_msg, body_text):
     return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode(), 'threadId': original_msg['threadId']}
 
 def get_service():
-    # Look inside the config folder
     token_path = 'config/token.json'
     
     if not os.path.exists(token_path):
-        # We don't create an empty file anymore, we just wait for the real one
         print(f"[!] '{token_path}' not found. Please run auth_me.py locally.")
-        return None
-
-    # This directory check is now a fallback safety
-    if os.path.isdir(token_path):
-        print(f"[!] CRITICAL: '{token_path}' is a directory. Please delete it.")
         return None
 
     try:
@@ -90,7 +81,8 @@ def check_and_process():
         def find_imgs(p_list):
             imgs = []
             for p in p_list:
-                if p.get('parts'): imgs.extend(find_imgs(p['parts']))
+                if p.get('parts'): 
+                    imgs.extend(find_imgs(p['parts']))
                 if p.get('filename') and p.get('mimeType', '').startswith('image/'):
                     att = service.users().messages().attachments().get(userId='me', messageId=msg_ref['id'], id=p['body']['attachmentId']).execute()
                     imgs.append(('media', (p['filename'], base64.urlsafe_b64decode(att['data']), p['mimeType'])))
@@ -110,8 +102,6 @@ def check_and_process():
 
         # 2. Check for Station Name (Update)
         else:
-            # IMPROVED MATCHING: 
-            # Sort by length descending so "West Oakland" is checked before "Oakland"
             sorted_stations = sorted(STATIONS, key=len, reverse=True)
             matched = None
             for s in sorted_stations:
@@ -135,14 +125,13 @@ def check_and_process():
                     service.users().messages().modify(userId='me', id=msg_ref['id'], body={'removeLabelIds': ['INBOX', 'UNREAD']}).execute()
 
 def run_worker():
+    time.sleep(10)
     print("[*] Gmail Worker Started. Polling...")
-    # Give the container network a moment to settle
-    time.sleep(10) 
     counter = 0
     
     while True:
         try:
-            if (counter % 2) == 0:  # Log every 2 iterations (every 10 seconds)
+            if (counter % 2) == 0:  # Log every 2 iterations (every 10 seconds) so it isn't spammed
                 print("[*] Checking for new emails...")
             check_and_process()
         except Exception as e:
