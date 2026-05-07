@@ -11,7 +11,7 @@ export function getPhotoReports(incidentId: string): Promise<PhotoReport[]> {
 
 export function updateIncident(
   incidentId: string,
-  fields: { issue_priority?: string; status?: string },
+  fields: { issue_priority?: string; status?: string; discipline?: string },
 ): Promise<Incident> {
   return apiFetch<Incident>(
     `/api/incidents/${encodeURIComponent(incidentId)}`,

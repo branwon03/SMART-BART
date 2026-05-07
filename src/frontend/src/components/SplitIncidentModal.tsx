@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
-import { MAINTENANCE_DISCIPLINES } from "../hooks/useMaintenanceDashboard";
+import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { API_BASE_URL } from "../lib/config";
 import { splitIncident } from "../lib/incidents";
 
@@ -113,9 +113,8 @@ export function SplitIncidentModal({
                       return (
                         <label
                           key={ev.evidence_id}
-                          className={`relative cursor-pointer shrink-0 w-[9.5rem] rounded-lg border-2 overflow-hidden ${
-                            checked ? "border-black ring-2 ring-black/30" : "border-gray-200"
-                          }`}
+                          className={`relative cursor-pointer shrink-0 w-[9.5rem] rounded-lg border-2 overflow-hidden ${checked ? "border-black ring-2 ring-black/30" : "border-gray-200"
+                            }`}
                         >
                           <input
                             type="checkbox"

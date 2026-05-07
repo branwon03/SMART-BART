@@ -22,6 +22,7 @@ from contextlib import asynccontextmanager
 class IncidentUpdate(BaseModel):
     issue_priority: str | None = None
     status: str | None = None
+    discipline: str | None = None
     location_id: str | None = None
 
 
@@ -282,6 +283,8 @@ async def update_incident(
         setattr(row, "issue_priority", body.issue_priority)
     if body.status is not None:
         setattr(row, "status", body.status)
+    if body.discipline is not None:
+        setattr(row, "discipline", body.discipline)
     if body.location_id is not None:  
         setattr(row, "location_id", body.location_id)
 
