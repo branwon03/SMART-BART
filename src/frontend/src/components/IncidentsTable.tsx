@@ -1,9 +1,12 @@
 import type { Incident } from "../types/api";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
-import { isHighPriority } from "../lib/priorityUi";
 import { DisciplineSummary } from "./DisciplineSummary";
 
 
+import {
+  issuePriorityDotClassFromRaw,
+  normalizeIssuePriority,
+} from "../lib/priorityUi";
 
 type IncidentsTableProps = {
   activeTab: string;
@@ -92,11 +95,8 @@ export function IncidentsTable({
                   </td>
                   <td className="p-5">
                     <div
-                      className={`h-1.5 w-10 rounded-full ${
-                        isHighPriority(item.issue_priority)
-                          ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                          : "bg-yellow-400"
-                      }`}
+                      className={issuePriorityDotClassFromRaw(item.issue_priority)}
+                      title={`Priority: ${normalizeIssuePriority(item.issue_priority)}`}
                     />
                   </td>
                   <td className="p-5 text-xs font-semibold text-slate-600">

@@ -41,6 +41,7 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
+    gmail_thread_id = Column(String, nullable=True, index=True)
 
 
 class PhotoReport(Base):
@@ -48,6 +49,7 @@ class PhotoReport(Base):
 
     evidence_id = Column(String, primary_key=True)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
+    submission_id = Column(String, index=True) 
     image_url = Column(String)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)

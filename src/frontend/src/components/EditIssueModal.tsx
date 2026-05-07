@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Incident } from "../types/api";
+import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { updateIncident } from "../lib/incidents";
 
-const PRIORITY_OPTIONS = ["Standard", "Emergency"] as const;
-const STATUS_OPTIONS = ["New", "In Progress", "Resolved", "Closed"] as const;
+const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+type IssuePriority = (typeof PRIORITY_OPTIONS)[number];
+const STATUS_OPTIONS = ["New", "In Progress", "Closed"] as const;
 
 type EditIssueModalProps = {
   incident: Incident;
@@ -14,11 +16,18 @@ type EditIssueModalProps = {
 };
 
 export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalProps) {
-  const [priority, setPriority] = useState(
-    () => normalizePriority(incident.issue_priority),
+  const [priority, setPriority] = useState<IssuePriority>(() =>
+    normalizePriority(incident.issue_priority),
   );
   const [status, setStatus] = useState(
     () => normalizeStatus(incident.status),
+  );
+  const options = useMemo(
+    () => disciplineSelectOptions(incident.discipline),
+    [incident.discipline],
+  );
+  const [discipline, setDiscipline] = useState(() =>
+    initialDiscipline(incident.discipline),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +39,7 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
       const updated = await updateIncident(incident.incident_id, {
         issue_priority: priority,
         status,
+        discipline,
       });
       console.log("Incident updated:", updated);
       onSave(updated);
@@ -56,7 +66,9 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             <span className="text-sm font-bold text-gray-700">Priority</span>
             <select
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) =>
+                setPriority(e.target.value as IssuePriority)
+              }
               className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
             >
               {PRIORITY_OPTIONS.map((opt) => (
@@ -65,7 +77,7 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             </select>
           </label>
 
-          <label className="block mb-6">
+          <label className="block mb-4">
             <span className="text-sm font-bold text-gray-700">Status</span>
             <select
               value={status}
@@ -74,6 +86,23 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block mb-6">
+            <span className="text-sm font-bold text-gray-700">
+              Discipline (redirect)
+            </span>
+            <select
+              value={discipline}
+              onChange={(e) => setDiscipline(e.target.value)}
+              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+            >
+              {options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </label>
@@ -106,13 +135,25 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
   );
 }
 
-function normalizePriority(p: string | number | null | undefined): string {
-  if (p == null) return "Standard";
-  const s = String(p).trim().toLowerCase();
-  if (/\b(emergency|critical|severe|urgent|high)\b/.test(s) || s === "1") {
-    return "Emergency";
+function normalizePriority(p: string | number | null | undefined): IssuePriority {
+  if (p == null) return "LOW";
+  const raw = String(p).trim();
+  const upper = raw.toUpperCase();
+  if ((PRIORITY_OPTIONS as readonly string[]).includes(upper)) {
+    return upper as IssuePriority;
   }
-  return "Standard";
+  const s = raw.toLowerCase();
+  if (/\b(critical)\b/.test(s) || s === "emergency" || /\b(severe)\b/.test(s)) {
+    return "CRITICAL";
+  }
+  if (/\b(high)\b/.test(s) || /\b(urgent)\b/.test(s) || s === "1" || p === 1) {
+    return "HIGH";
+  }
+  if (/\b(medium)\b/.test(s)) return "MEDIUM";
+  if (/\b(low)\b/.test(s) || s === "standard" || s === "0" || p === 0) {
+    return "LOW";
+  }
+  return "LOW";
 }
 
 function normalizeStatus(s: string | null | undefined): string {
@@ -121,4 +162,25 @@ function normalizeStatus(s: string | null | undefined): string {
     (opt) => opt.toLowerCase() === s.trim().toLowerCase(),
   );
   return match ?? "New";
+}
+
+function disciplineSelectOptions(current: string | null | undefined): string[] {
+  const list = [...MAINTENANCE_DISCIPLINES];
+  const d = current?.trim();
+  if (
+    d &&
+    !list.some((opt) => opt.toLowerCase() === d.toLowerCase())
+  ) {
+    return [d, ...list];
+  }
+  return list;
+}
+
+function initialDiscipline(current: string | null | undefined): string {
+  const d = current?.trim();
+  if (!d) return MAINTENANCE_DISCIPLINES[0];
+  const match = MAINTENANCE_DISCIPLINES.find(
+    (opt) => opt.toLowerCase() === d.toLowerCase(),
+  );
+  return match ?? d;
 }

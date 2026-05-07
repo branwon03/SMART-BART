@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import uuid
 from sqlalchemy import text, func
+from typing import cast
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
@@ -21,6 +22,17 @@ from contextlib import asynccontextmanager
 class IncidentUpdate(BaseModel):
     issue_priority: str | None = None
     status: str | None = None
+    discipline: str | None = None
+    location_id: str | None = None
+
+
+class MergePhotosBody(BaseModel):
+    evidence_ids: list[str]
+class SplitRequest(BaseModel):
+    evidence_ids: list[str]
+    title: str
+    description: str | None = None
+    discipline: str | None = None
 
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -71,6 +83,7 @@ async def submissions(
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
     photo_location_id: str = Form(default=None),
+    gmail_thread_id: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -94,6 +107,7 @@ async def submissions(
         submission_id = uuid.uuid4().hex
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
+        
 
         incident = Incident(
             incident_id=incident_id,
@@ -103,6 +117,7 @@ async def submissions(
             vlm_summary=description or None,
             location_id=photo_location_id or None,
             created_at=now,
+            gmail_thread_id=gmail_thread_id,
         )
         db.add(incident)
 
@@ -126,7 +141,7 @@ async def submissions(
                 photo_report_status="New",
                 photo_report_confidence=None,
                 photo_report_discipline=None,
-                photo_location_id=photo_location_id,
+                photo_location_id=photo_location_id or "EMAIL-Unlocated",
             )
             db.add(photo_report)
 
@@ -156,10 +171,104 @@ async def get_incidents(db: Session = Depends(get_db)):
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
             "location_id": r.location_id, 
+            "gmail_thread_id": r.gmail_thread_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
     ]
+
+
+@app.post("/api/incidents/{incident_id}/split")
+async def split_incident(
+    incident_id: str,
+    body: SplitRequest,
+    db: Session = Depends(get_db),
+):
+    parent = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="title is required and cannot be blank")
+
+    order_preserve: list[str] = []
+    seen: set[str] = set()
+    for eid in body.evidence_ids:
+        if eid not in seen:
+            seen.add(eid)
+            order_preserve.append(eid)
+
+    if not order_preserve:
+        raise HTTPException(status_code=422, detail="evidence_ids must not be empty")
+
+    reports = (
+        db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
+    )
+    by_evidence: dict[str, PhotoReport] = {
+        cast(str, r.evidence_id): r for r in reports
+    }
+
+    unknown = [eid for eid in order_preserve if eid not in by_evidence]
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"evidence_ids not on this incident: {unknown}",
+        )
+
+    remaining = len(reports) - len(order_preserve)
+    if remaining < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="cannot move all evidence; leave at least one photo on parent incident",
+        )
+
+    now = datetime.now(timezone.utc)
+    new_incident_id = uuid.uuid4().hex
+    new_submission_id = uuid.uuid4().hex
+
+    parent_discipline: str | None = cast(str | None, parent.discipline)
+    child_discipline: str | None = parent_discipline
+    if body.discipline is not None:
+        trimmed_d = body.discipline.strip()
+        if trimmed_d:
+            child_discipline = trimmed_d
+
+    child = Incident(
+        incident_id=new_incident_id,
+        status=parent.status,
+        issue_priority=parent.issue_priority,
+        discipline=child_discipline,
+        vlm_summary=title,
+        location_id=parent.location_id,
+        created_at=now,
+    )
+    db.add(child)
+
+    desc_provided = body.description is not None
+    desc_value = (
+        None if body.description is None else (body.description.strip() or None)
+    )
+
+    for eid in order_preserve:
+        pr = by_evidence[eid]
+        setattr(pr, "incident_id", new_incident_id)
+        setattr(pr, "submission_id", new_submission_id)
+        if desc_provided:
+            setattr(pr, "user_context", desc_value)
+
+    db.commit()
+    db.refresh(child)
+
+    return {
+        "incident_id": child.incident_id,
+        "status": child.status,
+        "issue_priority": child.issue_priority,
+        "discipline": child.discipline,
+        "vlm_summary": child.vlm_summary,
+        "location_id": child.location_id,
+        "created_at": child.created_at.isoformat() if child.created_at else None,
+    }
 
 
 @app.put("/api/incidents/{incident_id}")
@@ -174,6 +283,10 @@ async def update_incident(
         setattr(row, "issue_priority", body.issue_priority)
     if body.status is not None:
         setattr(row, "status", body.status)
+    if body.discipline is not None:
+        setattr(row, "discipline", body.discipline)
+    if body.location_id is not None:  
+        setattr(row, "location_id", body.location_id)
 
     db.commit()
     db.refresh(row)
@@ -203,7 +316,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
     from sqlalchemy import text
 
     query = text("""
-        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id
+        SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id,
+               vlm_summary, photo_report_discipline
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -218,6 +332,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         submitted_val = row[3]
         user_context_val = row[4]
         found_pri_val = row[5]
+        vlm_summary_val = row[7]
+        photo_report_discipline_val = row[8]
 
         clean_data.append(
             {
@@ -233,6 +349,12 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
                 if user_context_val is not None
                 else "",
                 "found_priority": None if found_pri_val is None else str(found_pri_val),
+                "vlm_summary": None
+                if vlm_summary_val is None
+                else str(vlm_summary_val),
+                "photo_report_discipline": None
+                if photo_report_discipline_val is None
+                else str(photo_report_discipline_val),
             }
         )
     # Bypass FastAPI's automatic encoder completely
@@ -250,6 +372,67 @@ async def delete_incident(incident_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"deleted_incident_id": incident_id}
+
+
+@app.post("/api/incidents/{target_incident_id}/merge-photos")
+async def merge_photos_into_incident(
+    target_incident_id: str,
+    body: MergePhotosBody,
+    db: Session = Depends(get_db),
+):
+    target = (
+        db.query(Incident)
+        .filter(Incident.incident_id == target_incident_id)
+        .first()
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail="Target incident not found")
+
+    discipline_value = target.discipline
+
+    merged_count = 0
+    touched_sources: set[str] = set()
+    for eid in body.evidence_ids:
+        if not eid:
+            continue
+        row = (
+            db.query(PhotoReport)
+            .filter(PhotoReport.evidence_id == eid)
+            .first()
+        )
+        if not row:
+            continue
+        source_incident_id = cast(str, row.incident_id)
+        if source_incident_id == target_incident_id:
+            continue
+        touched_sources.add(source_incident_id)
+        setattr(row, "incident_id", target_incident_id)
+        if discipline_value is not None:
+            setattr(row, "photo_report_discipline", discipline_value)
+        merged_count += 1
+
+    db.flush()
+
+    for src_id in touched_sources:
+        if src_id == target_incident_id:
+            continue
+        remaining = (
+            db.query(PhotoReport)
+            .filter(PhotoReport.incident_id == src_id)
+            .count()
+        )
+        if remaining == 0:
+            orphan = (
+                db.query(Incident)
+                .filter(Incident.incident_id == src_id)
+                .first()
+            )
+            if orphan:
+                db.delete(orphan)
+
+    db.commit()
+
+    return {"merged_count": merged_count}
 
 
 @app.get("/api/images/{evidence_id}")

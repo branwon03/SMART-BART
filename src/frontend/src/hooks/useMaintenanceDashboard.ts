@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
+import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
-
-export const MAINTENANCE_DISCIPLINES = [
-  "FARE COLLECTION",
-  "BUILDINGS",
-  "COMMS",
-  "ELEVATOR AND ESCALATOR",
-  "GROUNDS",
-  "MECHANICAL",
-  "SYSTEM SERVICE",
-  "ELECTRICAL",
-  "UNCLASSIFIED",
-] as const;
 
 const INCIDENTS_POLL_MS = 10_000;
 const CLOCK_TICK_MS = 60_000;
@@ -38,7 +27,7 @@ export function useMaintenanceDashboard() {
         const updated = json.find((i) => i.incident_id === prevSelectedIncident.incident_id);
         return updated ?? prevSelectedIncident;
       });
-      
+
     } catch (err) {
       console.error("Fetch incidents failed:", err);
     }
@@ -104,7 +93,24 @@ export function useMaintenanceDashboard() {
     setIncidentIdExpanded(false);
   }, []);
 
+  const refreshAfterMerge = useCallback(
+    async (openIncidentId: string) => {
+      await fetchData();
+      await fetchEvidence(openIncidentId);
+    },
+    [fetchData, fetchEvidence],
+  );
+
+  const notifyIncidentSplitForParent = useCallback(
+    (parentIncidentId: string) => {
+      void fetchData();
+      void fetchEvidence(parentIncidentId);
+    },
+    [fetchData, fetchEvidence],
+  );
+
   return {
+    allIncidents: data,
     disciplines: MAINTENANCE_DISCIPLINES,
     activeTab,
     filteredData,
@@ -117,5 +123,7 @@ export function useMaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    refreshAfterMerge,
+    notifyIncidentSplitForParent,
   };
 }
