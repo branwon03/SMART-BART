@@ -47,6 +47,9 @@ tag_commit = true
 changelog_file = "CHANGELOG.md"
 build_command = "python -m pip install uv && python -m uv build"
 
+[tool.vercel]
+entrypoint = "src.backend.main:app"
+
 [tool.fastapi]
 entrypoint = "src.backend.main:app"
 
