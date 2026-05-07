@@ -5,7 +5,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
-import { isHighPriority } from "../lib/priorityUi";
+import { getPriorityStyles } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
 import { MergeIncidentModal } from "./MergeIncidentModal";
@@ -110,11 +110,10 @@ export function IncidentDetailPanel({
 
               <span className="font-bold text-gray-700">Priority:</span>
               <span
-                className={
-                  isHighPriority(incident.issue_priority)
-                    ? "text-red-600 font-bold"
-                    : "text-yellow-600 font-bold"
-                }
+                className={getPriorityStyles(
+                // CHANGED: Use a fallback to ensure we only pass string | null
+                incident.issue_priority ? String(incident.issue_priority) : null // [cite: 651, 656]
+                )}
               >
                 {incident.issue_priority != null && incident.issue_priority !== ""
                   ? String(incident.issue_priority)

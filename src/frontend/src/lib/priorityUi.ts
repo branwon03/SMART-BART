@@ -49,8 +49,19 @@ export function issuePriorityDotClassFromRaw(
   return issuePriorityDotClass(normalizeIssuePriority(p));
 }
 
-/** True when priority is HIGH or CRITICAL (after normalization). */
-export function isHighPriority(p: string | number | null | undefined): boolean {
-  const level = normalizeIssuePriority(p);
-  return level === "HIGH" || level === "CRITICAL";
-}
+export const getPriorityStyles = (priority: string | null): string => {
+  const p = priority?.toUpperCase() || "";
+  
+  switch (p) {
+    case "CRITICAL":
+      return "text-red-700 font-bold"; // CHANGED: Boldest for Critical
+    case "HIGH":
+      return "text-orange-600 font-bold"; // CHANGED: Orange for High
+    case "MEDIUM":
+      return "text-yellow-500 font-bold"; // CHANGED: Yellow for Medium
+    case "LOW":
+      return "text-gray-500 font-bold"; // CHANGED: gray for Low
+    default:
+      return "text-gray-500 font-medium"; // FALLBACK
+  }
+};
