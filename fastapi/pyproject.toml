@@ -8,3 +8,9 @@ dependencies = [
   "pydantic-settings>=2.2.1",
   "uvicorn>=0.34.0",
 ]
+
+[tool.vercel]
+entrypoint = "app.main:app"
+
+[tool.fastapi]
+entrypoint = "app.main:app"
