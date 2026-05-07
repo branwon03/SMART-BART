@@ -235,6 +235,7 @@ export function IncidentDetailPanel({
           onSave={(updated) => {
             setEditModalOpen(false);
             onIncidentUpdated(updated);
+            onClose();
           }}
           onCancel={() => setEditModalOpen(false)}
         />
