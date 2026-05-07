@@ -1,9 +1,11 @@
 "use client";
 
+import { useCallback } from "react";
 import { DisciplineSidebar } from "../../components/DisciplineSidebar";
 import { IncidentDetailPanel } from "../../components/IncidentDetailPanel";
 import { IncidentsTable } from "../../components/IncidentsTable";
 import { useMaintenanceDashboard } from "../../hooks/useMaintenanceDashboard";
+import { deleteIncident } from "../../lib/incidents";
 
 export default function MaintenanceDashboard() {
   const {
@@ -20,9 +22,34 @@ export default function MaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    removeIncidents,
     refreshAfterMerge,
     notifyIncidentSplitForParent,
   } = useMaintenanceDashboard();
+
+  const handleBulkDelete = useCallback(
+    async (incidentIds: string[]) => {
+      const deletedIds: string[] = [];
+      const failures: { id: string; message: string }[] = [];
+      const results = await Promise.allSettled(
+        incidentIds.map((id) => deleteIncident(id)),
+      );
+      results.forEach((r, i) => {
+        const id = incidentIds[i];
+        if (r.status === "fulfilled") deletedIds.push(id);
+        else {
+          failures.push({
+            id,
+            message:
+              r.reason instanceof Error ? r.reason.message : String(r.reason),
+          });
+        }
+      });
+      if (deletedIds.length > 0) removeIncidents(deletedIds);
+      return { deletedIds, failures };
+    },
+    [removeIncidents],
+  );
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
@@ -59,6 +86,7 @@ export default function MaintenanceDashboard() {
             selectedIncidentId={selectedIncident?.incident_id ?? null}
             now={now}
             onSelectIncident={setSelectedIncident}
+            onBulkDelete={handleBulkDelete}
           />
         </main>
 

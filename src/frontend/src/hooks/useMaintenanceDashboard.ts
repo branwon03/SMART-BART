@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 
@@ -24,6 +24,8 @@ export function useMaintenanceDashboard() {
   const [now, setNow] = useState(() => new Date());
   const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
 
+  const selectedIncidentRef = useRef<Incident | null>(null);
+  selectedIncidentRef.current = selectedIncident;
 
   const fetchData = useCallback(async () => {
     try {
@@ -103,6 +105,20 @@ export function useMaintenanceDashboard() {
     setIncidentIdExpanded(false);
   }, []);
 
+  const removeIncidents = useCallback((incidentIds: string[]) => {
+    if (incidentIds.length === 0) return;
+    const idSet = new Set(incidentIds);
+    const sel = selectedIncidentRef.current;
+    if (sel && idSet.has(sel.incident_id)) {
+      setEvidence([]);
+      setIncidentIdExpanded(false);
+    }
+    setData((prev) => prev.filter((inc) => !idSet.has(inc.incident_id)));
+    setSelectedIncident((prev) =>
+      prev && idSet.has(prev.incident_id) ? null : prev,
+    );
+  }, []);
+
   const refreshAfterMerge = useCallback(
     async (openIncidentId: string) => {
       await fetchData();
@@ -133,6 +149,7 @@ export function useMaintenanceDashboard() {
     selectDiscipline,
     updateSelectedIncident,
     removeIncident,
+    removeIncidents,
     refreshAfterMerge,
     notifyIncidentSplitForParent,
   };
