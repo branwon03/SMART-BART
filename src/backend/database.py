@@ -41,6 +41,7 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
+    gmail_thread_id = Column(String, nullable=True, index=True)
 
 
 class PhotoReport(Base):

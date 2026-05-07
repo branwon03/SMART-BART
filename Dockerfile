@@ -11,8 +11,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
 RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     zlib1g-dev \
