@@ -30,6 +30,10 @@ datasets/312 Raw Campus Pictures-selected/
 # docker volumes
 uploads/
 
+#email credentials
+gmail_credentials.json
+token.json
+
 # gemini 
 credentials.json
 
