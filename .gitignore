@@ -50,3 +50,5 @@ src/mobile/expo-env.d.ts
 .tmp_grouping_review/
 .cache/
 datasets/grouping_eval/campus_images/
+.vercel
+.env*.local
