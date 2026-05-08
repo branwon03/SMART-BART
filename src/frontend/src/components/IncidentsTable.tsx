@@ -89,7 +89,7 @@ export function IncidentsTable({
                       className="w-4 h-4 rounded border-slate-300 text-blue-600"
                     />
                   </td>
-                  <td className="p-5 font-bold text-slate-700">{item.vlm_summary}</td>
+                  <td className="p-5 font-bold text-slate-2000">{item.vlm_summary}</td>
                   <td className="p-5 font-mono text-xs text-slate-400">
                     #{item.incident_id.slice(0, 8)}
                   </td>
