@@ -34,7 +34,17 @@ class SplitRequest(BaseModel):
     discipline: str | None = None
 
 
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
+def _resolve_upload_dir() -> Path:
+    env = os.getenv("UPLOAD_DIR")
+    if env:
+        return Path(env)
+    # Vercel Functions: only /tmp is writable; default "uploads" mkdir fails → import crash.
+    if os.getenv("VERCEL"):
+        return Path("/tmp/uploads")
+    return Path("uploads")
+
+
+UPLOAD_DIR = _resolve_upload_dir()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 

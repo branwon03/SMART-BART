@@ -1,6 +1,4 @@
 import math
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
 import os
 
 BART_STATIONS = {
@@ -69,6 +67,9 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 def get_nearest_station_local(file_path):
     try:
+        from PIL import Image
+        from PIL.ExifTags import GPSTAGS, TAGS
+
         # Check if file exists first to avoid crashes
         if not os.path.exists(file_path):
             return f"File not found at {file_path}"

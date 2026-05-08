@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
+
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from sqlalchemy import (
@@ -12,11 +14,35 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+
+def _normalize_database_url(url: str) -> str:
+    """Default postgresql:// → psycopg2 driver in SQLAlchemy; deps only have psycopg3."""
+    raw = url.strip()
+    if not raw:
+        return raw
+    parsed = urlparse(raw)
+    scheme = parsed.scheme.lower()
+
+    if scheme.startswith("sqlite"):
+        return raw
+
+    if scheme in ("postgresql", "postgres"):
+        return urlunparse(parsed._replace(scheme="postgresql+psycopg"))
+
+    if scheme == "postgresql+psycopg2":
+        return urlunparse(parsed._replace(scheme="postgresql+psycopg"))
+
+    return raw
+
+
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
+_raw_database_url = os.getenv("DATABASE_URL")
+if not _raw_database_url:
     raise RuntimeError("DATABASE_URL is not set (check .env)")
+
+DATABASE_URL = _normalize_database_url(_raw_database_url)
 
 # pgvector.Vector is not used for SQLite (tests / local without Postgres).
 _USE_SQLITE = DATABASE_URL.startswith("sqlite")

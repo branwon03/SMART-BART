@@ -54,10 +54,16 @@ Coarse location filtering helped at lower thresholds, but it did not improve the
 
 ## How to run the evaluation
 
+The eval script depends on optional packages (pandas, scikit-learn, google-cloud-storage). Install them once:
+
+```bash
+uv sync --extra eval
+```
+
 Run the image-heavy threshold sweep:
 
 ```bash
-uv run python -m src.backend.grouping_eval_metrics \
+uv run --extra eval python -m src.backend.grouping_eval_metrics \
   --input-csv datasets/grouping_eval/campus_grouping_eval_subset_no_manual_desc_100.csv \
   --image-dir datasets/grouping_eval/campus_images \
   --production-embeddings \
@@ -65,10 +71,11 @@ uv run python -m src.backend.grouping_eval_metrics \
   --metrics-out datasets/grouping_eval/campus_grouping_eval_metrics_image_heavy_100_v5.csv \
   --predictions-out datasets/grouping_eval/campus_grouping_eval_predictions_image_heavy_100_v5.csv
 ```
+
 Run the same evaluation with coarse location filtering:
 
 ```bash
-uv run python -m src.backend.grouping_eval_metrics \
+uv run --extra eval python -m src.backend.grouping_eval_metrics \
   --input-csv datasets/grouping_eval/campus_grouping_eval_subset_no_manual_desc_100_coarse_location.csv \
   --image-dir datasets/grouping_eval/campus_images \
   --production-embeddings \
@@ -76,7 +83,8 @@ uv run python -m src.backend.grouping_eval_metrics \
   --sweep \
   --metrics-out datasets/grouping_eval/campus_grouping_eval_metrics_image_heavy_100_coarse_location_v5.csv \
   --predictions-out datasets/grouping_eval/campus_grouping_eval_predictions_image_heavy_100_coarse_location_v5.csv
-  ```
-  ## Notes: 
-  
-  These results should be treated as an MVP evaluation result, not a final production benchmark. The subset is useful because the labels were visually checked, but a larger future benchmark should include more locations, more object types, more random sampling, and more real end-to-end submissions.
+```
+
+## Notes
+
+These results should be treated as an MVP evaluation result, not a final production benchmark. The subset is useful because the labels were visually checked, but a larger future benchmark should include more locations, more object types, more random sampling, and more real end-to-end submissions.

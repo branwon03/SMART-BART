@@ -5,23 +5,36 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.135.1",
     "python-dotenv>=1.2.2",
-    "requests>=2.32.5",
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2.0",
-    "psycopg2-binary>=2.9.11",
     "google-genai>=1.69.0",
     "google-auth>=2.49.1",
     "pgvector>=0.4.2",
-    "pillow>=12.2.0",
+]
+
+[project.optional-dependencies]
+# Local / CI only: eval script (datasets/grouping_eval) — omit on Vercel to stay under Lambda size limits.
+eval = [
+    "pandas>=3.0.2",
+    "scikit-learn>=1.8.0",
+    "google-cloud-storage>=3.10.1",
+]
+# Gmail ingestion scripts (check_email.py, auth_me.py) and their tests.
+gmail = [
+    "requests>=2.32.5",
     "google-api-python-client>=2.194.0",
     "google-auth-httplib2>=0.3.1",
     "google-auth-oauthlib>=1.3.1",
-    "scikit-learn>=1.8.0",
-    "pandas>=3.0.2",
-    "google-cloud-storage>=3.10.1",
+]
+# Offline processor / EXIF (Pillow) — not imported by the deployed API.
+processor = [
+    "pillow>=12.2.0",
+]
+# If you use a legacy SQLAlchemy URL that requires the psycopg2 driver, sync with: uv sync --extra legacy-pg
+legacy-pg = [
+    "psycopg2-binary>=2.9.11",
 ]
 
 [tool.uv]
