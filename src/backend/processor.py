@@ -252,11 +252,13 @@ def process_submission(submission_id: str, db: Session):
         exclude_evidence_id=cast(str | None, best_photo.evidence_id),
     )
 
+    safe_match_score = match_score if match_score is not None else 0.0 #This ensures we don't print "None" and cause an error
+
     if target_incident_id:
-        print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}")
+        print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {safe_match_score:.3f}")
     else:
         target_incident_id = photos[0].incident_id
-        print(f"  [-] No match (best score={match_score:.3f}). Using new Incident {target_incident_id}.")
+        print(f"  [-] No match (best score={safe_match_score:.3f}). Using new Incident {target_incident_id}.")
 
     # --- Phase 3: Assign every photo to the target incident ---
 
