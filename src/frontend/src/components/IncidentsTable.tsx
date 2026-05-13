@@ -1,5 +1,6 @@
 import type { Incident } from "../types/api";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { formatShortDate } from "../lib/formatDate";
 import { DisciplineSummary } from "./DisciplineSummary";
 
 
@@ -62,13 +63,14 @@ export function IncidentsTable({
               <th className="p-5">Priority</th>
               <th className="p-5">Status</th>
               <th className="p-5">Location</th>
-              <th className="p-5 text-right font-bold text-blue-600 uppercase">Time Elapsed</th>
+              <th className="p-5 text-right font-bold text-blue-600 uppercase">First Reported</th>
+              <th className="p-5 text-right font-bold text-blue-600 uppercase">Age</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-20 text-center text-slate-400 italic">
+                <td colSpan={8} className="p-20 text-center text-slate-400 italic">
                   No reports currently active for {activeTab}.
                 </td>
               </tr>
@@ -77,11 +79,10 @@ export function IncidentsTable({
                 <tr
                   key={item.incident_id}
                   onClick={() => onSelectIncident(item)}
-                  className={`cursor-pointer transition-all group ${
-                    selectedIncidentId === item.incident_id
-                      ? "bg-blue-50"
-                      : "hover:bg-slate-50"
-                  }`}
+                  className={`cursor-pointer transition-all group ${selectedIncidentId === item.incident_id
+                    ? "bg-blue-50"
+                    : "hover:bg-slate-50"
+                    }`}
                 >
                   <td className="p-5">
                     <input
@@ -104,6 +105,9 @@ export function IncidentsTable({
                   </td>
                   <td className="p-5 text-xs font-semibold text-slate-600 uppercase tracking-tighter">
                     {item.location_id}
+                  </td>
+                  <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
+                    {formatShortDate(item.created_at)}
                   </td>
                   <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
                     {formatElapsedSince(item.created_at, now)}

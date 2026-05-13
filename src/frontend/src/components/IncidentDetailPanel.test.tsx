@@ -41,7 +41,6 @@ describe("IncidentDetailPanel", () => {
         incident={incident}
         evidence={[]}
         allIncidents={[incident]}
-        now={new Date("2024-06-01T12:00:00.000Z")}
         incidentIdExpanded={false}
         onToggleIncidentIdExpanded={vi.fn()}
         onClose={onClose}
