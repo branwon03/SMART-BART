@@ -2,8 +2,8 @@ import os
 import shutil
 import tempfile
 import uuid
+from sqlalchemy import text, func
 from typing import cast
-from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
@@ -460,3 +460,28 @@ def get_image(evidence_id: str):
         if path.exists():
             return FileResponse(path, media_type=f"image/{ext}")
     raise HTTPException(status_code=404, detail="Image not found")
+
+@app.get("/api/dashboard/discipline-stats")
+async def get_discipline_stats(db: Session = Depends(get_db)):
+    """Returns the first and last report dates grouped by discipline."""
+    try:
+        # We use func.min/max and group_by to aggregate the timestamps
+        stats = db.query(
+            Incident.discipline,
+            func.min(Incident.created_at).label("first_report"),
+            func.max(Incident.created_at).label("last_report"),
+            func.count(Incident.incident_id).label("total_count")
+        ).group_by(Incident.discipline).all()
+        
+        return [
+            {
+                "discipline": s.discipline or "Unassigned",
+                "first_report": s.first_report.isoformat() if s.first_report else None,
+                "last_report": s.last_report.isoformat() if s.last_report else None,
+                "total_count": s.total_count
+            }
+            for s in stats
+        ]
+    except Exception as e:
+        print(f"Dashboard Stats Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard stats")

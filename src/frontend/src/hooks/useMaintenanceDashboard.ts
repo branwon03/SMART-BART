@@ -9,7 +9,7 @@ const DASHBOARD_CLOCK_MS = 60_000;
 
 export function useMaintenanceDashboard() {
   const [data, setData] = useState<Incident[]>([]);
-  const [activeTab, setActiveTab] = useState("ELECTRICAL");
+  const [activeTab, setActiveTab] = useState("FARE COLLECTION");
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(() => new Date());

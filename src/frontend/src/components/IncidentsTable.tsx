@@ -1,6 +1,9 @@
 import type { Incident } from "../types/api";
 import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { formatShortDate } from "../lib/formatDate";
+import { DisciplineSummary } from "./DisciplineSummary";
+
+
 import {
   issuePriorityDotClassFromRaw,
   normalizeIssuePriority,
@@ -12,6 +15,13 @@ type IncidentsTableProps = {
   selectedIncidentId: string | null;
   now: Date;
   onSelectIncident: (incident: Incident) => void;
+};
+
+export type DisciplineStat = {
+  discipline: string;
+  first_report: string | null;
+  last_report: string | null;
+  total_count: number;
 };
 
 export function IncidentsTable({
@@ -30,7 +40,13 @@ export function IncidentsTable({
         >
           Actions <span>▼</span>
         </button>
+      <section>
+        
+        
+      </section>
+
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <DisciplineSummary activeTab={activeTab} />
           {filteredData.length} Total Records
         </div>
       </div>
@@ -74,7 +90,7 @@ export function IncidentsTable({
                       className="w-4 h-4 rounded border-slate-300 text-blue-600"
                     />
                   </td>
-                  <td className="p-5 font-bold text-slate-700">{item.vlm_summary}</td>
+                  <td className="p-5 font-bold text-slate-2000">{item.vlm_summary}</td>
                   <td className="p-5 font-mono text-xs text-slate-400">
                     #{item.incident_id.slice(0, 8)}
                   </td>
