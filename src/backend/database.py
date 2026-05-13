@@ -11,12 +11,21 @@ from sqlalchemy import (
     String,
     create_engine,
 )
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set (check .env)")
+
+# Docker Compose: .env often points at localhost for host-side tools; Postgres service is `db`.
+_use_internal = os.getenv("DATABASE_USE_INTERNAL_DB", "").lower() in ("1", "true", "yes")
+if _use_internal and not DATABASE_URL.startswith("sqlite"):
+    _parsed = make_url(DATABASE_URL)
+    if _parsed.host in ("localhost", "127.0.0.1", "::1"):
+        DATABASE_URL = str(_parsed.set(host="db"))
 
 # pgvector.Vector is not used for SQLite (tests / local without Postgres).
 _USE_SQLITE = DATABASE_URL.startswith("sqlite")

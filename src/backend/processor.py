@@ -1,10 +1,9 @@
 import os
-import time
 import math
 import mimetypes
 from pathlib import Path
 from sqlalchemy import func, text
-from src.backend.database import Base, engine, SessionLocal, PhotoReport
+from src.backend.database import SessionLocal, PhotoReport
 from dotenv import load_dotenv
 from google import genai
 from typing import cast
@@ -320,55 +319,14 @@ def process_submission(submission_id: str, db: Session):
             incident.location_id = best_location
             db.commit()
             print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
-    
-BATCH_SIZE = 10 
 
-def run_processor():
-    print("[*] Initializing database foundation...")
+
+def process_submission_task(submission_id: str) -> None:
+    """Open a fresh DB session and process one submission (e.g. from BackgroundTasks)."""
+    db = SessionLocal()
     try:
-        with engine.connect() as conn:
-            # 1. Enable pgvector (required for your embeddings)
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-            conn.commit()
-            print("[*] pgvector extension enabled.")
-
-        # 2. Create the tables if they don't exist
-        Base.metadata.create_all(bind=engine)
-        print("[*] Database tables created/verified.")
-        
+        process_submission(submission_id, db)
     except Exception as e:
-        print(f"[!] Initialization failed: {e}")
-        # If DB isn't ready, wait 5 seconds and let Docker restart the container
-        time.sleep(5)
-        return
-    
-    while True:
-        db = SessionLocal()
-        try:
-            # Look for the next photo that hasn't been processed yet
-            pending = db.query(PhotoReport.submission_id)\
-                .filter(PhotoReport.photo_report_status == "New")\
-                .distinct()\
-                .limit(BATCH_SIZE)\
-                .all()
-
-            if pending:
-                for (submission_id,) in pending:
-                    try:
-                        process_submission(submission_id, db)
-                    except Exception as e:
-                        print(f"[!] Error processing submission {submission_id}: {e}")
-                
-            else:
-                print("[~] No new submissions. Waiting...")
-                time.sleep(10)
-        except Exception as e:
-            print(f"[!] Processor error: {e}")
-            time.sleep(5)
-
-        finally:
-            db.close()
-
-
-if __name__ == "__main__":
-    run_processor()
+        print(f"[!] Error processing submission {submission_id}: {e}")
+    finally:
+        db.close()

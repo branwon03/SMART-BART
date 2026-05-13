@@ -7,11 +7,12 @@ from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+from src.backend.processor import process_submission_task
 from src.backend.inference import (
     get_extension,
     kSupportedList,
@@ -80,6 +81,7 @@ async def health_check() -> dict[str, str]:
 
 @app.post("/api/submissions")
 async def submissions(
+    background_tasks: BackgroundTasks,
     media: list[UploadFile] = File(default=[]),
     description: str = Form(default=None),
     photo_location_id: str = Form(default=None),
@@ -132,6 +134,7 @@ async def submissions(
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
                 incident_id=incident_id,
+                submission_id=submission_id,
                 image_url=saved_image_url,
                 embedding=None,
                 submitted_at=now,
@@ -146,6 +149,9 @@ async def submissions(
             db.add(photo_report)
 
         db.commit()
+
+        if tmp_paths:
+            background_tasks.add_task(process_submission_task, submission_id)
 
         # 6. Return Clean Response
         return {
