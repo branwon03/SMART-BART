@@ -78,10 +78,14 @@ export function useMaintenanceDashboard() {
 
   const updateSelectedIncident = useCallback((updated: Incident) => {
     setData((prev) =>
-      prev.map((inc) => (inc.incident_id === updated.incident_id ? updated : inc)),
+      prev.map((inc) =>
+        inc.incident_id === updated.incident_id ? { ...inc, ...updated } : inc,
+      ),
     );
     setSelectedIncident((prev) =>
-      prev && prev.incident_id === updated.incident_id ? updated : prev,
+      prev && prev.incident_id === updated.incident_id
+        ? { ...prev, ...updated }
+        : prev,
     );
   }, []);
 
