@@ -31,6 +31,7 @@ class IncidentUpdate(BaseModel):
     status: str | None = None
     discipline: str | None = None
     location_id: str | None = None
+    vlm_summary: str | None = None
 
 
 class MergePhotosBody(BaseModel):
@@ -303,6 +304,14 @@ async def update_incident(
         setattr(row, "discipline", body.discipline)
     if body.location_id is not None:  
         setattr(row, "location_id", body.location_id)
+    if body.vlm_summary is not None:
+        title = body.vlm_summary.strip()
+        if not title:
+            raise HTTPException(
+                status_code=422,
+                detail="vlm_summary cannot be blank",
+            )
+        setattr(row, "vlm_summary", title)
 
     db.commit()
     db.refresh(row)

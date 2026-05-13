@@ -29,10 +29,16 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
   const [discipline, setDiscipline] = useState(() =>
     initialDiscipline(incident.discipline),
   );
+  const [title, setTitle] = useState(() => incident.vlm_summary ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setError("Title cannot be empty");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -40,9 +46,10 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
         issue_priority: priority,
         status,
         discipline,
+        vlm_summary: trimmedTitle,
       });
       console.log("Incident updated:", updated);
-      onSave(updated);
+      onSave({ ...updated, vlm_summary: trimmedTitle });
     } catch (err) {
       console.error("Failed to update incident:", err);
       setError(err instanceof Error ? err.message : "Update failed");
@@ -61,6 +68,17 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
           onClick={(e) => e.stopPropagation()}
         >
           <h2 className="text-xl font-black mb-6">Edit Issue</h2>
+
+          <label className="block mb-4">
+            <span className="text-sm font-bold text-gray-700">Title</span>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Incident title"
+              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+            />
+          </label>
 
           <label className="block mb-4">
             <span className="text-sm font-bold text-gray-700">Priority</span>
