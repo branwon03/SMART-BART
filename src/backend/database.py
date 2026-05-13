@@ -10,8 +10,9 @@ from sqlalchemy import (
     JSON,
     String,
     create_engine,
+    func,
 )
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -41,6 +42,7 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
+    last_report_at = Column(DateTime, nullable=True)
     gmail_thread_id = Column(String, nullable=True, index=True)
 
 
@@ -74,3 +76,24 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def refresh_incident_last_report_at(db: Session, incident_id: str) -> None:
+    """Set last_report_at from photo_reports: max date iff min/max fall on different UTC days."""
+    inc = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not inc:
+        return
+    min_date = (
+        db.query(func.min(PhotoReport.submitted_at))
+        .filter(PhotoReport.incident_id == incident_id)
+        .scalar()
+    )
+    max_date = (
+        db.query(func.max(PhotoReport.submitted_at))
+        .filter(PhotoReport.incident_id == incident_id)
+        .scalar()
+    )
+    if min_date and max_date and min_date.date() != max_date.date():
+        inc.last_report_at = max_date
+    else:
+        inc.last_report_at = None

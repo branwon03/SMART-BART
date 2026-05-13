@@ -57,7 +57,6 @@ export default function MaintenanceDashboard() {
             activeTab={activeTab}
             filteredData={filteredData}
             selectedIncidentId={selectedIncident?.incident_id ?? null}
-            now={now}
             onSelectIncident={setSelectedIncident}
           />
         </main>
@@ -68,7 +67,6 @@ export default function MaintenanceDashboard() {
             incident={selectedIncident}
             evidence={evidence}
             allIncidents={allIncidents}
-            now={now}
             incidentIdExpanded={incidentIdExpanded}
             onToggleIncidentIdExpanded={() => setIncidentIdExpanded((e) => !e)}
             onClose={() => {

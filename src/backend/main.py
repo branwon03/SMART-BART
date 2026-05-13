@@ -11,7 +11,14 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+from src.backend.database import (
+    Base,
+    Incident,
+    PhotoReport,
+    engine,
+    get_db,
+    refresh_incident_last_report_at,
+)
 from src.backend.inference import (
     get_extension,
     kSupportedList,
@@ -117,6 +124,7 @@ async def submissions(
             vlm_summary=description or None,
             location_id=photo_location_id or None,
             created_at=now,
+            last_report_at=None,
             gmail_thread_id=gmail_thread_id,
         )
         db.add(incident)
@@ -173,6 +181,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "location_id": r.location_id, 
             "gmail_thread_id": r.gmail_thread_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            "last_report_at": r.last_report_at.isoformat() if r.last_report_at else None,
         }
         for r in rows
     ]
@@ -242,6 +251,7 @@ async def split_incident(
         vlm_summary=title,
         location_id=parent.location_id,
         created_at=now,
+        last_report_at=None,
     )
     db.add(child)
 
@@ -260,6 +270,11 @@ async def split_incident(
     db.commit()
     db.refresh(child)
 
+    refresh_incident_last_report_at(db, incident_id)
+    refresh_incident_last_report_at(db, new_incident_id)
+    db.commit()
+    db.refresh(child)
+
     return {
         "incident_id": child.incident_id,
         "status": child.status,
@@ -268,6 +283,7 @@ async def split_incident(
         "vlm_summary": child.vlm_summary,
         "location_id": child.location_id,
         "created_at": child.created_at.isoformat() if child.created_at else None,
+        "last_report_at": child.last_report_at.isoformat() if child.last_report_at else None,
     }
 
 
@@ -299,6 +315,7 @@ async def update_incident(
         "vlm_summary": row.vlm_summary,
         "location_id": row.location_id,
         "created_at": row.created_at.isoformat() if row.created_at else None,
+        "last_report_at": row.last_report_at.isoformat() if row.last_report_at else None,
     }
 
 
@@ -430,6 +447,7 @@ async def merge_photos_into_incident(
             if orphan:
                 db.delete(orphan)
 
+    refresh_incident_last_report_at(db, target_incident_id)
     db.commit()
 
     return {"merged_count": merged_count}

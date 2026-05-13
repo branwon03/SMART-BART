@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
-import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { formatDateTime, formatShortDate } from "../lib/formatDate";
 import { getPriorityStyles } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
@@ -15,7 +15,6 @@ type IncidentDetailPanelProps = {
   incident: Incident;
   evidence: PhotoReport[];
   allIncidents: Incident[];
-  now: Date;
   incidentIdExpanded: boolean;
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
@@ -29,7 +28,6 @@ export function IncidentDetailPanel({
   incident,
   evidence,
   allIncidents,
-  now,
   incidentIdExpanded,
   onToggleIncidentIdExpanded,
   onClose,
@@ -126,8 +124,13 @@ export function IncidentDetailPanel({
               <span className="font-bold text-gray-700">Location:</span>
               <span>{incident.location_id}</span>
 
-              <span className="font-bold text-gray-700">Age:</span>
-              <span>{formatElapsedSince(incident.created_at, now)}</span>
+              <span className="font-bold text-gray-700">First reported:</span>
+              <span>{formatShortDate(incident.created_at)}</span>
+
+              <span className="font-bold text-gray-700">Last reported:</span>
+              <span>
+                {incident.last_report_at ? formatShortDate(incident.last_report_at) : "—"}
+              </span>
             </div>
           </div>
 
@@ -173,9 +176,7 @@ export function IncidentDetailPanel({
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
                   <span>Report summary {idx + 1}:</span>
                   <span className="font-mono text-[10px] font-normal text-slate-500">
-                    {ev.submitted_at
-                      ? `${formatElapsedSince(ev.submitted_at, now)} ago`
-                      : "—"}
+                    {formatDateTime(ev.submitted_at)}
                   </span>
                 </div>
                 <p className="text-gray-800">

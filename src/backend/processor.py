@@ -4,7 +4,7 @@ import math
 import mimetypes
 from pathlib import Path
 from sqlalchemy import func, text
-from src.backend.database import Base, engine, SessionLocal, PhotoReport
+from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident, refresh_incident_last_report_at
 from dotenv import load_dotenv
 from google import genai
 from typing import cast
@@ -13,7 +13,6 @@ from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
-from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
 from src.backend.gps_lookup import get_nearest_station_local
@@ -320,7 +319,9 @@ def process_submission(submission_id: str, db: Session):
             incident.location_id = best_location
             db.commit()
             print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
-    
+
+        refresh_incident_last_report_at(db, target_incident_id)
+        db.commit()
 BATCH_SIZE = 10 
 
 def run_processor():

@@ -1,5 +1,5 @@
 import type { Incident } from "../types/api";
-import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { formatShortDate } from "../lib/formatDate";
 import {
   issuePriorityDotClassFromRaw,
   normalizeIssuePriority,
@@ -9,7 +9,6 @@ type IncidentsTableProps = {
   activeTab: string;
   filteredData: Incident[];
   selectedIncidentId: string | null;
-  now: Date;
   onSelectIncident: (incident: Incident) => void;
 };
 
@@ -17,7 +16,6 @@ export function IncidentsTable({
   activeTab,
   filteredData,
   selectedIncidentId,
-  now,
   onSelectIncident,
 }: IncidentsTableProps) {
   return (
@@ -46,13 +44,14 @@ export function IncidentsTable({
               <th className="p-5">Priority</th>
               <th className="p-5">Status</th>
               <th className="p-5">Location</th>
-              <th className="p-5 text-right font-bold text-blue-600 uppercase">Time Elapsed</th>
+              <th className="p-5 text-right font-bold text-blue-600 uppercase">First Reported</th>
+              <th className="p-5 text-right font-bold text-blue-600 uppercase">Last Reported</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-20 text-center text-slate-400 italic">
+                <td colSpan={8} className="p-20 text-center text-slate-400 italic">
                   No reports currently active for {activeTab}.
                 </td>
               </tr>
@@ -90,7 +89,10 @@ export function IncidentsTable({
                     {item.location_id}
                   </td>
                   <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
-                    {formatElapsedSince(item.created_at, now)}
+                    {formatShortDate(item.created_at)}
+                  </td>
+                  <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
+                    {item.last_report_at ? formatShortDate(item.last_report_at) : "—"}
                   </td>
                 </tr>
               ))
