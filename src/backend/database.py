@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ from sqlalchemy import (
     create_engine,
     func,
 )
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -42,7 +43,7 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
-    last_report_at = Column(DateTime, nullable=True)
+    last_report_at: Mapped[datetime | None] = mapped_column(DateTime)
     gmail_thread_id = Column(String, nullable=True, index=True)
 
 
