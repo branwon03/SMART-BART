@@ -7,7 +7,7 @@ Parse structured model output into backend fields needed by the MVP pipeline.
 This utility is meant to be called after the queue/worker runs the model and
 before the backend updates database-backed incident/report records.
 """
-
+import json
 import re
 
 
@@ -57,16 +57,23 @@ def _extract_field(response_text: str, field_name: str) -> str | None:
 
 def parse_classification(response_text: str) -> dict:
     """
-    Parse raw model text into structured backend fields.
-
-    Expected output fields:
-    - issue_priority
-    - discipline
-    - vlm_summary
+    Parse raw JSON model text into structured backend fields.
     """
-    issue_priority = _extract_field(response_text, "issue_priority")
-    discipline = _extract_field(response_text, "discipline")
-    vlm_summary = _extract_field(response_text, "vlm_summary")
+    # ======= CHANGED: Use native JSON parsing for Structured Outputs =======
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError:
+        # Fallback for unexpected non-JSON output
+        return {
+            "issue_priority": None,
+            "discipline": "UNCLASSIFIED",
+            "vlm_summary": "Error: Invalid JSON output"
+        }
+
+    # Extract fields from the dictionary
+    issue_priority = data.get("issue_priority")
+    discipline = data.get("discipline")
+    vlm_summary = data.get("vlm_summary")
 
     if issue_priority is not None:
         issue_priority = issue_priority.upper()

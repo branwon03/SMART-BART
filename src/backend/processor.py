@@ -2,6 +2,7 @@ import os
 import time
 import math
 import mimetypes
+from datetime import datetime
 from pathlib import Path
 from sqlalchemy import func, text
 from src.backend.database import Base, engine, SessionLocal, PhotoReport
@@ -132,7 +133,11 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
             prompt,
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         ],
-        config=GenerateContentConfig(response_logprobs=True, logprobs=3)
+        config=GenerateContentConfig(
+            response_mime_type="application/json",
+            response_logprobs=True, 
+            logprobs=3
+        )
     )
 
     raw_response = (response.text or "").strip()
@@ -140,11 +145,37 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
     if not raw_response:
         raise ValueError("Gemini returned an empty response")
 
-    #converting the log probs to a confidence score
-    avg_logprobs = response.candidates[0].avg_logprobs or 0.0
-    confidence = math.exp(avg_logprobs)
+    #Calculate discipline selection confidence
+    discipline_conf = 0.0
+    try:
+        candidate = response.candidates[0]
+        logprobs_list = candidate.logprobs_result.chosen_candidates
+        
+        # Look for the token representing the VALUE of the "discipline" key
+        for i, lp in enumerate(logprobs_list):
+            token_clean = lp.token.strip().replace('"', '').upper()
+            # Find where the model starts outputting the discipline value
+            if "DISCIPLINE" in token_clean:
+                # In JSON, the value usually follows after a quote/colon within 5 tokens
+                for offset in range(1, 6):
+                    if i + offset >= len(logprobs_list): break
+                    val_token = logprobs_list[i+offset].token.strip().replace('"', '').upper()
+                    if any(d in val_token for d in DISCIPLINES if d != "UNCLASSIFIED"):
+                        discipline_conf = math.exp(logprobs_list[i+offset].log_prob)
+                        print(f"  [debug] Found surgical JSON token '{val_token}' Confidence: {discipline_conf:.2f})")
+                        break
+                if discipline_conf > 0: break
+        
+        # Fallback to incase extraction is messy
+        if discipline_conf == 0.0:
+            avg_lp = candidate.avg_logprobs or -1.0
+            discipline_conf = math.exp(avg_lp) ** (1/len(logprobs_list)) 
+            
+    except Exception as e:
+        print(f" [!] Surgical parsing error: {e}. Defaulting to safety.")
+        discipline_conf = 0.50 
 
-    return raw_response, confidence
+    return raw_response, min(discipline_conf, 1.0)
 
 def process_submission(submission_id: str, db: Session):
     """
@@ -199,6 +230,9 @@ def process_submission(submission_id: str, db: Session):
                 user_description=description
             )
             parsed = parse_classification(raw_response)
+            if confidence < 0.45:
+                print(f"  [!] Low discipline confidence ({confidence:.2f}). Forcing UNCLASSIFIED.")
+                parsed["discipline"] = "UNCLASSIFIED"
         
             embedding_instruction = (
                 f"Task: Grouping maintenance photos from different angles. "
@@ -243,14 +277,24 @@ def process_submission(submission_id: str, db: Session):
 
     best_photo, best_parsed, best_confidence, best_vector, best_location = max(results, key=lambda x: x[2])
 
+    raw_time = best_photo.submitted_at
+    if isinstance(raw_time, str):
+        try:
+            cleaned_time = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+        except ValueError:
+            cleaned_time = datetime.now()
+    else:
+        cleaned_time = raw_time
+
     target_incident_id, match_score = find_matching_incident(
         db,
         new_embedding=best_vector,
         discipline=best_parsed["discipline"],
         location_id=cast(str | None, best_photo.photo_location_id),
-        submitted_at=best_photo.submitted_at,
+        submitted_at=cleaned_time,
         exclude_evidence_id=cast(str | None, best_photo.evidence_id),
     )
+    safe_match_score = match_score if match_score is not None else 0.0
 
     if target_incident_id:
         print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}")
