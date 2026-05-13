@@ -4,7 +4,8 @@ import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { getIncidents, getPhotoReports } from "../lib/incidents";
 
 const INCIDENTS_POLL_MS = 10_000;
-const CLOCK_TICK_MS = 60_000;
+/** Server time display + incidents age column reference (same tick). */
+const DASHBOARD_CLOCK_MS = 60_000;
 
 export function useMaintenanceDashboard() {
   const [data, setData] = useState<Incident[]>([]);
@@ -48,7 +49,7 @@ export function useMaintenanceDashboard() {
     };
     const initialTimeout = setTimeout(tick, 0);
     const dataInterval = setInterval(tick, INCIDENTS_POLL_MS);
-    const clockInterval = setInterval(() => setNow(new Date()), CLOCK_TICK_MS);
+    const clockInterval = setInterval(() => setNow(new Date()), DASHBOARD_CLOCK_MS);
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(dataInterval);

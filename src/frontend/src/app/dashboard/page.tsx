@@ -57,6 +57,7 @@ export default function MaintenanceDashboard() {
             activeTab={activeTab}
             filteredData={filteredData}
             selectedIncidentId={selectedIncident?.incident_id ?? null}
+            now={now}
             onSelectIncident={setSelectedIncident}
           />
         </main>

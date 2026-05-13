@@ -1,4 +1,5 @@
 import type { Incident } from "../types/api";
+import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { formatShortDate } from "../lib/formatDate";
 import {
   issuePriorityDotClassFromRaw,
@@ -9,6 +10,7 @@ type IncidentsTableProps = {
   activeTab: string;
   filteredData: Incident[];
   selectedIncidentId: string | null;
+  now: Date;
   onSelectIncident: (incident: Incident) => void;
 };
 
@@ -16,6 +18,7 @@ export function IncidentsTable({
   activeTab,
   filteredData,
   selectedIncidentId,
+  now,
   onSelectIncident,
 }: IncidentsTableProps) {
   return (
@@ -45,7 +48,7 @@ export function IncidentsTable({
               <th className="p-5">Status</th>
               <th className="p-5">Location</th>
               <th className="p-5 text-right font-bold text-blue-600 uppercase">First Reported</th>
-              <th className="p-5 text-right font-bold text-blue-600 uppercase">Last Reported</th>
+              <th className="p-5 text-right font-bold text-blue-600 uppercase">Age</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -60,11 +63,10 @@ export function IncidentsTable({
                 <tr
                   key={item.incident_id}
                   onClick={() => onSelectIncident(item)}
-                  className={`cursor-pointer transition-all group ${
-                    selectedIncidentId === item.incident_id
-                      ? "bg-blue-50"
-                      : "hover:bg-slate-50"
-                  }`}
+                  className={`cursor-pointer transition-all group ${selectedIncidentId === item.incident_id
+                    ? "bg-blue-50"
+                    : "hover:bg-slate-50"
+                    }`}
                 >
                   <td className="p-5">
                     <input
@@ -92,7 +94,7 @@ export function IncidentsTable({
                     {formatShortDate(item.created_at)}
                   </td>
                   <td className="p-5 text-right font-mono text-xs font-bold text-slate-500">
-                    {item.last_report_at ? formatShortDate(item.last_report_at) : "—"}
+                    {formatElapsedSince(item.created_at, now)}
                   </td>
                 </tr>
               ))
