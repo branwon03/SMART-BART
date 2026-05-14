@@ -5,7 +5,7 @@ import mimetypes
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import func, text
-from src.backend.database import Base, engine, SessionLocal, PhotoReport
+from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident, refresh_incident_last_report_at
 from dotenv import load_dotenv
 from google import genai
 from typing import cast
@@ -14,7 +14,6 @@ from google.genai.types import GenerateContentConfig
 from google.oauth2 import service_account
 from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
-from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
 from src.backend.grouping import find_matching_incident  # , GROUPING_THRESHOLD
 from src.backend.gps_lookup import get_nearest_station_local
@@ -318,15 +317,13 @@ def process_submission(submission_id: str, db: Session):
         exclude_evidence_id=cast(str | None, best_photo.evidence_id),
     )
 
+    safe_match_score = match_score if match_score is not None else 0.0 #This ensures we don't print "None" and cause an error
+
     if target_incident_id:
-        print(
-            f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}"
-        )
+        print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {safe_match_score:.3f}")
     else:
         target_incident_id = photos[0].incident_id
-        print(
-            f"  [-] No match (best score={match_score:.3f}). Using new Incident {target_incident_id}."
-        )
+        print(f"  [-] No match (best score={safe_match_score:.3f}). Using new Incident {target_incident_id}.")
 
     # --- Phase 3: Assign every photo to the target incident ---
 
@@ -396,13 +393,11 @@ def process_submission(submission_id: str, db: Session):
         if current_inc_loc == "Assign-Me-Via-Geolocation" or current_inc_loc is None:
             incident.location_id = best_location
             db.commit()
-            print(
-                f"  [✓] Updated Incident {target_incident_id} location -> {best_location}"
-            )
+            print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
 
-
-BATCH_SIZE = 10
-
+        refresh_incident_last_report_at(db, target_incident_id)
+        db.commit()
+BATCH_SIZE = 10 
 
 def run_processor():
     print("[*] Initializing database foundation...")

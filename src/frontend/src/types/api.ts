@@ -6,6 +6,7 @@ export type Incident = {
   vlm_summary?: string | null;
   location_id?: string | null;
   created_at?: string | null;
+  last_report_at?: string | null;
 };
 
 export type PhotoReport = {
@@ -18,6 +19,8 @@ export type PhotoReport = {
   found_priority?: string | null;
   vlm_summary?: string | null;
   photo_report_discipline?: string | null;
+  reporter_name?: string | null;
+  reporter_contact?: string | null;
 };
 
 export type SubmissionResult = {

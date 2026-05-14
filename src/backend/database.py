@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
@@ -10,8 +11,9 @@ from sqlalchemy import (
     JSON,
     String,
     create_engine,
+    func,
 )
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -41,6 +43,7 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
+    last_report_at: Mapped[datetime | None] = mapped_column(DateTime)
     gmail_thread_id = Column(String, nullable=True, index=True)
 
 
@@ -60,6 +63,8 @@ class PhotoReport(Base):
     photo_report_confidence = Column(Float, nullable=True)
     photo_report_discipline = Column(String, nullable=True)
     photo_location_id = Column(String)
+    reporter_name = Column(String, nullable=True)
+    reporter_contact = Column(String, nullable=True)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────
@@ -74,3 +79,52 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def ensure_reporter_columns_on_photo_reports() -> None:
+    """Add reporter columns to existing DBs (create_all does not alter tables)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if not insp.has_table("photo_reports"):
+        return
+    cols = {c["name"] for c in insp.get_columns("photo_reports")}
+    statements: list[str] = []
+    if "reporter_name" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN reporter_name TEXT"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN reporter_name VARCHAR"
+        )
+    if "reporter_contact" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN reporter_contact TEXT"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN reporter_contact VARCHAR"
+        )
+    if not statements:
+        return
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
+
+
+def refresh_incident_last_report_at(db: Session, incident_id: str) -> None:
+    """Set last_report_at from photo_reports: max date iff min/max fall on different UTC days."""
+    inc = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+    if not inc:
+        return
+    min_date = (
+        db.query(func.min(PhotoReport.submitted_at))
+        .filter(PhotoReport.incident_id == incident_id)
+        .scalar()
+    )
+    max_date = (
+        db.query(func.max(PhotoReport.submitted_at))
+        .filter(PhotoReport.incident_id == incident_id)
+        .scalar()
+    )
+    if min_date and max_date and min_date.date() != max_date.date():
+        inc.last_report_at = max_date
+    else:
+        inc.last_report_at = None

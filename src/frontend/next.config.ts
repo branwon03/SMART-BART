@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const backendOrigin =
-  process.env.BACKEND_PROXY_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
+  process.env.BACKEND_PROXY_URL?.replace(/\/+$/, "") || "http://backend:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",

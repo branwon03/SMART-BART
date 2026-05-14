@@ -23,6 +23,7 @@ DISCIPLINES = [
     "TRACK",
     "ELECTRICAL",
     "RSS",
+    "UNCLASSIFIED",
 ]
 
 PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]

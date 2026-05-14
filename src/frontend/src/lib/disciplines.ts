@@ -7,4 +7,5 @@ export const MAINTENANCE_DISCIPLINES = [
   "MECHANICAL",
   "SYSTEM SERVICE",
   "ELECTRICAL",
+  "UNCLASSIFIED",
 ] as const;

@@ -59,11 +59,15 @@ def test_submission_persists_and_returns_incident_id():
         "found_priority",
         "vlm_summary",
         "photo_report_discipline",
+        "reporter_name",
+        "reporter_contact",
     }
     assert rpt["incident_id"] == body["incident_id"]
     assert rpt["user_context"] == "Exposed wiring near platform edge"
     assert rpt["vlm_summary"] is None
     assert rpt["photo_report_discipline"] is None
+    assert rpt["reporter_name"] is None
+    assert rpt["reporter_contact"] is None
 
 
 # ── RED-GREEN #2: GET /api/incidents accumulates multiple submissions ─────────
