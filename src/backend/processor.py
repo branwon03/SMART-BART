@@ -16,13 +16,14 @@ from sqlalchemy.orm import Session
 from src.backend.inference import generate_embedding
 from src.backend.database import Incident
 from src.backend.gemini_parser import parse_classification, DISCIPLINES
-from src.backend.grouping import find_matching_incident#, GROUPING_THRESHOLD
+from src.backend.grouping import find_matching_incident  # , GROUPING_THRESHOLD
 from src.backend.gps_lookup import get_nearest_station_local
- 
+
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 
 _genai_client: genai.Client | None = None
+
 
 def get_genai_client():
     """Vertex client using a service account file (same pattern as inference.py), not host-only ADC."""
@@ -59,12 +60,17 @@ def get_genai_client():
         credentials=credentials,
     )
 
+
 def resolve_local_image_path(photo: PhotoReport) -> str:
     image_url = getattr(photo, "image_url", None)
     evidence_id = getattr(photo, "evidence_id", None)
 
     # Test path / legacy local path case: image_url is a plain filename like "photo1.jpg"
-    if image_url and isinstance(image_url, str) and not image_url.startswith("/api/images/"):
+    if (
+        image_url
+        and isinstance(image_url, str)
+        and not image_url.startswith("/api/images/")
+    ):
         return os.path.join(str(UPLOAD_DIR), image_url)
 
     # Real app case: image_url is "/api/images/{evidence_id}", so resolve from evidence_id on disk
@@ -75,7 +81,10 @@ def resolve_local_image_path(photo: PhotoReport) -> str:
 
     return ""
 
-def identify_objects(image_path: str, class_list: list, user_description: str = "Not provided") -> tuple[str, float]:
+
+def identify_objects(
+    image_path: str, class_list: list, user_description: str = "Not provided"
+) -> tuple[str, float]:
     """
     Gemini 2.5 Flash call with logprobs for real confidence scoring.
 
@@ -134,10 +143,8 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         ],
         config=GenerateContentConfig(
-            response_mime_type="application/json",
-            response_logprobs=True, 
-            logprobs=3
-        )
+            response_mime_type="application/json", response_logprobs=True, logprobs=3
+        ),
     )
 
     raw_response = (response.text or "").strip()
@@ -145,49 +152,58 @@ def identify_objects(image_path: str, class_list: list, user_description: str = 
     if not raw_response:
         raise ValueError("Gemini returned an empty response")
 
-    #Calculate discipline selection confidence
+    # Calculate discipline selection confidence
     discipline_conf = 0.0
     try:
         candidate = response.candidates[0]
         logprobs_list = candidate.logprobs_result.chosen_candidates
-        
+
         # Look for the token representing the VALUE of the "discipline" key
         for i, lp in enumerate(logprobs_list):
-            token_clean = lp.token.strip().replace('"', '').upper()
+            token_clean = lp.token.strip().replace('"', "").upper()
             # Find where the model starts outputting the discipline value
             if "DISCIPLINE" in token_clean:
                 # In JSON, the value usually follows after a quote/colon within 5 tokens
                 for offset in range(1, 6):
-                    if i + offset >= len(logprobs_list): break
-                    val_token = logprobs_list[i+offset].token.strip().replace('"', '').upper()
-                    if any(d in val_token for d in DISCIPLINES if d != "UNCLASSIFIED"):
-                        discipline_conf = math.exp(logprobs_list[i+offset].log_prob)
-                        print(f"  [debug] Found surgical JSON token '{val_token}' Confidence: {discipline_conf:.2f})")
+                    if i + offset >= len(logprobs_list):
                         break
-                if discipline_conf > 0: break
-        
+                    val_token = (
+                        logprobs_list[i + offset].token.strip().replace('"', "").upper()
+                    )
+                    if any(d in val_token for d in DISCIPLINES if d != "UNCLASSIFIED"):
+                        discipline_conf = math.exp(logprobs_list[i + offset].log_prob)
+                        print(
+                            f"  [debug] Found surgical JSON token '{val_token}' Confidence: {discipline_conf:.2f})"
+                        )
+                        break
+                    if discipline_conf > 0:
+                        break
+
         # Fallback to incase extraction is messy
         if discipline_conf == 0.0:
             avg_lp = candidate.avg_logprobs or -1.0
-            discipline_conf = math.exp(avg_lp) ** (1/len(logprobs_list)) 
-            
+            discipline_conf = math.exp(avg_lp) ** (1 / len(logprobs_list))
+
     except Exception as e:
         print(f" [!] Surgical parsing error: {e}. Defaulting to safety.")
-        discipline_conf = 0.50 
+        discipline_conf = 0.50
 
     return raw_response, min(discipline_conf, 1.0)
+
 
 def process_submission(submission_id: str, db: Session):
     """
     Processes all photos belonging to a single submission together.
     All photos in a submission are guaranteed to end up in the same incident.
     """
-    photos = db.query(PhotoReport)\
-        .filter(PhotoReport.submission_id == submission_id)\
-        .filter(PhotoReport.photo_report_status == "New")\
-        .with_for_update(skip_locked=True)\
+    photos = (
+        db.query(PhotoReport)
+        .filter(PhotoReport.submission_id == submission_id)
+        .filter(PhotoReport.photo_report_status == "New")
+        .with_for_update(skip_locked=True)
         .all()
-    
+    )
+
     if not photos:
         print(f"[!] No new photos found for submission {submission_id}")
         return
@@ -211,13 +227,15 @@ def process_submission(submission_id: str, db: Session):
 
         # Check if geolocation is needed
         if photo.photo_location_id == "Assign-Me-Via-Geolocation":
-            print(f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF...")
+            print(
+                f"[*] Geolocation requested for {photo.evidence_id}. Extracting EXIF..."
+            )
             found_location = get_nearest_station_local(file_path)
         else:
             # Keep the manually provided ID (e.g., from a dropdown or user selection)
             found_location = photo.photo_location_id
             print(f"[*] Using provided location ID: {found_location}")
- 
+
         photo.photo_location_id = found_location  # type: ignore[assignment]
         photo.photo_report_status = "In-Progress"  # type: ignore[assignment]
         db.commit()
@@ -225,15 +243,15 @@ def process_submission(submission_id: str, db: Session):
         try:
             # call identify_object for this photo_report
             raw_response, confidence = identify_objects(
-                file_path, 
-                DISCIPLINES, 
-                user_description=description
+                file_path, DISCIPLINES, user_description=description
             )
             parsed = parse_classification(raw_response)
             if confidence < 0.45:
-                print(f"  [!] Low discipline confidence ({confidence:.2f}). Forcing UNCLASSIFIED.")
+                print(
+                    f"  [!] Low discipline confidence ({confidence:.2f}). Forcing UNCLASSIFIED."
+                )
                 parsed["discipline"] = "UNCLASSIFIED"
-        
+
             embedding_instruction = (
                 f"Task: Grouping maintenance photos from different angles. "
                 f"Physical Asset: {parsed['vlm_summary']}. "
@@ -245,8 +263,7 @@ def process_submission(submission_id: str, db: Session):
 
             print(f"[*] Generating multimodal embedding for {photo.evidence_id}...")
             vector = generate_embedding(
-                text=embedding_instruction,
-                image_paths=[Path(file_path)]
+                text=embedding_instruction, image_paths=[Path(file_path)]
             )
 
             # Update the PhotoReport with the results
@@ -254,28 +271,34 @@ def process_submission(submission_id: str, db: Session):
             photo.photo_report_discipline = parsed["discipline"]
             photo.embedding = vector
             photo.found_priority = parsed["issue_priority"]
-            photo.photo_report_status = "Completed"     # type: ignore[assignment]
+            photo.photo_report_status = "Completed"  # type: ignore[assignment]
             photo.photo_report_confidence = confidence  # type: ignore[assignment]
 
             db.commit()
             results.append((photo, parsed, confidence, vector, found_location))
-            print(f"  [+] Classified {photo.evidence_id}: {parsed['discipline']} (conf: {confidence:.2f})")
+            print(
+                f"  [+] Classified {photo.evidence_id}: {parsed['discipline']} (conf: {confidence:.2f})"
+            )
 
         except Exception as e:
             print(f"[!] Error classifying photo {photo.evidence_id}: {e}")
             photo.photo_report_status = "Error: Inference Failed"  # type: ignore[assignment]
             db.commit()
-    
+
     if not results:
-        print(f"[!] No photos were successfully classified for submission {submission_id}")
+        print(
+            f"[!] No photos were successfully classified for submission {submission_id}"
+        )
         return
-    
+
     # --- Phase 2: Find the best incident match for the WHOLE submission ---
     # Use the highest-confidence photo's embedding as the submission's
     # "representative" signal for similarity search. This means one strong
     # photo can anchor the whole submission to an existing incident.
 
-    best_photo, best_parsed, best_confidence, best_vector, best_location = max(results, key=lambda x: x[2])
+    best_photo, best_parsed, best_confidence, best_vector, best_location = max(
+        results, key=lambda x: x[2]
+    )
 
     raw_time = best_photo.submitted_at
     if isinstance(raw_time, str):
@@ -294,13 +317,16 @@ def process_submission(submission_id: str, db: Session):
         submitted_at=cleaned_time,
         exclude_evidence_id=cast(str | None, best_photo.evidence_id),
     )
-    safe_match_score = match_score if match_score is not None else 0.0
 
     if target_incident_id:
-        print(f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}")
+        print(
+            f"  [+] Best match for submission {submission_id} is Incident {target_incident_id} with score {match_score:.3f}"
+        )
     else:
         target_incident_id = photos[0].incident_id
-        print(f"  [-] No match (best score={match_score:.3f}). Using new Incident {target_incident_id}.")
+        print(
+            f"  [-] No match (best score={match_score:.3f}). Using new Incident {target_incident_id}."
+        )
 
     # --- Phase 3: Assign every photo to the target incident ---
 
@@ -321,28 +347,33 @@ def process_submission(submission_id: str, db: Session):
                             SELECT 1 FROM photo_reports WHERE incident_id = :old_id
                         )
                     """),
-                    {"old_id": original_incident_id}
+                    {"old_id": original_incident_id},
                 )
                 db.commit()
             except Exception as delete_error:
-                print(f" [!] Failed to delete original incident {original_incident_id}: {delete_error}")
+                print(
+                    f" [!] Failed to delete original incident {original_incident_id}: {delete_error}"
+                )
                 db.rollback()
 
         photo.photo_report_status = "Completed"  # type: ignore[assignment]
         db.commit()
 
     # --- Phase 4: Promote the best photo's metadata to the incident ---
-    incident = db.query(Incident).filter(Incident.incident_id == target_incident_id).first()
-       
+    incident = (
+        db.query(Incident).filter(Incident.incident_id == target_incident_id).first()
+    )
+
     if incident:
         current_max_confidence = (
             db.query(func.max(PhotoReport.photo_report_confidence))
             .filter(PhotoReport.incident_id == target_incident_id)
             .filter(PhotoReport.evidence_id != best_photo.evidence_id)
-            .scalar() or -1.0
+            .scalar()
+            or -1.0
         )
-    
-        # If this photo is the most confident one we've seen for this incident, 
+
+        # If this photo is the most confident one we've seen for this incident,
         # promote its metadata to the incident level.
         if best_confidence > current_max_confidence:
             incident.discipline = best_parsed["discipline"]
@@ -356,16 +387,22 @@ def process_submission(submission_id: str, db: Session):
             )
 
         else:
-            print(f"  [-] Incident {target_incident_id} already has a higher-confidence classification. Skipping update.")
+            print(
+                f"  [-] Incident {target_incident_id} already has a higher-confidence classification. Skipping update."
+            )
 
         # Propagate resolved location to incident if it hasn't been set yet
         current_inc_loc = getattr(incident, "location_id", None)
         if current_inc_loc == "Assign-Me-Via-Geolocation" or current_inc_loc is None:
             incident.location_id = best_location
             db.commit()
-            print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
-    
-BATCH_SIZE = 10 
+            print(
+                f"  [✓] Updated Incident {target_incident_id} location -> {best_location}"
+            )
+
+
+BATCH_SIZE = 10
+
 
 def run_processor():
     print("[*] Initializing database foundation...")
@@ -379,22 +416,24 @@ def run_processor():
         # 2. Create the tables if they don't exist
         Base.metadata.create_all(bind=engine)
         print("[*] Database tables created/verified.")
-        
+
     except Exception as e:
         print(f"[!] Initialization failed: {e}")
         # If DB isn't ready, wait 5 seconds and let Docker restart the container
         time.sleep(5)
         return
-    
+
     while True:
         db = SessionLocal()
         try:
             # Look for the next photo that hasn't been processed yet
-            pending = db.query(PhotoReport.submission_id)\
-                .filter(PhotoReport.photo_report_status == "New")\
-                .distinct()\
-                .limit(BATCH_SIZE)\
+            pending = (
+                db.query(PhotoReport.submission_id)
+                .filter(PhotoReport.photo_report_status == "New")
+                .distinct()
+                .limit(BATCH_SIZE)
                 .all()
+            )
 
             if pending:
                 for (submission_id,) in pending:
@@ -402,7 +441,7 @@ def run_processor():
                         process_submission(submission_id, db)
                     except Exception as e:
                         print(f"[!] Error processing submission {submission_id}: {e}")
-                
+
             else:
                 print("[~] No new submissions. Waiting...")
                 time.sleep(10)
