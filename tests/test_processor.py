@@ -1,14 +1,15 @@
+import json
 import src.backend.processor as processor
 from src.backend.processor import process_submission, run_processor
 from unittest.mock import MagicMock, patch 
 from src.backend.database import Incident, PhotoReport
 
 # 1. Setup global mocks
-FAKE_RESPONSE = (
-    "discipline: MECHANICAL\n"
-    "issue_priority: HIGH\n"
-    "vlm_summary: Broken pipe."
-)
+FAKE_RESPONSE = json.dumps({
+    "discipline": "MECHANICAL",
+    "issue_priority": "HIGH",
+    "vlm_summary": "Broken pipe."
+})
 
 processor.identify_objects = lambda *args, **kwargs: (FAKE_RESPONSE, 0.95)
 processor.generate_embedding = lambda *args, **kwargs: [0.1] * 3072
