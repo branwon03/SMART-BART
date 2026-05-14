@@ -5,6 +5,12 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      # IANA name must use underscore; "America/LosAngeles" breaks TZ parsing → weird log abbreviations.
+      TZ: America/Los_Angeles
+    command: >
+      postgres
+      -c timezone=America/Los_Angeles
+      -c log_timezone=America/Los_Angeles
     ports:
       - "5432:5432"
     volumes:

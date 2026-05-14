@@ -63,6 +63,8 @@ class PhotoReport(Base):
     photo_report_confidence = Column(Float, nullable=True)
     photo_report_discipline = Column(String, nullable=True)
     photo_location_id = Column(String)
+    reporter_name = Column(String, nullable=True)
+    reporter_contact = Column(String, nullable=True)
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────
@@ -77,6 +79,34 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def ensure_reporter_columns_on_photo_reports() -> None:
+    """Add reporter columns to existing DBs (create_all does not alter tables)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if not insp.has_table("photo_reports"):
+        return
+    cols = {c["name"] for c in insp.get_columns("photo_reports")}
+    statements: list[str] = []
+    if "reporter_name" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN reporter_name TEXT"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN reporter_name VARCHAR"
+        )
+    if "reporter_contact" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN reporter_contact TEXT"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN reporter_contact VARCHAR"
+        )
+    if not statements:
+        return
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
 
 
 def refresh_incident_last_report_at(db: Session, incident_id: str) -> None:

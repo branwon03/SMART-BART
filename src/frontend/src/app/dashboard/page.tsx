@@ -1,8 +1,11 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import { DisciplineSidebar } from "../../components/DisciplineSidebar";
 import { IncidentDetailPanel } from "../../components/IncidentDetailPanel";
 import { IncidentsTable } from "../../components/IncidentsTable";
+import { BulkEditModal } from "../../components/BulkEditModal";
+import { BulkDeleteModal } from "../../components/BulkDeleteModal";
 import { useMaintenanceDashboard } from "../../hooks/useMaintenanceDashboard";
 
 export default function MaintenanceDashboard() {
@@ -13,23 +16,45 @@ export default function MaintenanceDashboard() {
     allIncidents,
     selectedIncident,
     setSelectedIncident,
+    checkedIds,
+    toggleCheckedOne,
+    toggleCheckedAllVisible,
+    clearCheckedIds,
     evidence,
     now,
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    closeIncidentPanel,
     updateSelectedIncident,
     removeIncident,
     refreshAfterMerge,
     notifyIncidentSplitForParent,
   } = useMaintenanceDashboard();
 
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const selectedForBulk = useMemo(
+    () => filteredData.filter((i) => checkedIds.has(i.incident_id)),
+    [filteredData, checkedIds],
+  );
+
+  const handleSelectDiscipline = useCallback(
+    (d: string) => {
+      setBulkEditOpen(false);
+      setBulkDeleteOpen(false);
+      selectDiscipline(d);
+    },
+    [selectDiscipline],
+  );
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans text-sm overflow-x-hidden">
       <DisciplineSidebar
         disciplines={disciplines}
         activeTab={activeTab}
-        onSelectDiscipline={selectDiscipline}
+        onSelectDiscipline={handleSelectDiscipline}
       />
 
       <div className="flex-1 ml-64 relative">
@@ -58,7 +83,12 @@ export default function MaintenanceDashboard() {
             filteredData={filteredData}
             selectedIncidentId={selectedIncident?.incident_id ?? null}
             now={now}
+            checkedIds={checkedIds}
             onSelectIncident={setSelectedIncident}
+            onToggleCheckedOne={toggleCheckedOne}
+            onToggleCheckedAllVisible={toggleCheckedAllVisible}
+            onBulkEditRequest={() => setBulkEditOpen(true)}
+            onBulkDeleteRequest={() => setBulkDeleteOpen(true)}
           />
         </main>
 
@@ -70,14 +100,37 @@ export default function MaintenanceDashboard() {
             allIncidents={allIncidents}
             incidentIdExpanded={incidentIdExpanded}
             onToggleIncidentIdExpanded={() => setIncidentIdExpanded((e) => !e)}
-            onClose={() => {
-              setIncidentIdExpanded(false);
-              setSelectedIncident(null);
-            }}
+            onClose={closeIncidentPanel}
             onIncidentUpdated={updateSelectedIncident}
             onIncidentDeleted={removeIncident}
             onRefreshAfterMerge={refreshAfterMerge}
             onIncidentSplit={notifyIncidentSplitForParent}
+          />
+        )}
+
+        {bulkEditOpen && selectedForBulk.length > 0 && (
+          <BulkEditModal
+            incidents={selectedForBulk}
+            onApplied={(updates) => {
+              for (const u of updates) {
+                updateSelectedIncident(u);
+              }
+              clearCheckedIds();
+            }}
+            onClose={() => setBulkEditOpen(false)}
+          />
+        )}
+
+        {bulkDeleteOpen && selectedForBulk.length > 0 && (
+          <BulkDeleteModal
+            incidents={selectedForBulk}
+            onApplied={(deletedIds) => {
+              for (const id of deletedIds) {
+                removeIncident(id);
+              }
+              clearCheckedIds();
+            }}
+            onClose={() => setBulkDeleteOpen(false)}
           />
         )}
       </div>

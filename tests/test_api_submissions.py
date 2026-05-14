@@ -65,3 +65,23 @@ def test_api_submissions_rejects_unsupported_file_type():
     )
     assert resp.status_code == 422
     assert "Unsupported file type" in resp.json()["detail"]
+
+
+def test_api_submissions_persists_reporter_fields():
+    """Reporter name and contact are stored and returned on photo reports."""
+    png = _make_png_bytes()
+    resp = client.post(
+        "/api/submissions",
+        files=[("media", ("test.png", png, "image/png"))],
+        data={
+            "description": "Wet floor",
+            "reporter_name": "Jamie Test",
+            "reporter_contact": "555-0100",
+        },
+    )
+    assert resp.status_code == 200
+    incident_id = resp.json()["incident_id"]
+    reports = client.get(f"/api/photo-reports/{incident_id}").json()
+    assert len(reports) == 1
+    assert reports[0]["reporter_name"] == "Jamie Test"
+    assert reports[0]["reporter_contact"] == "555-0100"

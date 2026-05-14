@@ -19,6 +19,8 @@ export type PhotoReport = {
   found_priority?: string | null;
   vlm_summary?: string | null;
   photo_report_discipline?: string | null;
+  reporter_name?: string | null;
+  reporter_contact?: string | null;
 };
 
 export type SubmissionResult = {
