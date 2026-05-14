@@ -6,7 +6,6 @@ export type Incident = {
   vlm_summary?: string | null;
   location_id?: string | null;
   created_at?: string | null;
-  last_report_at?: string | null;
 };
 
 export type PhotoReport = {

@@ -98,6 +98,7 @@ export default function MaintenanceDashboard() {
             incident={selectedIncident}
             evidence={evidence}
             allIncidents={allIncidents}
+            now={now}
             incidentIdExpanded={incidentIdExpanded}
             onToggleIncidentIdExpanded={() => setIncidentIdExpanded((e) => !e)}
             onClose={closeIncidentPanel}

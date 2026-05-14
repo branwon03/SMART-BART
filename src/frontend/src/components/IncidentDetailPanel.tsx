@@ -5,6 +5,7 @@ import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
 import { formatDateTime, formatShortDate } from "../lib/formatDate";
+import { formatElapsedSince } from "../lib/formatElapsedSince";
 import { getPriorityStyles } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
@@ -15,6 +16,7 @@ type IncidentDetailPanelProps = {
   incident: Incident;
   evidence: PhotoReport[];
   allIncidents: Incident[];
+  now: Date;
   incidentIdExpanded: boolean;
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
@@ -28,6 +30,7 @@ export function IncidentDetailPanel({
   incident,
   evidence,
   allIncidents,
+  now,
   incidentIdExpanded,
   onToggleIncidentIdExpanded,
   onClose,
@@ -147,10 +150,8 @@ export function IncidentDetailPanel({
               <span className="font-bold text-gray-700">First reported:</span>
               <span>{formatShortDate(incident.created_at)}</span>
 
-              <span className="font-bold text-gray-700">Last reported:</span>
-              <span>
-                {incident.last_report_at ? formatShortDate(incident.last_report_at) : "—"}
-              </span>
+              <span className="font-bold text-gray-700">Age:</span>
+              <span>{formatElapsedSince(incident.created_at, now)}</span>
             </div>
           </div>
 

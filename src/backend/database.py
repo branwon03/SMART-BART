@@ -1,19 +1,10 @@
 import os
-from datetime import datetime
 from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    JSON,
-    String,
-    create_engine,
-    func,
-)
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy import Column, DateTime, Float, ForeignKey, JSON, String, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -33,6 +24,7 @@ class Base(DeclarativeBase):
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
+
 class Incident(Base):
     __tablename__ = "incidents"
 
@@ -43,7 +35,6 @@ class Incident(Base):
     vlm_summary = Column(String)
     location_id = Column(String)
     created_at = Column(DateTime)
-    last_report_at: Mapped[datetime | None] = mapped_column(DateTime)
     gmail_thread_id = Column(String, nullable=True, index=True)
 
 
@@ -52,7 +43,7 @@ class PhotoReport(Base):
 
     evidence_id = Column(String, primary_key=True)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
-    submission_id = Column(String, index=True) 
+    submission_id = Column(String, index=True)
     image_url = Column(String)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
@@ -68,6 +59,7 @@ class PhotoReport(Base):
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────
+
 
 def get_db():
     db = SessionLocal()
@@ -107,24 +99,3 @@ def ensure_reporter_columns_on_photo_reports() -> None:
     with engine.begin() as conn:
         for stmt in statements:
             conn.execute(text(stmt))
-
-
-def refresh_incident_last_report_at(db: Session, incident_id: str) -> None:
-    """Set last_report_at from photo_reports: max date iff min/max fall on different UTC days."""
-    inc = db.query(Incident).filter(Incident.incident_id == incident_id).first()
-    if not inc:
-        return
-    min_date = (
-        db.query(func.min(PhotoReport.submitted_at))
-        .filter(PhotoReport.incident_id == incident_id)
-        .scalar()
-    )
-    max_date = (
-        db.query(func.max(PhotoReport.submitted_at))
-        .filter(PhotoReport.incident_id == incident_id)
-        .scalar()
-    )
-    if min_date and max_date and min_date.date() != max_date.date():
-        inc.last_report_at = max_date
-    else:
-        inc.last_report_at = None
