@@ -4,7 +4,7 @@ import math
 import mimetypes
 from pathlib import Path
 from sqlalchemy import func, text
-from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident, refresh_incident_last_report_at
+from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident
 from dotenv import load_dotenv
 from google import genai
 from typing import cast
@@ -322,8 +322,6 @@ def process_submission(submission_id: str, db: Session):
             db.commit()
             print(f"  [✓] Updated Incident {target_incident_id} location -> {best_location}")
 
-        refresh_incident_last_report_at(db, target_incident_id)
-        db.commit()
 BATCH_SIZE = 10 
 
 def run_processor():
