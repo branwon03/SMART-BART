@@ -191,7 +191,8 @@ export function IncidentDetailPanel({
 
         <div className="mt-4 mb-6">
           <h3 className="font-bold text-lg mb-2">Description:</h3>
-          <div className="bg-gray-100 border border-gray-300 rounded-lg p-5 h-48 overflow-y-auto text-[15px] leading-relaxed space-y-10">
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-5 h-48 overflow-y-auto text-[15px] leading-relaxed space-y-8">
+            {/* Case 1: Single Report or consolidated view */}
             {descriptionBlocks.kind === "single" && (
               <div className="border-b border-gray-200 pb-3 last:border-0">
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
@@ -199,8 +200,7 @@ export function IncidentDetailPanel({
                     Rider report
                     {descriptionBlocks.photoCount > 1 ? (
                       <span className="font-normal text-gray-400">
-                        {" "}
-                        ({descriptionBlocks.photoCount} photos)
+                        {" "} ({descriptionBlocks.photoCount} photos)
                       </span>
                     ) : null}
                   </span>
@@ -208,11 +208,18 @@ export function IncidentDetailPanel({
                     {formatDateTime(descriptionBlocks.submittedAt)}
                   </span>
                 </div>
-                <p className="text-gray-800">
-                  - &quot;{descriptionBlocks.text}&quot;
-                </p>
+                <div className="text-gray-800">
+                  <div>&quot;{descriptionBlocks.text}&quot;</div>
+                  {incident.issue_priority && (
+                    <div className="text-gray-600 mt-1">
+                      Priority: {String(incident.issue_priority)}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Case 2: Multiple individual reports merged together */}
             {descriptionBlocks.kind === "multiple" &&
               descriptionBlocks.items.map((ev, idx) => (
                 <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
@@ -222,11 +229,19 @@ export function IncidentDetailPanel({
                       {formatDateTime(ev.submitted_at)}
                     </span>
                   </div>
-                  <p className="text-gray-800">
-                    - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;
-                  </p>
+                  {/* Use <div> here too */}
+                  <div className="text-gray-800">
+                    <div>- &quot;{ev.user_context || "Rider report logged via web-app."}&quot;</div>
+                    {ev.found_priority && (
+                      <div className="text-gray-600 mt-1">
+                        Priority: {ev.found_priority}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
+            {/* Reporter info block */}
             {descriptionBlocks.kind === "empty" && (
               <p className="text-gray-400 italic text-center py-4">No historical reports found.</p>
             )}
@@ -236,9 +251,10 @@ export function IncidentDetailPanel({
               );
               if (!reporter) return null;
               return (
-                <div className="border-t border-gray-200 pt-3 mt-3">
-                  <span className="font-bold text-gray-500 text-xs uppercase tracking-wide">
-                    Reporter
+                /* Removed 'border-t' and 'pt-3' to eliminate the double line */
+                <div className="mt-3">
+                  <span className="font-bold text-gray-500 text-xs tracking-wide">
+                    Last Reporter
                   </span>
                   <p className="text-gray-800 mt-1">
                     {reporter.reporter_name ? (
