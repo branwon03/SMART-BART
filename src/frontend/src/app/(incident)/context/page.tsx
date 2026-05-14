@@ -89,20 +89,34 @@ export default function UserContext() {
               onChange={(e) => setLocation(e.target.value)}
               className="w-full bg-[#D1D5DB] border border-black p-3 text-sm appearance-none text-gray-700 focus:outline-none focus:border-[#0099D8] cursor-pointer"
             >
-              <option value="Main Campus">Main Campus</option>
-              <option value="RUIZ">Ruiz Administration Center: RUIZ (Formerly ADMIN)</option>
-              <option value="ACS">Arts and Computational Sciences: ACS</option>
-              <option value="BSP">Biomedical Sciences and Physics: BSP</option>
-              <option value="COB">Classroom and Office Building: CLSSRM: COB</option>
-              <option value="COB2">Classroom and Office Building 2: COB2</option>
-              <option value="GLCR">Glacier Point: GLCR</option>
-              <option value="GRAN">Granite Pass: GRAN</option>
-              <option value="KL">Kolligian Library: KOLLIG: KL</option>
-              <option value="SE">Science and Engineering: SCIENG: SE</option>
-              <option value="SE2">Science and Engineering 2: SE2</option>
-              <option value="SSM">Social Sciences and Management: SSM</option>
-              <option value="SSB">Student Services Building: SSB</option>
-              <option value="SRE">Sustainability Research and Engineering: SRE</option>
+              <option value="Arts and Computational Sciences">Arts and Computational Sciences</option>
+              <option value="Bellevue Lot">Bellevue Lot</option>
+              <option value="Biomedical Sciences and Physics">Biomedical Sciences and Physics</option>
+              <option value="Bobcat Field">Bobcat Field</option>
+              <option value="Cathedral">Cathedral</option>
+              <option value="Central Utilities Plant">Central Utilities Plant</option>
+              <option value="Classroom and Office Building 1">Classroom and Office Building 1</option>
+              <option value="Classroom and Office Building 2">Classroom and Office Building 2</option>
+              <option value="El Portal">El Portal</option>
+              <option value="Glacier Point">Glacier Point</option>
+              <option value="Granite Pass">Granite Pass</option>
+              <option value="Gym">Gym</option>
+              <option value="Half Dome">Half Dome</option>
+              <option value="Kolligian Library">Kolligian Library</option>
+              <option value="Mariposa">Mariposa</option>
+              <option value="Pavilion Dining Center">Pavilion Dining Center</option>
+              <option value="Scholar's Lot">Scholar's Lot</option>
+              <option value="Science and Engineering">Science and Engineering</option>
+              <option value="Science and Engineering 2">Science and Engineering 2</option>
+              <option value="Sentinel Rock">Sentinel Rock</option>
+              <option value="Social Sciences and Management">Social Sciences and Management</option>
+              <option value="Student Services Building">Student Services Building</option>
+              <option value="Sustainability Research and Engineering">Sustainability Research and Engineering</option>
+              <option value="Tenaya">Tenaya</option>
+              <option value="Tuolomne">Tuolomne</option>
+              <option value="University Plaza">University Plaza</option>
+              <option value="Valley Terraces">Valley Terraces</option>
+              <option value="Yablokoff-Wallace Dining Center">Yablokoff-Wallace Dining Center</option>  
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter">
