@@ -1,0 +1,33 @@
+/**
+ * Keys must match backend `gps_lookup.BART_STATIONS` (incident / photo_location_id).
+ */
+export const BART_STATION_NAMES: readonly string[] = [
+  "Arts and Computational Sciences",
+  "Bellevue Lot",
+  "Biomedical Sciences and Physics",
+  "Bobcat Field",
+  "Cathedral",
+  "Central Utilities Plant",
+  "Classroom and Office Building 1",
+  "Classroom and Office Building 2",
+  "El Portal",
+  "Glacier Point",
+  "Granite Pass",
+  "Gym",
+  "Half Dome",
+  "Kolligian Library",
+  "Mariposa",
+  "Pavilion Dining Center",
+  "Scholar's Lot",
+  "Science and Engineering",
+  "Science and Engineering 2",
+  "Sentinel Rock",
+  "Social Sciences and Management",
+  "Student Services Building",
+  "Sustainability Research and Engineering",
+  "Tenaya",
+  "Tuolomne",
+  "University Plaza",
+  "Valley Terraces",
+  "Yablokoff-Wallace Dining Center",
+];
