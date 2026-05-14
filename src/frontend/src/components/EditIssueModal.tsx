@@ -56,60 +56,58 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
         status,
         discipline,
         vlm_summary: trimmedTitle,
+        location_id: trimLoc === "" ? null : trimLoc,
       });
       console.log("Incident updated:", updated);
-      onSave({ ...updated, vlm_summary: trimmedTitle });
-      location_id: trimLoc === "" ? null : trimLoc,
+      onSave({
+        ...updated,
+        vlm_summary: trimmedTitle,
+        location_id: trimLoc === "" ? null : trimLoc,
       });
-    console.log("Incident updated:", updated);
-    onSave({
-      ...updated,
-      location_id: trimLoc === "" ? null : trimLoc,
-    });
-  } catch (err) {
-    console.error("Failed to update incident:", err);
-    setError(err instanceof Error ? err.message : "Update failed");
-  } finally {
-    setSaving(false);
+    } catch (err) {
+      console.error("Failed to update incident:", err);
+      setError(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
   }
-}
 
-return (
-  <>
-    <div className="fixed inset-0 bg-black/40 z-40" onClick={onCancel} />
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onCancel} />
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="bg-white rounded-xl border-2 border-black shadow-2xl w-full max-w-md p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-black mb-6">Edit Issue</h2>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="bg-white rounded-xl border-2 border-black shadow-2xl w-full max-w-md p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="text-xl font-black mb-6">Edit Issue</h2>
 
-        <label className="block mb-4">
-          <span className="text-sm font-bold text-gray-700">Title</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Incident title"
-            className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
-          />
-        </label>
+          <label className="block mb-4">
+            <span className="text-sm font-bold text-gray-700">Title</span>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Incident title"
+              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+            />
+          </label>
 
-        <label className="block mb-4">
-          <span className="text-sm font-bold text-gray-700">Priority</span>
-          <select
-            value={priority}
-            onChange={(e) =>
-              setPriority(e.target.value as IssuePriority)
-            }
-            className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
-          >
-            {PRIORITY_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </label>
+          <label className="block mb-4">
+            <span className="text-sm font-bold text-gray-700">Priority</span>
+            <select
+              value={priority}
+              onChange={(e) =>
+                setPriority(e.target.value as IssuePriority)
+              }
+              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+            >
+              {PRIORITY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
 
         <label className="block mb-4">
           <span className="text-sm font-bold text-gray-700">Status</span>
