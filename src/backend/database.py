@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
-from sqlalchemy import Column, DateTime, Float, ForeignKey, JSON, String, create_engine
+from sqlalchemy import Column, DateTime, Float, ForeignKey, JSON, LargeBinary, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 env_path = Path(__file__).resolve().parents[2] / ".env"
@@ -45,6 +45,8 @@ class PhotoReport(Base):
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
     submission_id = Column(String, index=True)
     image_url = Column(String)
+    image_blob = Column(LargeBinary, nullable=True)
+    image_mime = Column(String, nullable=True)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
     user_context = Column(String)
@@ -93,6 +95,34 @@ def ensure_reporter_columns_on_photo_reports() -> None:
             "ALTER TABLE photo_reports ADD COLUMN reporter_contact TEXT"
             if _USE_SQLITE
             else "ALTER TABLE photo_reports ADD COLUMN reporter_contact VARCHAR"
+        )
+    if not statements:
+        return
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
+
+
+def ensure_image_blob_columns_on_photo_reports() -> None:
+    """Add image_blob / image_mime to existing DBs (create_all does not alter)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if not insp.has_table("photo_reports"):
+        return
+    cols = {c["name"] for c in insp.get_columns("photo_reports")}
+    statements: list[str] = []
+    if "image_blob" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN image_blob BLOB"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN image_blob BYTEA"
+        )
+    if "image_mime" not in cols:
+        statements.append(
+            "ALTER TABLE photo_reports ADD COLUMN image_mime TEXT"
+            if _USE_SQLITE
+            else "ALTER TABLE photo_reports ADD COLUMN image_mime VARCHAR"
         )
     if not statements:
         return

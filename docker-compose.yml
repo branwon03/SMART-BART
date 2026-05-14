@@ -32,6 +32,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./src:/app/src
+      - ./scripts:/app/scripts
       - uploads:/app/uploads
       - ./.env:/app/.env
       - ./credentials.json:/app/credentials.json

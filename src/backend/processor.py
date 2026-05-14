@@ -5,7 +5,15 @@ import mimetypes
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import func, text
-from src.backend.database import Base, engine, SessionLocal, PhotoReport, Incident
+from src.backend.database import (
+    Base,
+    engine,
+    SessionLocal,
+    PhotoReport,
+    Incident,
+    ensure_reporter_columns_on_photo_reports,
+    ensure_image_blob_columns_on_photo_reports,
+)
 from dotenv import load_dotenv
 from google import genai
 from typing import cast
@@ -63,6 +71,22 @@ def get_genai_client():
 def resolve_local_image_path(photo: PhotoReport) -> str:
     image_url = getattr(photo, "image_url", None)
     evidence_id = getattr(photo, "evidence_id", None)
+    blob = getattr(photo, "image_blob", None)
+
+    if blob and evidence_id:
+        work = Path(UPLOAD_DIR) / ".blob_work"
+        work.mkdir(parents=True, exist_ok=True)
+        mime = getattr(photo, "image_mime", None) or ""
+        low = mime.lower()
+        if "png" in low:
+            ext = ".png"
+        elif "webp" in low:
+            ext = ".webp"
+        else:
+            ext = ".jpg"
+        path = work / f"{evidence_id}{ext}"
+        path.write_bytes(bytes(blob))
+        return str(path)
 
     # Test path / legacy local path case: image_url is a plain filename like "photo1.jpg"
     if (
@@ -408,6 +432,8 @@ def run_processor():
 
         # 2. Create the tables if they don't exist
         Base.metadata.create_all(bind=engine)
+        ensure_reporter_columns_on_photo_reports()
+        ensure_image_blob_columns_on_photo_reports()
         print("[*] Database tables created/verified.")
 
     except Exception as e:

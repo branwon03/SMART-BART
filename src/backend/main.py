@@ -6,7 +6,7 @@ from sqlalchemy import text, func
 from typing import cast
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from src.backend.database import (
     PhotoReport,
     engine,
     ensure_reporter_columns_on_photo_reports,
+    ensure_image_blob_columns_on_photo_reports,
     get_db,
 )
 from src.backend.inference import (
@@ -62,6 +63,7 @@ async def lifespan(app: FastAPI):
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
         ensure_reporter_columns_on_photo_reports()
+        ensure_image_blob_columns_on_photo_reports()
         print("[startup] Database tables created successfully.")
 
     except Exception as exc:
@@ -465,7 +467,15 @@ async def merge_photos_into_incident(
 
 
 @app.get("/api/images/{evidence_id}")
-def get_image(evidence_id: str):
+def get_image(evidence_id: str, db: Session = Depends(get_db)):
+    row = (
+        db.query(PhotoReport)
+        .filter(PhotoReport.evidence_id == evidence_id)
+        .first()
+    )
+    if row is not None and row.image_blob:
+        mime = row.image_mime or "image/jpeg"
+        return Response(content=bytes(row.image_blob), media_type=mime)
     for ext in ("png", "jpg", "jpeg", "webp"):
         path = UPLOAD_DIR / f"{evidence_id}.{ext}"
         if path.exists():
