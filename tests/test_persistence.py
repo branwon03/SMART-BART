@@ -149,6 +149,65 @@ def test_get_image_unknown_returns_404():
     resp = client.get("/api/images/does-not-exist")
     assert resp.status_code == 404
 
+
+def test_get_image_serves_photo_reports_image_blob(db_session):
+    """DB-backed bytes (prepopulate-style) must resolve without disk file."""
+    from datetime import datetime, timezone
+    from io import BytesIO
+    import uuid
+
+    from PIL import Image
+
+    from src.backend.database import Incident, PhotoReport
+
+    buf = BytesIO()
+    Image.new("RGB", (4, 4), (10, 110, 200)).save(buf, format="JPEG", quality=80)
+    blob = buf.getvalue()
+
+    iid = uuid.uuid4().hex
+    eid = uuid.uuid4().hex
+    now = datetime.now(timezone.utc)
+    db_session.add(
+        Incident(
+            incident_id=iid,
+            status="New",
+            issue_priority=None,
+            discipline=None,
+            vlm_summary="blob test",
+            location_id=None,
+            created_at=now,
+            gmail_thread_id=None,
+        )
+    )
+    db_session.add(
+        PhotoReport(
+            evidence_id=eid,
+            incident_id=iid,
+            submission_id=uuid.uuid4().hex,
+            image_url=f"/api/images/{eid}",
+            image_blob=blob,
+            image_mime="image/jpeg",
+            embedding=None,
+            submitted_at=now,
+            user_context="",
+            found_priority="LOW",
+            vlm_summary=None,
+            photo_report_status="Completed",
+            photo_report_confidence=None,
+            photo_report_discipline=None,
+            photo_location_id="Test",
+            reporter_name=None,
+            reporter_contact=None,
+        )
+    )
+    db_session.commit()
+
+    resp = client.get(f"/api/images/{eid}")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/jpeg"
+    assert resp.content == blob
+
+
 # ── RED-GREEN #5: submission with image persists image_url and serves file ────
 
 def test_submission_persists_image_and_serves_it():

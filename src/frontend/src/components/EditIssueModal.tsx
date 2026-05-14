@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Incident } from "../types/api";
+import { BART_STATION_NAMES } from "../lib/bartStations";
 import { MAINTENANCE_DISCIPLINES } from "../lib/disciplines";
 import { updateIncident } from "../lib/incidents";
 
@@ -30,6 +31,13 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
     initialDiscipline(incident.discipline),
   );
   const [title, setTitle] = useState(() => incident.vlm_summary ?? "");
+  const locationOptions = useMemo(
+    () => locationSelectOptions(incident.location_id),
+    [incident.location_id],
+  );
+  const [locationId, setLocationId] = useState(() =>
+    initialLocationId(incident.location_id),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,14 +50,20 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
     setSaving(true);
     setError(null);
     try {
+      const trimLoc = locationId.trim();
       const updated = await updateIncident(incident.incident_id, {
         issue_priority: priority,
         status,
         discipline,
         vlm_summary: trimmedTitle,
+        location_id: trimLoc === "" ? null : trimLoc,
       });
       console.log("Incident updated:", updated);
-      onSave({ ...updated, vlm_summary: trimmedTitle });
+      onSave({
+        ...updated,
+        vlm_summary: trimmedTitle,
+        location_id: trimLoc === "" ? null : trimLoc,
+      });
     } catch (err) {
       console.error("Failed to update incident:", err);
       setError(err instanceof Error ? err.message : "Update failed");
@@ -95,62 +109,78 @@ export function EditIssueModal({ incident, onSave, onCancel }: EditIssueModalPro
             </select>
           </label>
 
-          <label className="block mb-4">
-            <span className="text-sm font-bold text-gray-700">Status</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </label>
+        <label className="block mb-4">
+          <span className="text-sm font-bold text-gray-700">Status</span>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </label>
 
-          <label className="block mb-6">
-            <span className="text-sm font-bold text-gray-700">
-              Discipline (redirect)
-            </span>
-            <select
-              value={discipline}
-              onChange={(e) => setDiscipline(e.target.value)}
-              className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
-            >
-              {options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </label>
+        <label className="block mb-4">
+          <span className="text-sm font-bold text-gray-700">Location</span>
+          <select
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+            className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+          >
+            <option value="">Not specified</option>
+            {locationOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          {error && (
-            <p className="text-red-600 text-sm font-semibold mb-4">{error}</p>
-          )}
+        <label className="block mb-6">
+          <span className="text-sm font-bold text-gray-700">
+            Discipline (redirect)
+          </span>
+          <select
+            value={discipline}
+            onChange={(e) => setDiscipline(e.target.value)}
+            className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-black focus:outline-none"
+          >
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={saving}
-              className="px-5 py-2 rounded-lg border-2 border-black font-bold text-sm hover:bg-gray-100 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="px-5 py-2 rounded-lg border-2 border-black bg-black text-white font-bold text-sm hover:bg-gray-800 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
+        {error && (
+          <p className="text-red-600 text-sm font-semibold mb-4">{error}</p>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="px-5 py-2 rounded-lg border-2 border-black font-bold text-sm hover:bg-gray-100 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 rounded-lg border-2 border-black bg-black text-white font-bold text-sm hover:bg-gray-800 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 }
 
 function normalizePriority(p: string | number | null | undefined): IssuePriority {
@@ -201,4 +231,19 @@ function initialDiscipline(current: string | null | undefined): string {
     (opt) => opt.toLowerCase() === d.toLowerCase(),
   );
   return match ?? d;
+}
+
+function locationSelectOptions(current: string | null | undefined): string[] {
+  const list = [...BART_STATION_NAMES];
+  const loc = current?.trim();
+  if (loc && !list.includes(loc)) {
+    return [loc, ...list];
+  }
+  return list;
+}
+
+function initialLocationId(current: string | null | undefined): string {
+  const loc = current?.trim();
+  if (!loc) return "";
+  return loc;
 }

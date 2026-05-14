@@ -6,7 +6,7 @@ from sqlalchemy import text, func
 from typing import cast
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from src.backend.database import (
     PhotoReport,
     engine,
     ensure_reporter_columns_on_photo_reports,
+    ensure_image_blob_columns_on_photo_reports,
     get_db,
 )
 from src.backend.inference import (
@@ -36,6 +37,8 @@ class IncidentUpdate(BaseModel):
 
 class MergePhotosBody(BaseModel):
     evidence_ids: list[str]
+
+
 class SplitRequest(BaseModel):
     evidence_ids: list[str]
     title: str
@@ -62,6 +65,7 @@ async def lifespan(app: FastAPI):
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
         ensure_reporter_columns_on_photo_reports()
+        ensure_image_blob_columns_on_photo_reports()
         print("[startup] Database tables created successfully.")
 
     except Exception as exc:
@@ -118,7 +122,6 @@ async def submissions(
         submission_id = uuid.uuid4().hex
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
-        
 
         incident = Incident(
             incident_id=incident_id,
@@ -138,7 +141,6 @@ async def submissions(
             dest = UPLOAD_DIR / f"{evidence_id}{ext}"
             shutil.copy2(str(tmp_path), str(dest))
             saved_image_url = f"/api/images/{evidence_id}"
-
 
             photo_report = PhotoReport(
                 evidence_id=evidence_id,
@@ -183,7 +185,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "issue_priority": r.issue_priority,
             "discipline": r.discipline,
             "vlm_summary": r.vlm_summary,
-            "location_id": r.location_id, 
+            "location_id": r.location_id,
             "gmail_thread_id": r.gmail_thread_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
@@ -203,7 +205,9 @@ async def split_incident(
 
     title = body.title.strip()
     if not title:
-        raise HTTPException(status_code=422, detail="title is required and cannot be blank")
+        raise HTTPException(
+            status_code=422, detail="title is required and cannot be blank"
+        )
 
     order_preserve: list[str] = []
     seen: set[str] = set()
@@ -215,12 +219,8 @@ async def split_incident(
     if not order_preserve:
         raise HTTPException(status_code=422, detail="evidence_ids must not be empty")
 
-    reports = (
-        db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
-    )
-    by_evidence: dict[str, PhotoReport] = {
-        cast(str, r.evidence_id): r for r in reports
-    }
+    reports = db.query(PhotoReport).filter(PhotoReport.incident_id == incident_id).all()
+    by_evidence: dict[str, PhotoReport] = {cast(str, r.evidence_id): r for r in reports}
 
     unknown = [eid for eid in order_preserve if eid not in by_evidence]
     if unknown:
@@ -298,7 +298,7 @@ async def update_incident(
         setattr(row, "status", body.status)
     if body.discipline is not None:
         setattr(row, "discipline", body.discipline)
-    if body.location_id is not None:  
+    if body.location_id is not None:
         setattr(row, "location_id", body.location_id)
     if body.vlm_summary is not None:
         title = body.vlm_summary.strip()
@@ -410,9 +410,7 @@ async def merge_photos_into_incident(
     db: Session = Depends(get_db),
 ):
     target = (
-        db.query(Incident)
-        .filter(Incident.incident_id == target_incident_id)
-        .first()
+        db.query(Incident).filter(Incident.incident_id == target_incident_id).first()
     )
     if not target:
         raise HTTPException(status_code=404, detail="Target incident not found")
@@ -424,11 +422,7 @@ async def merge_photos_into_incident(
     for eid in body.evidence_ids:
         if not eid:
             continue
-        row = (
-            db.query(PhotoReport)
-            .filter(PhotoReport.evidence_id == eid)
-            .first()
-        )
+        row = db.query(PhotoReport).filter(PhotoReport.evidence_id == eid).first()
         if not row:
             continue
         source_incident_id = cast(str, row.incident_id)
@@ -446,16 +440,10 @@ async def merge_photos_into_incident(
         if src_id == target_incident_id:
             continue
         remaining = (
-            db.query(PhotoReport)
-            .filter(PhotoReport.incident_id == src_id)
-            .count()
+            db.query(PhotoReport).filter(PhotoReport.incident_id == src_id).count()
         )
         if remaining == 0:
-            orphan = (
-                db.query(Incident)
-                .filter(Incident.incident_id == src_id)
-                .first()
-            )
+            orphan = db.query(Incident).filter(Incident.incident_id == src_id).first()
             if orphan:
                 db.delete(orphan)
 
@@ -465,34 +453,44 @@ async def merge_photos_into_incident(
 
 
 @app.get("/api/images/{evidence_id}")
-def get_image(evidence_id: str):
+def get_image(evidence_id: str, db: Session = Depends(get_db)):
+    row = db.query(PhotoReport).filter(PhotoReport.evidence_id == evidence_id).first()
+    if row is not None and row.image_blob:
+        mime = "image/jpeg" or None
+        return Response(content=bytes(row.image_blob), media_type=mime)
     for ext in ("png", "jpg", "jpeg", "webp"):
         path = UPLOAD_DIR / f"{evidence_id}.{ext}"
         if path.exists():
             return FileResponse(path, media_type=f"image/{ext}")
     raise HTTPException(status_code=404, detail="Image not found")
 
+
 @app.get("/api/dashboard/discipline-stats")
 async def get_discipline_stats(db: Session = Depends(get_db)):
     """Returns the first and last report dates grouped by discipline."""
     try:
         # We use func.min/max and group_by to aggregate the timestamps
-        stats = db.query(
-            Incident.discipline,
-            func.min(Incident.created_at).label("first_report"),
-            func.max(Incident.created_at).label("last_report"),
-            func.count(Incident.incident_id).label("total_count")
-        ).group_by(Incident.discipline).all()
-        
+        stats = (
+            db.query(
+                Incident.discipline,
+                func.min(Incident.created_at).label("first_report"),
+                func.max(Incident.created_at).label("last_report"),
+                func.count(Incident.incident_id).label("total_count"),
+            )
+            .group_by(Incident.discipline)
+            .all()
+        )
+
         return [
             {
                 "discipline": s.discipline or "Unassigned",
                 "first_report": s.first_report.isoformat() if s.first_report else None,
                 "last_report": s.last_report.isoformat() if s.last_report else None,
-                "total_count": s.total_count
+                "total_count": s.total_count,
             }
             for s in stats
         ]
     except Exception as e:
         print(f"Dashboard Stats Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch dashboard stats")
+

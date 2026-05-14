@@ -16,6 +16,7 @@ export function updateIncident(
     status?: string;
     discipline?: string;
     vlm_summary?: string;
+    location_id?: string | null;
   },
 ): Promise<Incident> {
   return apiFetch<Incident>(
