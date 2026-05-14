@@ -18,4 +18,5 @@ tests/
 .mypy_cache/
 .env
 .cursor/
-src/mobile/
+src/mobile/node_modules/
+src/mobile/.expo/

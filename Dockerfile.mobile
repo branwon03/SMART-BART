@@ -1,0 +1,15 @@
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY src/mobile/package*.json ./
+RUN npm install
+RUN npm install -g @expo/ngrok@^4.1.0
+
+COPY src/mobile/ ./
+
+EXPOSE 8081 19000 19001 19002
+
+CMD ["npx", "expo", "start", "--tunnel"]
