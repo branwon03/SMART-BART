@@ -105,7 +105,7 @@ export default function UserContext() {
               <option value="Kolligian Library">Kolligian Library</option>
               <option value="Mariposa">Mariposa</option>
               <option value="Pavilion Dining Center">Pavilion Dining Center</option>
-              <option value="Scholar's Lot">Scholar's Lot</option>
+              <option value="Scholars Lot">Scholar&apos;s Lot</option>
               <option value="Science and Engineering">Science and Engineering</option>
               <option value="Science and Engineering 2">Science and Engineering 2</option>
               <option value="Sentinel Rock">Sentinel Rock</option>
