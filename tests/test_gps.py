@@ -4,18 +4,19 @@ from src.backend.gps_lookup import calculate_distance, BART_STATIONS
 
 def test_calculate_distance_same_point():
     """If the points are the same, distance should be 0."""
-    lat, lon = 37.8049, -122.2951  # West Oakland
+    lat, lon = 37.363896235419695, -120.42389535027772          #Arbitrary, ACS building coords
     assert calculate_distance(lat, lon, lat, lon) == 0
 
-def test_calculate_distance_known_gap():
-    """Test distance between West Oakland and 12th St Oakland (~1.3 miles)."""
-    # Coords from your BART_STATIONS dict
-    lat1, lon1 = 37.8049, -122.2951 # West Oakland
-    lat2, lon2 = 37.8037, -122.2714 # 12th St
+def test_calculate_distance_uc_merced():
+    """Test distance between El Portal and Glacier Point (~0.14 miles)."""
+    # Coords for UC Merced locations
+    lat1, lon1 = 37.36158902195956, -120.42647249725572 # El Portal
+    lat2, lon2 = 37.363076916497405, -120.42479034586975 # Glacier Point
+    
     dist = calculate_distance(lat1, lon1, lat2, lon2)
     
-    # We allow a small margin of error (0.1 miles) for rounding
-    assert 1.2 <= dist <= 1.4
+    # Actual distance: ~0.138 miles. Checking if it's within a reasonable range (0.12 to 0.16).
+    assert 0.12 <= dist <= 0.16
 
 # --- TESTS FOR STATION SELECTION LOGIC ---
 
@@ -31,18 +32,13 @@ def get_nearest_name_only(user_lat, user_lon):
     return min(distances, key=distances.get)
 
 def test_nearest_station_exact_match():
-    """Providing exact Fremont coords should return 'Fremont'."""
-    fremont_coords = BART_STATIONS["Fremont"]
-    assert get_nearest_name_only(fremont_coords[0], fremont_coords[1]) == "Fremont"
+    """Providing exact Gym coords should return 'Gym'."""
+    gym_coords = BART_STATIONS["Gym"]
+    assert get_nearest_name_only(gym_coords[0], gym_coords[1]) == "Gym"
 
-def test_nearest_station_offset():
-    """A point slightly north of Downtown Berkeley should still snap to Berkeley."""
-    # Offset Berkeley lat slightly
-    lat, lon = 37.8710, -122.2681 
-    assert get_nearest_name_only(lat, lon) == "Downtown Berkeley"
-
-def test_far_away_point():
-    """A point in Merced should snap to the closest station (Berryessa / North San Jose)."""
-    # UC Merced Coords
-    merced_lat, merced_lon = 37.3647, -120.4244
-    assert get_nearest_name_only(merced_lat, merced_lon) == "Berryessa / North San Jose"
+def test_nearest_station_offset_pavilion():
+    """A point slightly north of Pavilion Dining Center should still snap to it."""
+    # Pavilion Dining Center base: (37.36411258128183, -120.4247885650939)
+    # Adding a slight northern offset (~55 meters)
+    lat, lon = 37.3642, -120.4247                                                                                           
+    assert get_nearest_name_only(lat, lon) == "Pavilion Dining Center"

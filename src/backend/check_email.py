@@ -16,17 +16,14 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000/api")
 POLL_INTERVAL = 5 
 STATIONS = [
-    "12th St. Oakland City Center", "16th St. Mission", "19th St. Oakland", "24th St. Mission",
-    "Antioch", "Ashby", "Balboa Park", "Bay Fair", "Berryessa / North San Jose",
-    "Castro Valley", "Civic Center / UN Plaza", "Coliseum", "Colma", "Concord",
-    "Daly City", "Downtown Berkeley", "Dublin / Pleasanton", "El Cerrito del Norte",
-    "El Cerrito Plaza", "Embarcadero", "Fremont", "Fruitvale", "Glen Park", "Hayward",
-    "Lafayette", "Lake Merritt", "MacArthur", "Millbrae", "Milpitas", "Montgomery St.",
-    "North Berkeley", "North Concord / Martinez", "Oakland International Airport",
-    "Orinda", "Pittsburg / Bay Point", "Pittsburg Center", "Pleasant Hill / Contra Costa Centre",
-    "Powell St.", "Richmond", "Rockridge", "San Bruno", "San Francisco International Airport",
-    "San Leandro", "South Hayward", "South San Francisco", "Union City", "Walnut Creek",
-    "Warm Springs / South Fremont", "West Dublin / Pleasanton", "West Oakland"
+    "Arts and Computational Sciences", "Bellevue Lot", "Biomedical Sciences and Physics",
+    "Bobcat Field", "Cathedral", "Central Utilities Plant", "Classroom and Office Building 1",
+    "Classroom and Office Building 2", "El Portal", "Glacier Point", "Granite Pass", "Gym",
+    "Half Dome", "Kolligian Library", "Mariposa", "Pavilion Dining Center", "Scholar's Lot",
+    "Science and Engineering", "Science and Engineering 2", "Sentinel Rock",
+    "Social Sciences and Management", "Student Services Building",
+    "Sustainability Research and Engineering", "Tenaya", "Tuolomne", "University Plaza",
+    "Valley Terraces", "Yablokoff-Wallace Dining Center"
 ]
 
 def create_reply(original_msg, body_text):
@@ -100,7 +97,7 @@ def check_and_process():
             data = {"description": snippet, "photo_location_id": "EMAIL-Unlocated", "gmail_thread_id": thread_id}
             r = requests.post(f"{API_BASE_URL}/submissions", files=image_files, data=data)
             if r.status_code == 200:
-                body = "Thank you for your submission - it has succesfully processed. To help expedite our maintenance response, please reply with your station name (e.g., 'West Oakland'):\n\n" + "\n".join([f"- {s}" for s in STATIONS])
+                body = "Thank you for your submission - it has succesfully processed. To help expedite our maintenance response, please reply with the location name (e.g., 'Granite Pass'):\n\n" + "\n".join([f"- {s}" for s in STATIONS])
                 service.users().messages().send(userId='me', body=create_reply(full_msg, body)).execute()
                 # Mark as read/remove from inbox
                 service.users().messages().modify(userId='me', id=msg_ref['id'], body={'removeLabelIds': ['INBOX', 'UNREAD']}).execute()
