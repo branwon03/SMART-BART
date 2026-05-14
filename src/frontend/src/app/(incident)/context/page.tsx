@@ -35,6 +35,8 @@ export default function UserContext() {
         description: contextText,
         priority,
         location,
+        fullName,
+        contact,
       });
       router.push('/confirmation');
     } catch (err) {
@@ -155,10 +157,10 @@ export default function UserContext() {
               className="w-full bg-[#D1D5DB] border border-black p-3 text-sm appearance-none text-gray-700 focus:outline-none focus:border-[#0099D8] cursor-pointer"
             >
               <option value="" disabled>Select Priority</option>
-              <option value="low">Low</option>
-              <option value="high">High</option>
-              <option value="emergency">Emergency</option>
-              <option value="unknown">Unknown</option>
+              <option value="low">LOW</option>
+              <option value="medium">MEDIUM</option>
+              <option value="high">HIGH</option>
+              <option value="critical">CRITICAL</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter">

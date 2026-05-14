@@ -229,6 +229,30 @@ export function IncidentDetailPanel({
             {descriptionBlocks.kind === "empty" && (
               <p className="text-gray-400 italic text-center py-4">No historical reports found.</p>
             )}
+            {(() => {
+              const reporter = evidence.find(
+                (e) => e.reporter_name || e.reporter_contact,
+              );
+              if (!reporter) return null;
+              return (
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <span className="font-bold text-gray-500 text-xs uppercase tracking-wide">
+                    Reporter
+                  </span>
+                  <p className="text-gray-800 mt-1">
+                    {reporter.reporter_name ? (
+                      <span>{reporter.reporter_name}</span>
+                    ) : null}
+                    {reporter.reporter_name && reporter.reporter_contact ? (
+                      <span> — </span>
+                    ) : null}
+                    {reporter.reporter_contact ? (
+                      <span className="text-blue-600">{reporter.reporter_contact}</span>
+                    ) : null}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

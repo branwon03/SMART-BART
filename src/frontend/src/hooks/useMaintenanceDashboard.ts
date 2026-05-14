@@ -14,12 +14,21 @@ export function useMaintenanceDashboard() {
   const [evidence, setEvidence] = useState<PhotoReport[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [incidentIdExpanded, setIncidentIdExpanded] = useState(false);
-
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     try {
       const json = await getIncidents();
       setData(json);
+
+      const validIds = new Set(json.map((i) => i.incident_id));
+      setCheckedIds((prev) => {
+        const next = new Set<string>();
+        for (const id of prev) {
+          if (validIds.has(id)) next.add(id);
+        }
+        return next;
+      });
 
       setSelectedIncident((prevSelectedIncident) => {
         if (!prevSelectedIncident) {
@@ -74,7 +83,41 @@ export function useMaintenanceDashboard() {
   const selectDiscipline = useCallback((discipline: string) => {
     setActiveTab(discipline);
     setSelectedIncident(null);
+    setEvidence([]);
+    setIncidentIdExpanded(false);
+    setCheckedIds(new Set());
   }, []);
+
+  const closeIncidentPanel = useCallback(() => {
+    setSelectedIncident(null);
+    setEvidence([]);
+    setIncidentIdExpanded(false);
+  }, []);
+
+  const toggleCheckedOne = useCallback((id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleCheckedAllVisible = useCallback((visibleIds: string[]) => {
+    if (visibleIds.length === 0) return;
+    setCheckedIds((prev) => {
+      const allIncluded = visibleIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allIncluded) {
+        for (const id of visibleIds) next.delete(id);
+      } else {
+        for (const id of visibleIds) next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearCheckedIds = useCallback(() => setCheckedIds(new Set()), []);
 
   const updateSelectedIncident = useCallback((updated: Incident) => {
     setData((prev) =>
@@ -91,11 +134,19 @@ export function useMaintenanceDashboard() {
 
   const removeIncident = useCallback((incidentId: string) => {
     setData((prev) => prev.filter((inc) => inc.incident_id !== incidentId));
-    setSelectedIncident((prev) =>
-      prev && prev.incident_id === incidentId ? null : prev,
-    );
-    setEvidence([]);
-    setIncidentIdExpanded(false);
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(incidentId);
+      return next;
+    });
+    setSelectedIncident((prev) => {
+      if (prev && prev.incident_id === incidentId) {
+        setEvidence([]);
+        setIncidentIdExpanded(false);
+        return null;
+      }
+      return prev;
+    });
   }, []);
 
   const refreshAfterMerge = useCallback(
@@ -121,11 +172,16 @@ export function useMaintenanceDashboard() {
     filteredData,
     selectedIncident,
     setSelectedIncident,
+    checkedIds,
+    toggleCheckedOne,
+    toggleCheckedAllVisible,
+    clearCheckedIds,
     evidence,
     now,
     incidentIdExpanded,
     setIncidentIdExpanded,
     selectDiscipline,
+    closeIncidentPanel,
     updateSelectedIncident,
     removeIncident,
     refreshAfterMerge,

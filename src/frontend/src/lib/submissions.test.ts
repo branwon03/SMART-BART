@@ -30,6 +30,9 @@ describe("submitReport", () => {
       images: [TINY_DATA_URL],
       description: "Broken escalator",
       priority: "high",
+      location: "West Oakland",
+      fullName: "Jane Rider",
+      contact: "jane@example.com",
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -40,6 +43,8 @@ describe("submitReport", () => {
 
     const body = opts.body as FormData;
     expect(body.get("description")).toBe("Broken escalator");
+    expect(body.get("reporter_name")).toBe("Jane Rider");
+    expect(body.get("reporter_contact")).toBe("jane@example.com");
     expect(body.get("media")).toBeInstanceOf(File);
   });
 
@@ -47,7 +52,10 @@ describe("submitReport", () => {
     await submitReport({
       images: [],
       description: "test",
-      priority: "emergency",
+      priority: "critical",
+      location: "foo",
+      fullName: "A",
+      contact: "b",
     });
 
     const body = fetchSpy.mock.calls[0][1].body as FormData;
@@ -59,6 +67,9 @@ describe("submitReport", () => {
       images: [],
       description: "test",
       priority: "",
+      location: "x",
+      fullName: "x",
+      contact: "x",
     });
 
     expect(result).toEqual(FAKE_RESULT);
@@ -72,7 +83,14 @@ describe("submitReport", () => {
     });
 
     await expect(
-      submitReport({ images: [], description: "test", priority: "" }),
+      submitReport({
+        images: [],
+        description: "test",
+        priority: "",
+        location: "",
+        fullName: "",
+        contact: "",
+      }),
     ).rejects.toThrow("Submission failed (500)");
   });
 });

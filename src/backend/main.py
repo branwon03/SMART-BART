@@ -16,6 +16,7 @@ from src.backend.database import (
     Incident,
     PhotoReport,
     engine,
+    ensure_reporter_columns_on_photo_reports,
     get_db,
     refresh_incident_last_report_at,
 )
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI):
 
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
+        ensure_reporter_columns_on_photo_reports()
         print("[startup] Database tables created successfully.")
 
     except Exception as exc:
@@ -92,6 +94,8 @@ async def submissions(
     description: str = Form(default=None),
     photo_location_id: str = Form(default=None),
     gmail_thread_id: str = Form(default=None),
+    reporter_name: str = Form(default=None),
+    reporter_contact: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -151,6 +155,8 @@ async def submissions(
                 photo_report_confidence=None,
                 photo_report_discipline=None,
                 photo_location_id=photo_location_id or "EMAIL-Unlocated",
+                reporter_name=reporter_name or None,
+                reporter_contact=reporter_contact or None,
             )
             db.add(photo_report)
 
@@ -343,7 +349,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
 
     query = text("""
         SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id,
-               vlm_summary, photo_report_discipline
+               vlm_summary, photo_report_discipline, reporter_name, reporter_contact
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -360,6 +366,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         found_pri_val = row[5]
         vlm_summary_val = row[7]
         photo_report_discipline_val = row[8]
+        reporter_name_val = row[9]
+        reporter_contact_val = row[10]
 
         clean_data.append(
             {
@@ -381,6 +389,12 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
                 "photo_report_discipline": None
                 if photo_report_discipline_val is None
                 else str(photo_report_discipline_val),
+                "reporter_name": None
+                if reporter_name_val is None
+                else str(reporter_name_val),
+                "reporter_contact": None
+                if reporter_contact_val is None
+                else str(reporter_contact_val),
             }
         )
     # Bypass FastAPI's automatic encoder completely
