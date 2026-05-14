@@ -98,6 +98,22 @@ services:
       backend:
         condition: service_healthy
     
+  mobile:
+    build:
+      context: .
+      dockerfile: Dockerfile.mobile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ~/.expo:/root/.expo
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - backend
+      - cloudflare-tunnel
 
 volumes:
   pgdata:
