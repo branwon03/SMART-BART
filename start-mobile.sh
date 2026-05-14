@@ -2,13 +2,18 @@
 npx expo start --tunnel &
 EXPO_PID=$!
 
-# Wait for ngrok to be ready then print the tunnel URL
 sleep 15
+TUNNEL_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"https://[^"]*' | grep -o 'https://.*' | sed 's/https/exp/')
+
 echo ""
 echo "========================================="
 echo "MOBILE TUNNEL URL:"
-curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"https://[^"]*' | grep -o 'https://.*' | sed 's/https/exp/'
+echo "$TUNNEL_URL"
 echo "========================================="
+echo ""
+echo "Scan this QR code with Expo Go:"
+echo ""
+qrencode -t ANSIUTF8 "$TUNNEL_URL"
 echo ""
 
 wait $EXPO_PID
