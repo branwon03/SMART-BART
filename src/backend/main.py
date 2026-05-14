@@ -2,8 +2,8 @@ import os
 import shutil
 import tempfile
 import uuid
+from sqlalchemy import text, func
 from typing import cast
-from sqlalchemy import text
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse, JSONResponse  # Add JSONResponse here
@@ -11,7 +11,15 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from src.backend.database import Base, Incident, PhotoReport, engine, get_db
+from src.backend.database import (
+    Base,
+    Incident,
+    PhotoReport,
+    engine,
+    ensure_reporter_columns_on_photo_reports,
+    get_db,
+    refresh_incident_last_report_at,
+)
 from src.backend.inference import (
     get_extension,
     kSupportedList,
@@ -24,6 +32,7 @@ class IncidentUpdate(BaseModel):
     status: str | None = None
     discipline: str | None = None
     location_id: str | None = None
+    vlm_summary: str | None = None
 
 
 class MergePhotosBody(BaseModel):
@@ -53,6 +62,7 @@ async def lifespan(app: FastAPI):
 
         # 2. Now create the tables
         Base.metadata.create_all(bind=engine)
+        ensure_reporter_columns_on_photo_reports()
         print("[startup] Database tables created successfully.")
 
     except Exception as exc:
@@ -84,6 +94,8 @@ async def submissions(
     description: str = Form(default=None),
     photo_location_id: str = Form(default=None),
     gmail_thread_id: str = Form(default=None),
+    reporter_name: str = Form(default=None),
+    reporter_contact: str = Form(default=None),
     db: Session = Depends(get_db),
 ):
     tmp_paths: list[Path] = []
@@ -117,6 +129,7 @@ async def submissions(
             vlm_summary=description or None,
             location_id=photo_location_id or None,
             created_at=now,
+            last_report_at=None,
             gmail_thread_id=gmail_thread_id,
         )
         db.add(incident)
@@ -142,6 +155,8 @@ async def submissions(
                 photo_report_confidence=None,
                 photo_report_discipline=None,
                 photo_location_id=photo_location_id or "EMAIL-Unlocated",
+                reporter_name=reporter_name or None,
+                reporter_contact=reporter_contact or None,
             )
             db.add(photo_report)
 
@@ -173,6 +188,7 @@ async def get_incidents(db: Session = Depends(get_db)):
             "location_id": r.location_id, 
             "gmail_thread_id": r.gmail_thread_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            "last_report_at": r.last_report_at.isoformat() if r.last_report_at else None,
         }
         for r in rows
     ]
@@ -242,6 +258,7 @@ async def split_incident(
         vlm_summary=title,
         location_id=parent.location_id,
         created_at=now,
+        last_report_at=None,
     )
     db.add(child)
 
@@ -260,6 +277,11 @@ async def split_incident(
     db.commit()
     db.refresh(child)
 
+    refresh_incident_last_report_at(db, incident_id)
+    refresh_incident_last_report_at(db, new_incident_id)
+    db.commit()
+    db.refresh(child)
+
     return {
         "incident_id": child.incident_id,
         "status": child.status,
@@ -268,6 +290,7 @@ async def split_incident(
         "vlm_summary": child.vlm_summary,
         "location_id": child.location_id,
         "created_at": child.created_at.isoformat() if child.created_at else None,
+        "last_report_at": child.last_report_at.isoformat() if child.last_report_at else None,
     }
 
 
@@ -287,6 +310,14 @@ async def update_incident(
         setattr(row, "discipline", body.discipline)
     if body.location_id is not None:  
         setattr(row, "location_id", body.location_id)
+    if body.vlm_summary is not None:
+        title = body.vlm_summary.strip()
+        if not title:
+            raise HTTPException(
+                status_code=422,
+                detail="vlm_summary cannot be blank",
+            )
+        setattr(row, "vlm_summary", title)
 
     db.commit()
     db.refresh(row)
@@ -299,6 +330,7 @@ async def update_incident(
         "vlm_summary": row.vlm_summary,
         "location_id": row.location_id,
         "created_at": row.created_at.isoformat() if row.created_at else None,
+        "last_report_at": row.last_report_at.isoformat() if row.last_report_at else None,
     }
 
 
@@ -317,7 +349,7 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
 
     query = text("""
         SELECT evidence_id, incident_id, image_url, submitted_at, user_context, found_priority, photo_location_id,
-               vlm_summary, photo_report_discipline
+               vlm_summary, photo_report_discipline, reporter_name, reporter_contact
         FROM photo_reports
         WHERE incident_id = :inc_id
         ORDER BY submitted_at DESC
@@ -334,6 +366,8 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
         found_pri_val = row[5]
         vlm_summary_val = row[7]
         photo_report_discipline_val = row[8]
+        reporter_name_val = row[9]
+        reporter_contact_val = row[10]
 
         clean_data.append(
             {
@@ -355,6 +389,12 @@ async def get_photo_reports(incident_id: str, db: Session = Depends(get_db)):
                 "photo_report_discipline": None
                 if photo_report_discipline_val is None
                 else str(photo_report_discipline_val),
+                "reporter_name": None
+                if reporter_name_val is None
+                else str(reporter_name_val),
+                "reporter_contact": None
+                if reporter_contact_val is None
+                else str(reporter_contact_val),
             }
         )
     # Bypass FastAPI's automatic encoder completely
@@ -430,6 +470,7 @@ async def merge_photos_into_incident(
             if orphan:
                 db.delete(orphan)
 
+    refresh_incident_last_report_at(db, target_incident_id)
     db.commit()
 
     return {"merged_count": merged_count}
@@ -442,3 +483,28 @@ def get_image(evidence_id: str):
         if path.exists():
             return FileResponse(path, media_type=f"image/{ext}")
     raise HTTPException(status_code=404, detail="Image not found")
+
+@app.get("/api/dashboard/discipline-stats")
+async def get_discipline_stats(db: Session = Depends(get_db)):
+    """Returns the first and last report dates grouped by discipline."""
+    try:
+        # We use func.min/max and group_by to aggregate the timestamps
+        stats = db.query(
+            Incident.discipline,
+            func.min(Incident.created_at).label("first_report"),
+            func.max(Incident.created_at).label("last_report"),
+            func.count(Incident.incident_id).label("total_count")
+        ).group_by(Incident.discipline).all()
+        
+        return [
+            {
+                "discipline": s.discipline or "Unassigned",
+                "first_report": s.first_report.isoformat() if s.first_report else None,
+                "last_report": s.last_report.isoformat() if s.last_report else None,
+                "total_count": s.total_count
+            }
+            for s in stats
+        ]
+    except Exception as e:
+        print(f"Dashboard Stats Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard stats")

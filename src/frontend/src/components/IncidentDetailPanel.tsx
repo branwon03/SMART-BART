@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Incident, PhotoReport } from "../types/api";
 import { API_BASE_URL } from "../lib/config";
 import { displayCompactIncidentId } from "../lib/formatIncidentId";
-import { formatElapsedSince } from "../lib/formatElapsedSince";
+import { formatDateTime, formatShortDate } from "../lib/formatDate";
 import { getPriorityStyles } from "../lib/priorityUi";
 import { EditIssueModal } from "./EditIssueModal";
 import { DeleteIssueModal } from "./DeleteIssueModal";
@@ -15,7 +15,6 @@ type IncidentDetailPanelProps = {
   incident: Incident;
   evidence: PhotoReport[];
   allIncidents: Incident[];
-  now: Date;
   incidentIdExpanded: boolean;
   onToggleIncidentIdExpanded: () => void;
   onClose: () => void;
@@ -29,7 +28,6 @@ export function IncidentDetailPanel({
   incident,
   evidence,
   allIncidents,
-  now,
   incidentIdExpanded,
   onToggleIncidentIdExpanded,
   onClose,
@@ -44,6 +42,26 @@ export function IncidentDetailPanel({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [splitModalOpen, setSplitModalOpen] = useState(false);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+
+  const descriptionBlocks = useMemo(() => {
+    if (evidence.length === 0) {
+      return { kind: "empty" as const };
+    }
+    const trimmed = evidence.map((e) => (e.user_context ?? "").trim());
+    const unique = new Set(trimmed);
+    if (unique.size <= 1) {
+      const text = trimmed[0]
+        ? trimmed[0]
+        : "Rider report logged via web-app.";
+      return {
+        kind: "single" as const,
+        text,
+        submittedAt: evidence[0].submitted_at,
+        photoCount: evidence.length,
+      };
+    }
+    return { kind: "multiple" as const, items: evidence };
+  }, [evidence]);
 
   const displayIndex =
     evidence.length === 0
@@ -111,8 +129,8 @@ export function IncidentDetailPanel({
               <span className="font-bold text-gray-700">Priority:</span>
               <span
                 className={getPriorityStyles(
-                // CHANGED: Use a fallback to ensure we only pass string | null
-                incident.issue_priority ? String(incident.issue_priority) : null // [cite: 651, 656]
+                  // CHANGED: Use a fallback to ensure we only pass string | null
+                  incident.issue_priority ? String(incident.issue_priority) : null // [cite: 651, 656]
                 )}
               >
                 {incident.issue_priority != null && incident.issue_priority !== ""
@@ -126,8 +144,13 @@ export function IncidentDetailPanel({
               <span className="font-bold text-gray-700">Location:</span>
               <span>{incident.location_id}</span>
 
-              <span className="font-bold text-gray-700">Age:</span>
-              <span>{formatElapsedSince(incident.created_at, now)}</span>
+              <span className="font-bold text-gray-700">First reported:</span>
+              <span>{formatShortDate(incident.created_at)}</span>
+
+              <span className="font-bold text-gray-700">Last reported:</span>
+              <span>
+                {incident.last_report_at ? formatShortDate(incident.last_report_at) : "—"}
+              </span>
             </div>
           </div>
 
@@ -168,24 +191,68 @@ export function IncidentDetailPanel({
         <div className="mt-4 mb-6">
           <h3 className="font-bold text-lg mb-2">Description:</h3>
           <div className="bg-gray-100 border border-gray-300 rounded-lg p-5 h-48 overflow-y-auto text-[15px] leading-relaxed space-y-10">
-            {evidence.map((ev, idx) => (
-              <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
+            {descriptionBlocks.kind === "single" && (
+              <div className="border-b border-gray-200 pb-3 last:border-0">
                 <div className="flex justify-between font-bold text-gray-500 mb-1">
-                  <span>Report summary {idx + 1}:</span>
+                  <span>
+                    Rider report
+                    {descriptionBlocks.photoCount > 1 ? (
+                      <span className="font-normal text-gray-400">
+                        {" "}
+                        ({descriptionBlocks.photoCount} photos)
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="font-mono text-[10px] font-normal text-slate-500">
-                    {ev.submitted_at
-                      ? `${formatElapsedSince(ev.submitted_at, now)} ago`
-                      : "—"}
+                    {formatDateTime(descriptionBlocks.submittedAt)}
                   </span>
                 </div>
                 <p className="text-gray-800">
-                  - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;
+                  - &quot;{descriptionBlocks.text}&quot;
                 </p>
               </div>
-            ))}
-            {evidence.length === 0 && (
+            )}
+            {descriptionBlocks.kind === "multiple" &&
+              descriptionBlocks.items.map((ev, idx) => (
+                <div key={ev.evidence_id} className="border-b border-gray-200 pb-3 last:border-0">
+                  <div className="flex justify-between font-bold text-gray-500 mb-1">
+                    <span>Report summary {idx + 1}:</span>
+                    <span className="font-mono text-[10px] font-normal text-slate-500">
+                      {formatDateTime(ev.submitted_at)}
+                    </span>
+                  </div>
+                  <p className="text-gray-800">
+                    - &quot;{ev.user_context || "Rider report logged via web-app."}&quot;
+                  </p>
+                </div>
+              ))}
+            {descriptionBlocks.kind === "empty" && (
               <p className="text-gray-400 italic text-center py-4">No historical reports found.</p>
             )}
+            {(() => {
+              const reporter = evidence.find(
+                (e) => e.reporter_name || e.reporter_contact,
+              );
+              if (!reporter) return null;
+              return (
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <span className="font-bold text-gray-500 text-xs uppercase tracking-wide">
+                    Reporter
+                  </span>
+                  <p className="text-gray-800 mt-1">
+                    {reporter.reporter_name ? (
+                      <span>{reporter.reporter_name}</span>
+                    ) : null}
+                    {reporter.reporter_name && reporter.reporter_contact ? (
+                      <span> — </span>
+                    ) : null}
+                    {reporter.reporter_contact ? (
+                      <span className="text-blue-600">{reporter.reporter_contact}</span>
+                    ) : null}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Upload, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useReportContext } from '../context/ReportContext';
 import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
@@ -151,6 +151,10 @@ export default function ImageUpload() {
     router.push('/context');
   };
 
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <main className="min-h-screen flex flex-col items-center bg-white text-black max-w-md mx-auto border-x border-gray-100 shadow-2xl">
       <div className="w-full flex flex-col h-full items-center">
@@ -185,12 +189,24 @@ export default function ImageUpload() {
             ) : (
               <div className="w-full h-full p-2 flex flex-wrap gap-2 overflow-y-auto content-start justify-center">
                 {images.map((src, index) => (
-                  <img 
-                    key={index} 
-                    src={src} 
-                    alt={`Uploaded preview ${index + 1}`} 
-                    className="w-[45%] aspect-square object-cover border border-gray-400" 
-                  />
+                  <div
+                    key={index}
+                    className="relative w-[45%] aspect-square shrink-0"
+                  >
+                    <img
+                      src={src}
+                      alt={`Uploaded preview ${index + 1}`}
+                      className="h-full w-full object-cover border border-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-1 right-1 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/65 text-white shadow-md ring-1 ring-white/30 transition hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0099D8]"
+                      aria-label={`Remove image ${index + 1}`}
+                    >
+                      <X size={16} strokeWidth={2.5} aria-hidden />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
