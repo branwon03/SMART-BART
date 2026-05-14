@@ -4,7 +4,8 @@ from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from sqlalchemy import Column, DateTime, Float, ForeignKey, JSON, String, create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker, mapped_column
+
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -23,6 +24,7 @@ class Base(DeclarativeBase):
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
+
 
 class Incident(Base):
     __tablename__ = "incidents"
@@ -43,7 +45,7 @@ class PhotoReport(Base):
 
     evidence_id = Column(String, primary_key=True)
     incident_id = Column(String, ForeignKey("incidents.incident_id"))
-    submission_id = Column(String, index=True) 
+    submission_id = Column(String, index=True)
     image_url = Column(String)
     embedding = Column(JSON if _USE_SQLITE else Vector(3072))
     submitted_at = Column(DateTime)
@@ -59,6 +61,7 @@ class PhotoReport(Base):
 
 
 # ── Dependency for FastAPI ────────────────────────────────────────────────────
+
 
 def get_db():
     db = SessionLocal()
@@ -98,4 +101,3 @@ def ensure_reporter_columns_on_photo_reports() -> None:
     with engine.begin() as conn:
         for stmt in statements:
             conn.execute(text(stmt))
-
