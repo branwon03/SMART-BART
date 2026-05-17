@@ -10,7 +10,6 @@ before the backend updates database-backed incident/report records.
 import json
 import re
 
-
 DISCIPLINES = [
     "FARE COLLECTION",
     "BUILDINGS",
@@ -27,7 +26,6 @@ DISCIPLINES = [
 ]
 
 PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-
 
 def _clean_value(value: str | None) -> str | None:
     """

@@ -1,3 +1,14 @@
+"""
+This module contains the main processing logic for incoming photo reports. It performs the following steps:
+1. Periodically polls the database for new photo reports that haven't been processed yet.
+2. For each new photo report, it resolves the local image path and checks if geolocation is needed.
+3. If geolocation is requested, it extracts GPS data from the image and determines the nearest BART station.
+4. It then calls the Gemini VLM model to classify the issue and generate an embedding for the photo.
+5. After processing all photos in a submission, it uses the highest-confidence photo's embedding to find a matching incident.
+6. It assigns all photos in the submission to the matched incident (or a new one if no match is found).
+7. Finally, it promotes the best photo's metadata to the incident level if it has the highest confidence.
+"""
+
 import os
 import time
 import math

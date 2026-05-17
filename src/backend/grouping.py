@@ -1,3 +1,8 @@
+"""
+This module implements the core grouping logic to determine whether a newly processed 
+photo report should be attached to an existing incident or should start a new incident.
+"""
+
 from datetime import timedelta
 from math import sqrt
 from sqlalchemy.orm import Session
