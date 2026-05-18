@@ -38,16 +38,6 @@ export function DisciplineSidebar({
           </button>
         ))}
       </nav>
-      
-      {/* after MVP deadline, we can add a login button here */}
-      <div className="pt-6 border-t border-slate-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-          AS
-        </div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-          Akash Sant
-        </div>
-      </div>
     </aside>
   );
 }
