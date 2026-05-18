@@ -1,3 +1,10 @@
+"""
+This is a utility script to generate the token.json file for Gmail API authentication.
+Running this script is a one time process to authenticate your Gmail account and create the token.json file 
+    in the /config directory if you do not already have it.
+Make sure you have a 'gmail_credentials.json' file in the /config directory before running this. 
+"""
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 import os
 

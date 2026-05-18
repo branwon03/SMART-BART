@@ -1,3 +1,9 @@
+"""
+This module defines the database models and connection for the application. 
+It uses SQLAlchemy as the ORM and supports both PostgreSQL (with pgvector) and SQLite (for testing/local development). 
+The database URL is read from the .env file, and the module provides a dependency for FastAPI routes to access the database session.
+"""
+
 import os
 from pathlib import Path
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]

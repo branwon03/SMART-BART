@@ -1,3 +1,8 @@
+"""
+This is a worker script that operates in the background to check for new emails in a Gmail account 
+    and process them as maintenance reports. It uses the Gmail API to read emails, extract any attached images, 
+    and interact with a backend API to create or update maintenance incidents based on the email content.
+"""
 import os
 import time
 import base64
@@ -7,6 +12,7 @@ from email.mime.text import MIMEText
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
+# Color macros
 RED = "\033[91m"
 BOLD = "\033[1m"
 ENDC = "\033[0m"

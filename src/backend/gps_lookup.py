@@ -1,3 +1,11 @@
+"""
+This module provides functionality to extract GPS coordinates from an image's EXIF data and 
+determine the nearest BART station based on those coordinates. It uses the Haversine formula 
+to calculate distances between the image's location and predefined BART station locations. 
+The main function, `get_nearest_station_local`, takes a file path to an image, extracts the 
+GPS data, and returns the name of the nearest BART station.
+"""
+
 import math
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
