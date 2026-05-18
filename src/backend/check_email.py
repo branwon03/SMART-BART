@@ -3,12 +3,6 @@ This is a worker script that operates in the background to check for new emails 
     and process them as maintenance reports. It uses the Gmail API to read emails, extract any attached images, 
     and interact with a backend API to create or update maintenance incidents based on the email content.
 """
-
-
-
-
-
-
 import os
 import time
 import base64
