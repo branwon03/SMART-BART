@@ -1,4 +1,6 @@
 services:
+  # Profiles: tunnel (Cloudflare expose), workers (processor + gmail-worker), mobile (Expo stack + tunnel).
+  # Default: db + backend + frontend.
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
@@ -47,12 +49,14 @@ services:
     # Same Compose network as frontend; port must match frontend (3000), not 3001.
     command: tunnel --url http://frontend:3000
     restart: unless-stopped
+    profiles: ["tunnel", "mobile"]
     depends_on:
       - frontend
 
   processor:
     build: . 
     restart: unless-stopped
+    profiles: ["workers"]
     command: python -m src.backend.processor
     env_file: .env
     # Same as backend: .env often uses localhost; inside Compose Postgres is the `db` service.
@@ -88,6 +92,7 @@ services:
 
   gmail-worker:
     build: .
+    profiles: ["workers"]
     command: python -m src.backend.check_email
     env_file: .env
     environment:
@@ -103,6 +108,7 @@ services:
       context: .
       dockerfile: Dockerfile.mobile
     restart: unless-stopped
+    profiles: ["mobile"]
     ports:
       - "8081:8081"
       - "19000:19000"

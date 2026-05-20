@@ -70,6 +70,35 @@ See the Software Stack & Quick Start wiki page for full setup instructions for t
 
 Include: what constitutes passing (e.g., all tests green, coverage threshold).
 
+## Local development (Docker)
+
+Default stack (**no profiles**):
+
+- `docker compose up` — Postgres, FastAPI backend, Next.js frontend (processor, Gmail polling, tunnel, and mobile containers stay **off**).
+
+Optional profiles (**combine as needed**):
+
+| Need | Command |
+|------|---------|
+| Vertex / upload pipeline / background processor + Gmail ingestion | `docker compose --profile workers up` |
+| Public HTTPS URL for Next (tunnel to `frontend:3000`) | `docker compose --profile tunnel up` |
+| Dockerized Expo (+ tunnel automatically via `mobile` profile on tunnel service) | `docker compose --profile mobile up` |
+
+Multiple profiles:
+
+```bash
+docker compose --profile workers --profile tunnel up
+```
+
+Environment variable equivalent (persist in shell/profile):
+
+```bash
+export COMPOSE_PROFILES=workers,tunnel
+docker compose up
+```
+
+**Breaking change:** `docker compose up` no longer starts `processor`, `gmail-worker`, `cloudflare-tunnel`, or `mobile`. If CI or teammates relied on implicit “bring everything up,” add `--profile workers` (and others) explicitly.
+
 ## Coding & Collaboration Conventions
 
 - Use semantic commit messages (see `CONTRIBUTING.md` for full details).
