@@ -6,7 +6,7 @@ import { useReportContext } from '../context/ReportContext';
 import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
 
 export default function ImageUpload() {
-  const { images, setImages } = useReportContext();
+  const { images, setImages, rawFiles, setRawFiles } = useReportContext();
   const router = useRouter(); 
   const [imageError, setImageError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false); 
@@ -130,6 +130,7 @@ export default function ImageUpload() {
     }
     
     setImages((prev) => [...prev, ...newImages]);
+    setRawFiles((prev) => [...prev, ...filesArray]);
 
 
   } catch (error: unknown) {
@@ -153,6 +154,7 @@ export default function ImageUpload() {
 
   const handleRemoveImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setRawFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (

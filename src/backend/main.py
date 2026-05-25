@@ -20,6 +20,7 @@ from src.backend.database import (
     ensure_image_blob_columns_on_photo_reports,
     get_db,
 )
+from src.backend.gps_lookup import get_nearest_station_local
 from src.backend.inference import (
     get_extension,
     kSupportedList,
@@ -118,7 +119,14 @@ async def submissions(
             tmp.close()
             tmp_paths.append(Path(tmp.name))
 
-        # 2. Run Inference
+        resolved_location = photo_location_id
+        if photo_location_id == "Assign-Me-Via-Geolocation" and tmp_paths:
+            for tmp_path in tmp_paths:
+                result = get_nearest_station_local(str(tmp_path))
+                if not result.startswith(("Error:", "No GPS", "File not found")):
+                    resolved_location = result
+                    break
+
         submission_id = uuid.uuid4().hex
         incident_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
@@ -129,7 +137,7 @@ async def submissions(
             issue_priority=None,
             discipline=None,
             vlm_summary=description or None,
-            location_id=photo_location_id or None,
+            location_id=resolved_location or None,
             created_at=now,
             gmail_thread_id=gmail_thread_id,
         )
@@ -154,7 +162,7 @@ async def submissions(
                 photo_report_status="New",
                 photo_report_confidence=None,
                 photo_report_discipline=None,
-                photo_location_id=photo_location_id or "EMAIL-Unlocated",
+                photo_location_id=resolved_location or "EMAIL-Unlocated",
                 reporter_name=reporter_name or None,
                 reporter_contact=reporter_contact or None,
             )
@@ -167,6 +175,7 @@ async def submissions(
             "incident_id": incident_id,
             "submission_id": submission_id,
             "description": description,
+            "location_id": resolved_location,
             "timestamp": now.isoformat(),
         }
     finally:
@@ -328,6 +337,8 @@ MIME_MAP = {
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg",
     "webp": "image/webp",
+    "heic": "image/heic",
+    "heif": "image/heif",
 }
 
 
@@ -458,10 +469,11 @@ def get_image(evidence_id: str, db: Session = Depends(get_db)):
     if row is not None and row.image_blob:
         mime = "image/jpeg" or None
         return Response(content=bytes(row.image_blob), media_type=mime)
-    for ext in ("png", "jpg", "jpeg", "webp"):
+    for ext in ("png", "jpg", "jpeg", "webp", "heic", "heif"):
         path = UPLOAD_DIR / f"{evidence_id}.{ext}"
         if path.exists():
-            return FileResponse(path, media_type=f"image/{ext}")
+            mime = MIME_MAP.get(ext, f"image/{ext}")
+            return FileResponse(path, media_type=mime)
     raise HTTPException(status_code=404, detail="Image not found")
 
 

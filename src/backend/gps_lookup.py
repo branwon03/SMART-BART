@@ -1,18 +1,15 @@
 """
-This module provides functionality to extract GPS coordinates from an image's EXIF data and 
-determine the nearest BART station based on those coordinates. It uses the Haversine formula 
-to calculate distances between the image's location and predefined BART station locations. 
-The main function, `get_nearest_station_local`, takes a file path to an image, extracts the 
-GPS data, and returns the name of the nearest BART station.
+Nearest campus building lookup from image GPS coordinates.
+
+Delegates GPS extraction to img_gps_extract (supports JPEG + HEIC/HEIF).
+Uses the Haversine formula to find the nearest building.
 """
 
 import math
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
-import os
+from src.backend.img_gps_extract import extract_gps_coordinates
 
-BART_STATIONS = {
-    "Arts and Computational Sciences": (37.363896235419695, -120.42389535027772), 
+CAMPUS_BUILDINGS = {
+    "Arts and Computational Sciences": (37.363896235419695, -120.42389535027772),
     "Bellevue Lot": (37.36046217603944, -120.42886485280854),
     "Biomedical Sciences and Physics": (37.364663934260975, -120.42264201521219),
     "Bobcat Field": (37.36260455474495, -120.42912793432374),
@@ -39,61 +36,48 @@ BART_STATIONS = {
     "Tuolomne": (37.36506338890882, -120.42678374931111),
     "University Plaza": (37.36161718611481, -120.42723264722463),
     "Valley Terraces": (37.36411437125763, -120.42761655373933),
-    "Yablokoff-Wallace Dining Center": (37.36454988338809, -120.42710185296478)
+    "Yablokoff-Wallace Dining Center": (37.36454988338809, -120.42710185296478),
 }
 
+BART_STATIONS = CAMPUS_BUILDINGS
+
+
 def calculate_distance(lat1, lon1, lat2, lon2):
-    """Calculate the great circle distance between two points on Earth."""
-    R = 3959  # Earth radius in miles
+    """Haversine distance between two points in miles."""
+    R = 3959
     d_lat = math.radians(lat2 - lat1)
     d_lon = math.radians(lon2 - lon1)
-    a = (math.sin(d_lat / 2) ** 2 +
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-         math.sin(d_lon / 2) ** 2)
+    a = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(d_lon / 2) ** 2
+    )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-def get_nearest_station_local(file_path):
+
+def get_nearest_building_from_coords(lat: float, lon: float) -> str:
+    """Return name of nearest campus building given decimal lat/lon."""
+    distances = {
+        name: calculate_distance(lat, lon, coords[0], coords[1])
+        for name, coords in CAMPUS_BUILDINGS.items()
+    }
+    return min(distances, key=distances.get)
+
+
+def get_nearest_station_local(file_path: str) -> str:
+    """Extract GPS from image file and return nearest campus building name.
+
+    Supports JPEG, PNG, HEIC/HEIF via the img_gps_extract adapter.
+    Returns an error string (not exception) on failure, matching existing API contract.
+    """
     try:
-        # Check if file exists first to avoid crashes
-        if not os.path.exists(file_path):
-            return f"File not found at {file_path}"
-
-        img = Image.open(file_path)
-        exif = img._getexif()
-        
-        if not exif:
-            return "No Metadata Found in local image"
-
-        gps_info = {}
-        for tag, value in exif.items():
-            decoded = TAGS.get(tag, tag)
-            if decoded == "GPSInfo":
-                for t in value:
-                    sub_tag = GPSTAGS.get(t, t)
-                    gps_info[sub_tag] = value[t]
-
-        if not gps_info:
-            return "No GPS Data in test_outlet.jpg"
-
-        def to_decimal(coords, ref):
-            # Safe conversion for EXIF rational types
-            parts = [float(x) for x in coords]
-            d, m, s = parts
-            decimal = d + (m / 60.0) + (s / 3600.0)
-            return -decimal if ref in ['S', 'W'] else decimal
-
-        user_lat = to_decimal(gps_info['GPSLatitude'], gps_info['GPSLatitudeRef'])
-        user_lon = to_decimal(gps_info['GPSLongitude'], gps_info['GPSLongitudeRef'])
-
-        distances = {
-            name: calculate_distance(user_lat, user_lon, coords[0], coords[1])
-            for name, coords in BART_STATIONS.items()
-        }
-
-        nearest = min(distances, key=distances.get)
-        return f"{nearest}"# ({distances[nearest]:.2f} miles away)"
-
+        lat, lon = extract_gps_coordinates(file_path)
+        return get_nearest_building_from_coords(lat, lon)
+    except FileNotFoundError:
+        return f"File not found at {file_path}"
+    except ValueError as e:
+        return f"No GPS Data: {e}"
     except Exception as e:
-        return f"Error: {str(e)}"
-    
+        return f"Error: {e}"

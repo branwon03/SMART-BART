@@ -25,6 +25,7 @@ export type PhotoReport = {
 export type SubmissionResult = {
   incident_id: string;
   description: string | null;
+  location_id?: string | null;
   timestamp: string;
 };
 

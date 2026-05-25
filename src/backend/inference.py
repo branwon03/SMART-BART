@@ -122,6 +122,8 @@ kSupportedList = {
     "jpg": ["image/jpeg", "image_url"],
     "jpeg": ["image/jpeg", "image_url"],
     "webp": ["image/webp", "image_url"],
+    "heic": ["image/heic", "image_url"],
+    "heif": ["image/heif", "image_url"],
 }
 
 

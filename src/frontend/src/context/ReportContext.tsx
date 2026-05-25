@@ -5,6 +5,8 @@ import React, { createContext, useCallback, useContext, useState, ReactNode } fr
 interface ReportContextType {
   images: string[];
   setImages: React.Dispatch<React.SetStateAction<string[]>>;
+  rawFiles: File[];
+  setRawFiles: React.Dispatch<React.SetStateAction<File[]>>;
   contextText: string;
   setContextText: React.Dispatch<React.SetStateAction<string>>;
   location: string;
@@ -22,6 +24,7 @@ const ReportContext = createContext<ReportContextType | undefined>(undefined);
 
 export function ReportProvider({ children }: { children: ReactNode }) {
   const [images, setImages] = useState<string[]>([]);
+  const [rawFiles, setRawFiles] = useState<File[]>([]);
   const [contextText, setContextText] = useState("");
   const [location, setLocation] = useState("");
   const [priority, setPriority] = useState("");
@@ -30,6 +33,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
   const clearSubmission = useCallback(() => {
     setImages([]);
+    setRawFiles([]);
     setContextText("");
     setLocation("");
     setPriority("");
@@ -39,7 +43,8 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
   return (
     <ReportContext.Provider value={{ 
-      images, setImages, 
+      images, setImages,
+      rawFiles, setRawFiles,
       contextText, setContextText,
       location, setLocation,
       priority, setPriority, 

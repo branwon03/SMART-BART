@@ -10,7 +10,7 @@ import { submitReport } from '@/lib/submissions';
 export default function UserContext() {
   const router = useRouter();
   const {
-    images,
+    images, rawFiles,
     contextText, setContextText,
     priority, setPriority,
     location, setLocation,
@@ -32,6 +32,7 @@ export default function UserContext() {
     try {
       await submitReport({
         images,
+        rawFiles,
         description: contextText,
         priority,
         location,
@@ -91,6 +92,8 @@ export default function UserContext() {
               onChange={(e) => setLocation(e.target.value)}
               className="w-full bg-[#D1D5DB] border border-black p-3 text-sm appearance-none text-gray-700 focus:outline-none focus:border-[#0099D8] cursor-pointer"
             >
+              <option value="" disabled>Select Location</option>
+              <option value="Assign-Me-Via-Geolocation">Auto-detect from photo GPS</option>
               <option value="Arts and Computational Sciences">Arts and Computational Sciences</option>
               <option value="Bellevue Lot">Bellevue Lot</option>
               <option value="Biomedical Sciences and Physics">Biomedical Sciences and Physics</option>

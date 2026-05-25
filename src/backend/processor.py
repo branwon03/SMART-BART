@@ -13,6 +13,9 @@ import os
 import time
 import math
 import mimetypes
+import pillow_heif
+
+pillow_heif.register_heif_opener()
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import func, text

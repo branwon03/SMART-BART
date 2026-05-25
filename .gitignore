@@ -51,3 +51,4 @@ src/mobile/expo-env.d.ts
 .cache/
 datasets/grouping_eval/campus_images/
 /docs
+CONTEXT.md

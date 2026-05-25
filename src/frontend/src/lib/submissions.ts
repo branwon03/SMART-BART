@@ -24,6 +24,7 @@ export function dataUrlToFile(dataUrl: string, filename: string): File {
  */
 export async function submitReport(params: {
   images: string[];
+  rawFiles?: File[];
   description: string;
   priority: string;
   location: string;
@@ -31,10 +32,20 @@ export async function submitReport(params: {
   contact: string;
 }): Promise<SubmissionResult> {
   const form = new FormData();
+  const useRawFiles =
+    params.location === "Assign-Me-Via-Geolocation" &&
+    params.rawFiles &&
+    params.rawFiles.length > 0;
 
-  params.images.forEach((dataUrl, i) => {
-    form.append("media", dataUrlToFile(dataUrl, `image-${i}.jpg`));
-  });
+  if (useRawFiles) {
+    params.rawFiles!.forEach((file) => {
+      form.append("media", file, file.name);
+    });
+  } else {
+    params.images.forEach((dataUrl, i) => {
+      form.append("media", dataUrlToFile(dataUrl, `image-${i}.jpg`));
+    });
+  }
 
   form.append("description", params.description);
   form.append("photo_location_id", params.location);

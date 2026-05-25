@@ -8,7 +8,7 @@ from tests.test_png_bytes import _make_png_bytes
 
 client = TestClient(app)
 
-EXPECTED_KEYS = {"incident_id", "submission_id", "description", "timestamp"}
+EXPECTED_KEYS = {"incident_id", "submission_id", "description", "location_id", "timestamp"}
 
 
 def test_api_submissions_with_image():
