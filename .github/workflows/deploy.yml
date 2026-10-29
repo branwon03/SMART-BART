@@ -1,0 +1,32 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Triggers deployment when merging to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: my-cloud-run-service # Replace with your service name
+          region: us-west1 # Replace with your target region
+          source: ./ # Points to the directory containing your app
+          flags: |
+            --allow-unauthenticated
+
+      - name: Display Live URL
+        run: echo "App deployed to ${{ steps.deploy.outputs.url }}"
