@@ -3,7 +3,13 @@ name: Deploy to Cloud Run
 on:
   push:
     branches:
-      - main # Triggers deployment when merging to main
+      - main
+
+env:
+  PROJECT_ID: smart-bart
+  REGION: us-west1
+  REPO: bart-repo
+  SERVICE: my-cloud-run-service
 
 jobs:
   deploy:
@@ -18,15 +24,23 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker Authentication
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
       - name: Deploy to Cloud Run
-        id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: my-cloud-run-service # Replace with your service name
-          region: us-west1 # Replace with your target region
-          source: ./ # Points to the directory containing your app
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
           flags: |
             --allow-unauthenticated
-
-      - name: Display Live URL
-        run: echo "App deployed to ${{ steps.deploy.outputs.url }}"
