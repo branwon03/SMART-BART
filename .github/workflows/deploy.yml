@@ -44,3 +44,4 @@ jobs:
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
           flags: |
             --allow-unauthenticated
+            --set-env-vars=DATABASE_URL=${{ secrets.DATABASE_URL }}
